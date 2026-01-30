@@ -12,7 +12,7 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-public class ByteCodeManipulator {
+public class bytecode {
 	protected byte[] original_bytecode;
 	protected ClassWriter class_writer;
 	protected ClassReader class_reader;
@@ -22,34 +22,34 @@ public class ByteCodeManipulator {
 	protected ArrayList<MethodInfo> methods_to_be_removed;
 	protected HashMap<MethodInfo, MethodOperator> methods_to_be_modified;
 
-	protected ByteCodeManipulator(byte[] bytecode) {
+	protected bytecode(byte[] bytecode) {
 		original_bytecode = bytecode;
 		class_reader = new ClassReader(bytecode);
 		class_writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 	}
 
-	public static ByteCodeManipulator load(byte[] bytecode) {
-		return new ByteCodeManipulator(bytecode);
+	public static bytecode load(byte[] bytecode) {
+		return new bytecode(bytecode);
 	}
 
-	public ByteCodeManipulator removeFields(String... field_names) {
+	public bytecode removeFields(String... field_names) {
 		fileds_to_be_removed.addAll(Arrays.asList(field_names));
 		return this;
 	}
 
-	public ByteCodeManipulator addFields(String... field_declaration) {
+	public bytecode addFields(String... field_declaration) {
 		for (String decl : field_declaration)
 			fileds_to_be_added.add(FieldInfo.from(decl));
 		return this;
 	}
 
-	public ByteCodeManipulator removeMethods(String... method_declarations) {
+	public bytecode removeMethods(String... method_declarations) {
 		for (String decl : method_declarations)
 			methods_to_be_removed.add(MethodInfo.from(decl));
 		return this;
 	}
 
-	public ByteCodeManipulator modifyMethod(String method_declaration, MethodOperator modifier) {
+	public bytecode modifyMethod(String method_declaration, MethodOperator modifier) {
 		methods_to_be_modified.put(MethodInfo.from(method_declaration), modifier);
 		return this;
 	}

@@ -149,7 +149,7 @@ public final class unsafe {
 		 */
 		public static final Object call(String method_name, Class<?>[] arg_types, Object... args) {
 			try {
-				return ObjectManipulator.invoke(unsafe.instance_jdk_internal_misc_Unsafe, method_name, arg_types, args);
+				return ObjectManipulator.call(unsafe.instance_jdk_internal_misc_Unsafe, method_name, arg_types, args);
 			} catch (SecurityException ex) {
 				ex.printStackTrace();
 			}

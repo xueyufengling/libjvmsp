@@ -107,12 +107,12 @@ public class file_system {
 	}
 
 	public static String classpath(uri.resolver resolver) {
-		Class<?> caller = JavaLang.caller_class();// 获取调用该方法的类
+		Class<?> caller = internal_access.caller_class();// 获取调用该方法的类
 		return classpath(caller, resolver);
 	}
 
 	public static String classpath() {
-		Class<?> caller = JavaLang.caller_class();// 获取调用该方法的类
+		Class<?> caller = internal_access.caller_class();// 获取调用该方法的类
 		return classpath(caller, uri.resolver.DEFAULT);
 	}
 
@@ -284,7 +284,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_local(String package_name, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return class_names_local(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -293,7 +293,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_local(String package_name) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return class_names_local(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -449,7 +449,7 @@ public class file_system {
 	}
 
 	public static byte[] resource_bytes(String path) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return resource_bytes(caller, path);// 获取调用该方法的类
 	}
 
@@ -463,7 +463,7 @@ public class file_system {
 	}
 
 	public static InputStream resource_stream(String path) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return resource_stream(caller, path);// 获取调用该方法的类
 	}
 
@@ -607,7 +607,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_in_jar(String package_name, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return class_names_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -616,7 +616,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_in_jar(String package_name) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return class_names_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -643,7 +643,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> classes_in_jar(String package_name, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return classes_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -652,7 +652,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> classes_in_jar(String package_name) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return classes_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -674,7 +674,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = internal_access.caller_class();
 		return subclasses_in_jar(caller, package_name, super_class, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -683,7 +683,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class) {
-		return subclasses_in_jar(JavaLang.caller_class(), package_name, super_class);// 获取调用该方法的类
+		return subclasses_in_jar(internal_access.caller_class(), package_name, super_class);// 获取调用该方法的类
 	}
 
 	// -------------------------------------------------------- foreach Operations --------------------------------------------------------------------

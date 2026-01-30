@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 @Target({ ElementType.METHOD })
 public @interface CallerSensitive {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	static class CallerSensitiveMirrorImpl implements MirrorAnnotation<CallerSensitive, CallerSensitiveMirrorImpl, Annotation> {
+	static class CallerSensitiveMirrorImpl implements annotation<CallerSensitive, CallerSensitiveMirrorImpl, Annotation> {
 		/**
 		 * 未缓存CallerSensitive标志位，将调用jdk.internal.reflect.Reflection.isCallerSensitive(Method m)获取标志位
 		 */
@@ -73,12 +73,12 @@ public @interface CallerSensitive {
 		}
 
 		@Override
-		public Annotation destAnnotationInstance() {
+		public Annotation reflect() {
 			return CallerSensitiveInstance;
 		}
 
 		@Override
-		public Class<CallerSensitive> mirrorAnnotationClass() {
+		public Class<CallerSensitive> mirror_class() {
 			return CallerSensitive.class;
 		}
 	}

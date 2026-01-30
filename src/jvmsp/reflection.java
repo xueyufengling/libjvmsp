@@ -64,19 +64,20 @@ public abstract class reflection {
 	}
 
 	/**
-	 * 无视权限设置是否可访问
+	 * 无视权限设置是否可访问。
+	 * 注意：如果access_obj为null，JVM将直接崩溃。
 	 * 
-	 * @param <AO>
+	 * @param <_AccessObj>
 	 * @param accessible_obj
 	 * @param accessible
 	 * @return
 	 */
-	public static <AO extends AccessibleObject> AO set_accessible(AO accessible_obj, boolean accessible) {
+	public static <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj, boolean accessible) {
 		java_lang_reflect_AccessibleObject_override.set(accessible_obj, accessible);
 		return accessible_obj;
 	}
 
-	public static <AO extends AccessibleObject> AO set_accessible(AO accessible_obj) {
+	public static <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj) {
 		return set_accessible(accessible_obj, true);
 	}
 
@@ -147,10 +148,10 @@ public abstract class reflection {
 	 */
 	public static final Field no_field_filter_find(Class<?> cls, String field_name) {
 		Field f = null;
-		Map<Class<?>, Set<String>> filterMap = get_field_filter();
+		Map<Class<?>, Set<String>> filter_map = get_field_filter();
 		remove_field_filter();
 		f = find_field(cls, field_name);
-		set_field_filter(filterMap);
+		set_field_filter(filter_map);
 		return f;
 	}
 
@@ -312,43 +313,43 @@ public abstract class reflection {
 	/**
 	 * 查找构造函数的原始对象
 	 * 
-	 * @param <T>
+	 * @param <_T>
 	 * @param clazz
 	 * @param public_only
 	 * @return
 	 */
-	public static <T> Constructor<T>[] __get_declared_constructors(Class<?> clazz, boolean public_only) {
+	public static <_T> Constructor<_T>[] __get_declared_constructors(Class<?> clazz, boolean public_only) {
 		try {
-			return (Constructor<T>[]) Class_getDeclaredConstructors0.invokeExact(clazz, public_only);
+			return (Constructor<_T>[]) Class_getDeclaredConstructors0.invokeExact(clazz, public_only);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
 		return null;
 	}
 
-	public static <T> Constructor<T>[] __get_declared_constructors(Class<?> clazz) {
+	public static <_T> Constructor<_T>[] __get_declared_constructors(Class<?> clazz) {
 		return __get_declared_constructors(clazz, false);
 	}
 
 	/**
 	 * 获取root构造函数
 	 * 
-	 * @param <T>
+	 * @param <_T>
 	 * @param clazz
 	 * @param which    java.lang.reflect.Member接口中的访问类型，Member.DECLARED为全部定义的构造函数，Member.PUBLIC为public的构造函数
 	 * @param argTypes 构造函数的参数类型
 	 * @return
 	 */
-	public static <T> Constructor<T> __get_declared_constructor(Class<T> clazz, int which, Class<?>... argTypes) {
+	public static <_T> Constructor<_T> __get_declared_constructor(Class<_T> clazz, int which, Class<?>... argTypes) {
 		try {
-			return (Constructor<T>) Class_getConstructor0.invokeExact(clazz, argTypes, which);
+			return (Constructor<_T>) Class_getConstructor0.invokeExact(clazz, argTypes, which);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
 		return null;
 	}
 
-	public static <T> Constructor<T> __get_declared_constructor(Class<T> clazz, Class<?>... argTypes) {
+	public static <_T> Constructor<_T> __get_declared_constructor(Class<_T> clazz, Class<?>... argTypes) {
 		return __get_declared_constructor(clazz, Member.DECLARED, argTypes);
 	}
 
@@ -372,13 +373,13 @@ public abstract class reflection {
 
 	@CallerSensitive
 	public static Class<?> find_class(String name, boolean initialize) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = caller_class();
 		return find_class(name, initialize, caller.getClassLoader(), caller);
 	}
 
 	@CallerSensitive
 	public static Class<?> find_class(String name) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = caller_class();
 		return find_class(name, true, caller.getClassLoader(), caller);
 	}
 
@@ -428,12 +429,16 @@ public abstract class reflection {
 		return result;
 	}
 
+	/**
+	 * 使用反射无视权限访问成员，如果是静态成员则传入Class<?>，非静态成员则传入对象本身，jdk.internal.reflect.Reflection会对反射获取的字段进行过滤，因此这些字段不能访问。如需访问使用Handle的方法进行
+	 * 
+	 * @param obj        非静态成员所属对象本身或静态成员对应的Class<?>
+	 * @param field_name 要访问的字段
+	 * @return 成员的值
+	 */
 	public static Object read(Object obj, Field field) {
-		if (obj == null || field == null)
-			return null;
 		try {
-			set_accessible(field, true);
-			return field.get(obj);
+			return set_accessible(field, true).get(obj);
 		} catch (IllegalAccessException ex) {
 			System.err.println("IllegalAccessException thrown when reading field " + field + " in " + obj);
 			ex.printStackTrace();
@@ -445,16 +450,37 @@ public abstract class reflection {
 		return read(obj, find_field(obj, field));
 	}
 
+	/**
+	 * 访问值，若目标字段不存在则返回默认值
+	 * 
+	 * @param obj
+	 * @param field_name
+	 * @param default_value
+	 * @return
+	 */
+	public static Object read_or_default(Object obj, String field_name, Object default_value) {
+		try {
+			return reflection.set_accessible(reflection.find_field(obj, field_name)).get(obj);
+		} catch (Throwable ex) {
+			return default_value;
+		}
+	}
+
+	public static Object read_or_default(Object obj, Field field, Object default_value) {
+		try {
+			return reflection.set_accessible(field).get(obj);
+		} catch (Throwable ex) {
+			return default_value;
+		}
+	}
+
 	public static boolean write(Object obj, Field field, Object value) {
-		if (obj == null || field == null)
-			return false;
 		try {
 			set_accessible(field, true);
 			field.set(obj, value);
 		} catch (IllegalAccessException ex) {
 			System.err.println("IllegalAccessException thrown when writing field " + field + " with value " + value + " in " + obj);
 			ex.printStackTrace();
-			;
 			return false;
 		}
 		return true;
@@ -462,6 +488,34 @@ public abstract class reflection {
 
 	public static boolean write(Object obj, String field, Object value) {
 		return write(obj, find_field(obj, field), value);
+	}
+
+	/**
+	 * 使用反射无视权限调用方法，如果是静态方法则传入Class<?>，非静态方法则传入对象本身。jdk.internal.reflect.Reflection会对反射获取的方法进行过滤，因此这些方法不能访问。如需访问使用Handle的方法进行
+	 * 
+	 * @param obj
+	 * @param method_name
+	 * @param arg_types
+	 * @param args
+	 */
+	public static Object call(Object obj, String method_name, Class<?>[] arg_types, Object... args) {
+		try {
+			return set_accessible(reflection.find_method(obj, method_name, arg_types)).invoke(obj, args);
+		} catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex) {
+			System.err.println("call method failed. obj = " + obj.toString() + ", method_name = " + method_name);
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	public static Object call(Object obj, Method method, Object... args) {
+		try {
+			return set_accessible(method).invoke(obj, args);
+		} catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex) {
+			System.err.println("call method failed. obj = " + obj.toString() + ", method_name = " + method.getName());
+			ex.printStackTrace();
+		}
+		return null;
 	}
 
 	public static String method_description(String name, Class<?>... arg_types) {
@@ -637,7 +691,7 @@ public abstract class reflection {
 	/**
 	 * 利用反射调用构造函数
 	 * 
-	 * @param obj  目标类型的对象实例或Class<T>
+	 * @param obj  目标类型的对象实例或Class<_T>
 	 * @param args
 	 * @return
 	 */
@@ -711,13 +765,13 @@ public abstract class reflection {
 	/**
 	 * 获取指定类型的外部类引用
 	 * 
-	 * @param <T>
+	 * @param <_T>
 	 * @param target 要获取的外部类类型
 	 * @param obj    要获取外部类引用的对象
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T enclosing_class_instance(Class<T> target, Object obj) {
+	public static <_T> _T enclosing_class_instance(Class<_T> target, Object obj) {
 		if (target == null || obj == null) {
 			return null;
 		}
@@ -726,11 +780,11 @@ public abstract class reflection {
 		if (outerCls == null) {
 			return null;// obj没有外部类
 		}
-		T outerObj = null;
+		_T outerObj = null;
 		Field[] fields = reflection.get_declared_fields(cls);
 		for (Field field : fields) {
 			if (field.getType() == outerCls && field.getName().startsWith("this$")) {// 找到上一层外部类的实例引用字段
-				outerObj = (T) ObjectManipulator.access(obj, field);
+				outerObj = (_T) read(obj, field);
 				if (outerCls == target)
 					return outerObj;
 				else
@@ -766,7 +820,7 @@ public abstract class reflection {
 	}
 
 	public static List<String> class_names_in_package(String package_name, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = caller_class();
 		return class_names_in_package(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -775,7 +829,7 @@ public abstract class reflection {
 	}
 
 	public static List<String> class_names_in_package(String package_name) {
-		Class<?> caller = JavaLang.caller_class();
+		Class<?> caller = caller_class();
 		return class_names_in_package(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -861,7 +915,7 @@ public abstract class reflection {
 		// 判断一个AnnotatedElement是否有某个注解，实际是判断缓存的注解map是否存在指定注解Class<?>的key
 		Map<Class<? extends Annotation>, Annotation> annoMap = actual_used_annotations(ae);
 		Annotation mirror_annotation = annoMap.remove(target_annotation_cls);// 移除镜像注解的key
-		Mirror.cast(mirror_annotation, dest_annotation);
+		mirror.cast(mirror_annotation, dest_annotation);
 		annoMap.put((Class<? extends Annotation>) dest_annotation_cls, mirror_annotation);// 填入目标注解
 	}
 
@@ -1127,5 +1181,117 @@ public abstract class reflection {
 
 	public static Class<?> first_generic_class(Type t) {
 		return generic_classes(t)[0].type();
+	}
+
+	/**
+	 * 栈帧回溯
+	 */
+
+	/**
+	 * 栈追踪时执行的操作
+	 */
+	@FunctionalInterface
+	public interface unwind_operation {
+		public void operate(StackWalker.StackFrame stack_frame);
+	}
+
+	/**
+	 * 栈追踪设置
+	 */
+	public enum unwind_option {
+		SKIP_COUNT_BY_FRAME, SKIP_COUNT_BY_CLASS
+	}
+
+	public static final StackWalker stack_walker;
+
+	static {
+		stack_walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);// 最常用，最先初始化
+	}
+
+	/**
+	 * 栈追踪<br>
+	 * 本方法对应的栈帧始终是0，<br>
+	 * skip 1 会返回直接调用本方法trackStackFrame(int skip_frame_count)的栈帧，即getCallerClass()方法本身栈帧<br>
+	 * skip 2 会返回调用getCallerClass()的方法栈帧
+	 * 
+	 * @param skip_frame_count
+	 * @return
+	 */
+	public static StackWalker.StackFrame unwind(int skip_frame_count) {
+		return stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get());
+	}
+
+	public static void unwind(int skip_frame_count, unwind_operation op) {
+		op.operate(stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get()));
+	}
+
+	public static Class<?> unwind_class(int skip_frame_count) {
+		return stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get().getDeclaringClass());
+	}
+
+	/**
+	 * 追踪函数调用栈帧，并获取调用的类<br>
+	 * StackTrackOption为SKIP_COUNT_BY_FRAME时，行为同unwind_class(int skip_frame_count)一致<br>
+	 * StackTrackOption为SKIP_COUNT_BY_CLASS时，追踪函数调用栈帧，并且返回第skip_class_count个不同的类<br>
+	 * skip_class_count只表明跳过几个不同的类，对于连续同一个类调用栈帧将直接全部跳过
+	 * 
+	 * @param skip_count
+	 * @param option
+	 * @return
+	 * @since Java 9
+	 */
+	public static Class<?> unwind_class(int skip_count, unwind_option option) {
+		switch (option) {
+		case SKIP_COUNT_BY_FRAME:
+			return unwind_class(skip_count);
+		case SKIP_COUNT_BY_CLASS: {
+			int skipped_class_count = 0;
+			int skip_frame = 1;// 以JavaLang作为起点
+			Class<?> caller_record = unwind_class(skip_frame);
+			Class<?> stack_frame_class = null;
+			if (skip_count > 0) {
+				for (;;) {
+					stack_frame_class = unwind_class(++skip_frame);
+					if (caller_record == stack_frame_class)
+						continue;
+					else {
+						caller_record = stack_frame_class;// 将下一个与当前caller_record不同的类记录作为追踪结果
+						if (++skipped_class_count >= skip_count)
+							break;
+					}
+				}
+			}
+			return caller_record;
+		}
+		}
+		return null;
+	}
+
+	/**
+	 * 获取直接调用该方法的类<br>
+	 * 例如A()调用B()，B()调用get_context_class()，那么返回B()栈帧
+	 * 
+	 * @return
+	 * @since Java 9
+	 * @CallerSensitive
+	 */
+	public static Class<?> context_class() {
+		return unwind_class(2);
+	}
+
+	/**
+	 * 获取一次间接调用该方法的类<br>
+	 * 例如A()调用B()，B()调用getOuterCallerClass()，那么返回A()栈帧
+	 * 
+	 * @return
+	 * @since Java 9
+	 * @CallerSensitive
+	 */
+	public static Class<?> caller_class() {
+		return unwind_class(3);
+	}
+
+	public static Class<?> caller_class_as_param() {
+		return unwind_class(4);
 	}
 }

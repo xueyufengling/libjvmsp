@@ -1,6 +1,8 @@
 package jvmsp;
 
+import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
@@ -8,24 +10,51 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
+import jvmsp.bytecode_source.map;
+
 public class class_loader {
 	private static MethodHandle ClassLoader_defineClass1;
 	private static MethodHandle ClassLoader_defineClass;
 	private static MethodHandle ClassLoader_findClass;
-	/**
-	 * final字段只能使用Unsafe更改，不可使用VarHandle。
-	 */
-	private static Field ClassLoader_$parent;
 
-	public static final String default_parent_field_name = "parent";
+	public static final String DEFAULT_PARENT_CLASS_LOADER_NAME = "parent";
 
 	static {
-		reflection.no_field_filter(() -> {
-			ClassLoader_defineClass1 = symbols.find_static_method(ClassLoader.class, "defineClass1", Class.class, ClassLoader.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, String.class);
-			ClassLoader_defineClass = symbols.find_special_method(ClassLoader.class, "defineClass", Class.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class);
-			ClassLoader_findClass = symbols.find_special_method(ClassLoader.class, "findClass", Class.class, String.class);
-			ClassLoader_$parent = reflection.find_field(ClassLoader.class, "parent");
-		});
+		ClassLoader_defineClass1 = symbols.find_static_method(ClassLoader.class, "defineClass1", Class.class, ClassLoader.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, String.class);
+		ClassLoader_defineClass = symbols.find_special_method(ClassLoader.class, "defineClass", Class.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class);
+		ClassLoader_findClass = symbols.find_special_method(ClassLoader.class, "findClass", Class.class, String.class);
+	}
+
+	@FunctionalInterface
+	public static interface bytecode_source {
+		/**
+		 * 根据类名查找字节码
+		 * 
+		 * @param class_name
+		 * @return
+		 */
+		public byte[] gen_bytecode(String class_name);
+
+		public static class map implements bytecode_source {
+			public final HashMap<String, byte[]> klassDefs;
+
+			public map(HashMap<String, byte[]> klassDefs) {
+				this.klassDefs = klassDefs;
+			}
+
+			@Override
+			public byte[] gen_bytecode(String class_name) {
+				return klassDefs.get(class_name);
+			}
+
+			public static map from(HashMap<String, byte[]> klassDefs) {
+				return new map(klassDefs);
+			}
+		}
+
+		public static map as_map(bytecode_source source) {
+			return (map) source;
+		}
 	}
 
 	public static class proxy extends ClassLoader {
@@ -34,7 +63,7 @@ public class class_loader {
 		private boolean reverseLoading = false;// 记录是否已经开始向下查找，防止在整个加载链中都查找不到无限循环loadClass()
 
 		public proxy(ClassLoader dest, String dest_parent_field_name, bytecode_source source) {
-			super(class_loader.get_parent(dest, dest_parent_field_name));
+			super(parent(dest, dest_parent_field_name));
 			class_loader.set_parent(dest, dest_parent_field_name, this);
 			this.son = dest;
 			this.bytecodeSource = source;
@@ -43,24 +72,24 @@ public class class_loader {
 		/**
 		 * Proxy将插入双亲委托加载链的dest的上方
 		 * 
-		 * @param dest           目标ClassLoader
-		 * @param undefinedKlass 要加载的字节码
+		 * @param dest            目标ClassLoader
+		 * @param undefined_class 要加载的字节码
 		 */
-		public proxy(ClassLoader dest, String dest_parent_field_name, HashMap<String, byte[]> undefinedKlass) {
-			this(dest, dest_parent_field_name, bytecode_source.Map.from(undefinedKlass));
+		public proxy(ClassLoader dest, String dest_parent_field_name, HashMap<String, byte[]> undefined_class) {
+			this(dest, dest_parent_field_name, bytecode_source.map.from(undefined_class));
 		}
 
 		public proxy(ClassLoader dest, bytecode_source source) {
-			this(dest, default_parent_field_name, source);
+			this(dest, DEFAULT_PARENT_CLASS_LOADER_NAME, source);
 		}
 
-		public proxy(ClassLoader dest, HashMap<String, byte[]> undefinedKlass) {
-			this(dest, default_parent_field_name, undefinedKlass);
+		public proxy(ClassLoader dest, HashMap<String, byte[]> undefined_class) {
+			this(dest, DEFAULT_PARENT_CLASS_LOADER_NAME, undefined_class);
 		}
 
 		@Override
 		protected Class<?> findClass(String name) throws ClassNotFoundException {
-			byte[] byte_code = bytecodeSource.genByteCode(name);
+			byte[] byte_code = bytecodeSource.gen_bytecode(name);
 			// 代理及之上的类加载器找不到类定义时，则让子类加载器son去加载目标类，这样动态加载的类就可以引用son加载的类
 			if (byte_code == null) {
 				if (reverseLoading) {
@@ -89,15 +118,15 @@ public class class_loader {
 
 		/**
 		 * @param dest
-		 * @param undefinedKlass
+		 * @param undefined_class
 		 * @return
 		 */
-		public static final proxy attach(ClassLoader dest, HashMap<String, byte[]> undefinedKlass) {
-			return new proxy(dest, undefinedKlass);
+		public static final proxy attach(ClassLoader dest, HashMap<String, byte[]> undefined_class) {
+			return new proxy(dest, undefined_class);
 		}
 
-		public static final proxy attach(ClassLoader dest, String dest_parent_field_name, HashMap<String, byte[]> undefinedKlass) {
-			return new proxy(dest, dest_parent_field_name, undefinedKlass);
+		public static final proxy attach(ClassLoader dest, String dest_parent_field_name, HashMap<String, byte[]> undefined_class) {
+			return new proxy(dest, dest_parent_field_name, undefined_class);
 		}
 
 		public static final proxy attach(ClassLoader dest, bytecode_source source) {
@@ -109,33 +138,103 @@ public class class_loader {
 		}
 	}
 
-	private static final DynamicConcurrentArrayList<Klass.class_definition> classDefs = new DynamicConcurrentArrayList<>();
+	public static final class class_definition {
+		public final ClassLoader loader;
+		public final String name;
+		public final byte[] b;
+		public final int off;
+		public final int len;
+		public final ProtectionDomain pd;
+		public final String source;
 
-	public static final void defineClass(Collection<Klass.class_definition> defs) throws Throwable {
-		classDefs.add(defs);
-		classDefs.forEach((Klass.class_definition def) -> {
-			class_loader.define_class(def);
-		});
-		classDefs.clear();
+		private class_definition(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain pd, String source) {
+			this.loader = loader;
+			this.name = name;
+			this.b = b;
+			this.off = off;
+			this.len = len;
+			this.pd = pd;
+			this.source = source;
+		}
+
+		public static final class_definition of(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain pd, String source) {
+			return new class_definition(loader, name, b, off, len, pd, source);
+		}
+	}
+
+	private static Field Class_$classLoader;
+
+	static {
+		Class_$classLoader = reflection.find_field(Class.class, "classLoader");
 	}
 
 	/**
-	 * 将undefinedKlass委托给父类为loader的新自定义ClassLoader加载。<br>
+	 * 设置Class的classLoader变量
+	 * 
+	 * @param cls
+	 * @param loader
+	 * @return
+	 */
+	public static Class<?> set_class_loader(Class<?> cls, ClassLoader loader) {
+		ObjectManipulator.setObject(cls, Class_$classLoader, loader);
+		return cls;
+	}
+
+	/**
+	 * 不经过安全检查直接获取classLoader
+	 * 
+	 * @param target
+	 * @param parent
+	 * @return
+	 */
+	public static ClassLoader get_class_loader(Class<?> cls) {
+		return (ClassLoader) ObjectManipulator.access(cls, Class_$classLoader);
+	}
+
+	/**
+	 * 将类设置为系统类
+	 * 
+	 * @param cls
+	 */
+	public static void as_bootstrap(Class<?> cls) {
+		set_class_loader(cls, null);// 将cls的类加载器设置为BootstrapClassLoader
+	}
+
+	public static void as_bootstrap(Field f) {
+		as_bootstrap(f.getDeclaringClass());
+	}
+
+	public static void as_bootstrap(Executable e) {
+		as_bootstrap(e.getDeclaringClass());
+	}
+
+	private static final DynamicConcurrentArrayList<class_definition> class_defs = new DynamicConcurrentArrayList<>();
+
+	public static final void define(Collection<class_definition> defs) throws Throwable {
+		class_defs.add(defs);
+		class_defs.forEach((class_definition def) -> {
+			class_loader.define(def);
+		});
+		class_defs.clear();
+	}
+
+	/**
+	 * 将undefined_class委托给父类为loader的新自定义ClassLoader加载。<br>
 	 * 注意，类加载的起点始终是手动调用的Class.forName(name,init,classLoader)、classLoader.loadClass(name)或直接使用该类型，例如直接在代码中使用{@code A a=new A();}的上下文的ClassLoader。<br>
 	 * 类搜寻只会从起点开始，一直向上查找直到BootstrapClassLoader，而不会去查找起点ClassLoader的子代ClassLoader。<br>
 	 * 因此，调用该方法返回的ClassLoader需要用户手动加载相关类，并且用反射使用加载的类，不能直接在代码中使用这些类型。<br>
 	 * 
 	 * @param loader
-	 * @param undefinedKlass
+	 * @param undefined_class
 	 * @return
 	 */
-	public static ClassLoader newClassLoaderFor(ClassLoader loader, HashMap<String, byte[]> undefinedKlass) {
+	public static ClassLoader new_class_loader(ClassLoader loader, HashMap<String, byte[]> undefined_class) {
 		return new ClassLoader(loader) {
-			private HashMap<String, byte[]> klassDefs = undefinedKlass;
+			private HashMap<String, byte[]> class_defs = undefined_class;
 
 			@Override
 			protected Class<?> findClass(String name) throws ClassNotFoundException {
-				byte[] byte_code = klassDefs.get(name);
+				byte[] byte_code = class_defs.get(name);
 				if (byte_code == null)
 					throw new ClassNotFoundException(name);
 				return defineClass(name, byte_code, 0, byte_code.length);
@@ -143,65 +242,78 @@ public class class_loader {
 		};
 	}
 
-	public static ClassLoader newClassLoaderFor(HashMap<String, byte[]> undefinedKlass) {
-		Class<?> caller = JavaLang.caller_class();
-		return newClassLoaderFor(caller.getClassLoader(), undefinedKlass);
+	public static ClassLoader new_class_loader(HashMap<String, byte[]> undefined_class) {
+		Class<?> caller = internal_access.caller_class();
+		return new_class_loader(caller.getClassLoader(), undefined_class);
 	}
 
 	/**
-	 * 解析父类加载器的字段
+	 * 获取指定类加载器的指定字段名称的父加载器.
+	 * 一般父加载器都是final字段，而final字段只能使用Unsafe更改，不可使用VarHandle。
 	 * 
-	 * @param target
-	 * @param dest_parent_field_name
+	 * @param loader
+	 * @param search_class           要搜寻字段的类，此类必须是loader本类及其父类
+	 * @param dest_parent_field_name 要搜寻的父加载器字段名称
 	 * @return
 	 */
-	private static final Field resolveParentLoaderField(ClassLoader target, String dest_parent_field_name) {
-		return dest_parent_field_name.equals(default_parent_field_name) ? ClassLoader_$parent : reflection.no_field_filter_find(target.getClass(), dest_parent_field_name);
+	public static final ClassLoader parent(ClassLoader loader, Class<? extends ClassLoader> search_class, String dest_parent_field_name) {
+		return (ClassLoader) reflection.read(loader, reflection.no_field_filter_find(search_class, dest_parent_field_name));
+	}
+
+	public static final ClassLoader parent(ClassLoader loader, String dest_parent_field_name) {
+		return parent(loader, loader.getClass(), dest_parent_field_name);
 	}
 
 	/**
-	 * 为ClassLoader设置父类加载器
+	 * 获取Java标准的父加载器，即字段parent。
+	 * 一般自定义类加载器其父加载器有可能不是parent，而是用户自定义的字段，此时需要在此传入实际使用的父加载器字段名称
+	 * 
+	 * @param loader
+	 * @return
+	 */
+	public static final ClassLoader parent(ClassLoader loader) {
+		return parent(loader, ClassLoader.class, DEFAULT_PARENT_CLASS_LOADER_NAME);
+	}
+
+	/**
+	 * 为ClassLoader设置父加载器
 	 * 
 	 * @param target                 目标ClassLoader
 	 * @param dest_parent_field_name 目标ClassLoader使用的父类加载器的字段名，当没有使用ClassLoader.parent成员构建加载委托链时需要指定实际的字段名称
 	 * @param parent
 	 * @return
 	 */
-	public static ClassLoader set_parent(ClassLoader target, String dest_parent_field_name, ClassLoader parent) {
-		ObjectManipulator.setObject(target, resolveParentLoaderField(target, dest_parent_field_name), parent);
+	public static ClassLoader set_parent(ClassLoader target, Class<? extends ClassLoader> search_class, String dest_parent_field_name, ClassLoader parent) {
+		reflection.write(target, reflection.no_field_filter_find(target.getClass(), dest_parent_field_name), parent);
 		return target;
 	}
 
-	public static ClassLoader set_parent(ClassLoader target, ClassLoader parent) {
-		return set_parent(target, default_parent_field_name, parent);
+	public static ClassLoader set_parent(ClassLoader target, String dest_parent_field_name, ClassLoader parent) {
+		return set_parent(target, target.getClass(), dest_parent_field_name, parent);
 	}
 
 	/**
-	 * 不经过安全检查直接获取parent
+	 * 设置Java标准的父加载器
 	 * 
 	 * @param target
 	 * @param parent
 	 * @return
 	 */
-	public static ClassLoader get_parent(ClassLoader target, String dest_parent_field_name) {
-		return (ClassLoader) ObjectManipulator.access(target, resolveParentLoaderField(target, dest_parent_field_name));
+	public static ClassLoader set_parent(ClassLoader target, ClassLoader parent) {
+		return set_parent(target, ClassLoader.class, DEFAULT_PARENT_CLASS_LOADER_NAME, parent);
 	}
 
-	public static ClassLoader get_parent(ClassLoader target) {
-		return get_parent(target, default_parent_field_name);
-	}
-
-	public static final Class<?> define_class(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protectionDomain, String source) throws ClassFormatError {
+	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, String source) throws ClassFormatError {
 		try {
-			return (Class<?>) ClassLoader_defineClass1.invokeExact(loader, name, b, off, len, protectionDomain, source);
+			return (Class<?>) ClassLoader_defineClass1.invokeExact(loader, name, b, off, len, protection_domain, source);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
 		return (Class<?>) symbols.UNREACHABLE_REFERENCE;
 	}
 
-	public static final Class<?> define_class(Klass.class_definition def) throws ClassFormatError {
-		return define_class(def.loader, def.name, def.b, def.off, def.len, def.pd, def.source);
+	public static final Class<?> define(class_definition def) throws ClassFormatError {
+		return define(def.loader, def.name, def.b, def.off, def.len, def.pd, def.source);
 	}
 
 	/**
@@ -212,13 +324,13 @@ public class class_loader {
 	 * @param b
 	 * @param off
 	 * @param len
-	 * @param protectionDomain
+	 * @param protection_domain
 	 * @return
 	 * @throws ClassFormatError
 	 */
-	public static final Class<?> define_class(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protectionDomain) throws ClassFormatError {
+	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protection_domain) throws ClassFormatError {
 		try {
-			return (Class<?>) ClassLoader_defineClass.invokeExact(loader, name, b, off, len, protectionDomain);
+			return (Class<?>) ClassLoader_defineClass.invokeExact(loader, name, b, off, len, protection_domain);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
@@ -226,19 +338,19 @@ public class class_loader {
 	}
 
 	/**
-	 * 从指定stackSkip对应的类的ClassLoader加载class
+	 * 从指定stack_skip对应的类的ClassLoader加载class
 	 * 
-	 * @param stackSkip
+	 * @param stack_skip
 	 * @param name
 	 * @param b
 	 * @param off
 	 * @param len
-	 * @param protectionDomain
+	 * @param protection_domain
 	 * @return
 	 * @throws ClassFormatError
 	 */
-	public static final Class<?> define_class(int stackSkip, String name, byte[] b, int off, int len, ProtectionDomain protectionDomain) throws ClassFormatError {
-		return define_class(JavaLang.unwind_class(stackSkip).getClassLoader(), name, b, off, len, protectionDomain);
+	public static final Class<?> define(int stack_skip, String name, byte[] b, int off, int len, ProtectionDomain protection_domain) throws ClassFormatError {
+		return define(internal_access.unwind_class(stack_skip).getClassLoader(), name, b, off, len, protection_domain);
 	}
 
 	/**
@@ -252,44 +364,23 @@ public class class_loader {
 	 * @return
 	 * @throws ClassFormatError
 	 */
-	public static final Class<?> define_class(ClassLoader loader, String name, byte[] b, int off, int len) throws ClassFormatError {
-		return define_class(loader, name, b, off, len, null);
+	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len) throws ClassFormatError {
+		return define(loader, name, b, off, len, null);
 	}
 
-	public static final Class<?> define_class(ClassLoader loader, String name, byte[] b) throws ClassFormatError {
-		return define_class(loader, name, b, 0, b.length);
-	}
-
-	/**
-	 * 从指定stackSkip对应的类的ClassLoader加载class
-	 * 
-	 * @param stackSkip
-	 * @param name
-	 * @param b
-	 * @param off
-	 * @param len
-	 * @return
-	 * @throws ClassFormatError
-	 * @CallerSensitive
-	 */
-	public static final Class<?> define_class(int stackSkip, String name, byte[] b, int off, int len) throws ClassFormatError {
-		return define_class(JavaLang.unwind_class(stackSkip).getClassLoader(), name, b, off, len);
-	}
-
-	public static final Class<?> defineClass(int stackSkip, String name, byte[] b) throws ClassFormatError {
-		return define_class(stackSkip, name, b, 0, b.length);
+	public static final Class<?> define(ClassLoader loader, String name, byte[] b) throws ClassFormatError {
+		return define(loader, name, b, 0, b.length);
 	}
 
 	/**
 	 * 查找类
 	 * 
-	 * @param stackSkip
+	 * @param loader
 	 * @param name
-	 * @param b
 	 * @return
-	 * @throws ClassFormatError
+	 * @throws ClassNotFoundException
 	 */
-	public static final Class<?> find_class(ClassLoader loader, String name) throws ClassNotFoundException {
+	public static final Class<?> find(ClassLoader loader, String name) throws ClassNotFoundException {
 		try {
 			return (Class<?>) ClassLoader_findClass.invokeExact(loader, name);
 		} catch (Throwable ex) {
@@ -298,12 +389,8 @@ public class class_loader {
 		return (Class<?>) symbols.UNREACHABLE_REFERENCE;
 	}
 
-	public static ClassLoader get_caller_class_loader() {
-		return JavaLang.caller_class().getClassLoader();
-	}
-
-	public static ClassLoader getOuterCallerClassLoader() {
-		return JavaLang.unwind_class(4).getClassLoader();
+	public static ClassLoader caller_class_loader() {
+		return internal_access.unwind_class(4).getClassLoader();
 	}
 
 	/**
@@ -313,7 +400,7 @@ public class class_loader {
 	 * @param init
 	 * @param class_names
 	 */
-	public static void loadKlass(ClassLoader loader, boolean init, String... class_names) {
+	public static void load(ClassLoader loader, boolean init, String... class_names) {
 		for (String cls : class_names)
 			try {
 				Class.forName(cls, init, loader);
@@ -323,9 +410,9 @@ public class class_loader {
 			}
 	}
 
-	public static void loadKlass(boolean init, String... class_names) {
-		ClassLoader loader = getOuterCallerClassLoader();
-		loadKlass(loader, init, class_names);
+	public static void load(boolean init, String... class_names) {
+		ClassLoader loader = caller_class_loader();
+		load(loader, init, class_names);
 	}
 
 	/**
@@ -333,12 +420,12 @@ public class class_loader {
 	 * 
 	 * @param class_names
 	 */
-	public static void loadKlass(String... class_names) {
-		ClassLoader loader = getOuterCallerClassLoader();
-		loadKlass(loader, true, class_names);
+	public static void load(String... class_names) {
+		ClassLoader loader = caller_class_loader();
+		load(loader, true, class_names);
 	}
 
-	public static void loadKlass(Class<?> any_class_in_package, file_system.uri.resolver resolver, boolean init, String start_path, boolean include_subpackage) {
+	public static void load(Class<?> any_class_in_package, file_system.uri.resolver resolver, boolean init, String start_path, boolean include_subpackage) {
 		List<String> class_names = reflection.class_names_in_package(any_class_in_package, resolver, start_path, include_subpackage);
 		ClassLoader loader = any_class_in_package.getClassLoader();
 		for (String cls : class_names)
@@ -350,13 +437,13 @@ public class class_loader {
 			}
 	}
 
-	public static void loadKlass(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage) {
-		loadKlass(any_class_in_package, file_system.uri.resolver.DEFAULT, init, start_path, include_subpackage);
+	public static void load(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage) {
+		load(any_class_in_package, file_system.uri.resolver.DEFAULT, init, start_path, include_subpackage);
 	}
 
-	public static void loadKlass(boolean init, String start_path, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
-		loadKlass(caller, init, start_path, include_subpackage);
+	public static void load(boolean init, String start_path, boolean include_subpackage) {
+		Class<?> caller = internal_access.caller_class();
+		load(caller, init, start_path, include_subpackage);
 	}
 
 	/**
@@ -364,9 +451,9 @@ public class class_loader {
 	 * 
 	 * @param class_names
 	 */
-	public static void loadKlass(String start_path, boolean include_subpackage) {
-		Class<?> caller = JavaLang.caller_class();
-		loadKlass(caller, true, start_path, include_subpackage);
+	public static void load(String start_path, boolean include_subpackage) {
+		Class<?> caller = internal_access.caller_class();
+		load(caller, true, start_path, include_subpackage);
 	}
 
 	/**
@@ -378,15 +465,15 @@ public class class_loader {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static ArrayList<Class<?>> loadedClasses(ClassLoader loader) {
+	public static ArrayList<Class<?>> loaded_classes(ClassLoader loader) {
 		if (loader != null)
 			return (ArrayList<Class<?>>) ObjectManipulator.access(loader, "classes");
 		return null;
 	}
 
 	@SuppressWarnings("unchecked")
-	public static ArrayList<Class<?>> loadedClassesCopy(ClassLoader loader) {
-		return (ArrayList<Class<?>>) loadedClasses(loader).clone();
+	public static ArrayList<Class<?>> loaded_classes_copy(ClassLoader loader) {
+		return (ArrayList<Class<?>>) loaded_classes(loader).clone();
 	}
 
 	/**
@@ -394,7 +481,7 @@ public class class_loader {
 	 * 
 	 * @return
 	 */
-	public static String[] getLoadedPackageNames(ClassLoader loader) {
+	public static String[] loaded_packages(ClassLoader loader) {
 		Package[] packages = loader.getDefinedPackages();// 获取调用该方法的类
 		if (packages == null)
 			return null;
@@ -405,8 +492,84 @@ public class class_loader {
 		return package_names;
 	}
 
-	public static String[] getLoadedPackageNames() {
-		Class<?> caller = JavaLang.caller_class();
-		return getLoadedPackageNames(caller.getClassLoader());
+	public static String[] loaded_packages() {
+		Class<?> caller = internal_access.caller_class();
+		return loaded_packages(caller.getClassLoader());
+	}
+
+	/**
+	 * 加载JAR文件中的类
+	 */
+
+	/**
+	 * 加载指定jar中的所有类
+	 * 
+	 * @param loader
+	 * @param jar
+	 */
+	public static ClassLoader load_jar(ClassLoader loader, InputStream... jars) {
+		return class_loader.proxy.attach(loader, DEFAULT_PARENT_CLASS_LOADER_NAME, file_system.collect_class(jars));
+	}
+
+	public static ClassLoader load_jar(ClassLoader loader, byte[]... multi_jar_bytes) {
+		return load_jar(loader, file_system.jar_streams(multi_jar_bytes));
+	}
+
+	/**
+	 * 加载jar子包中的类
+	 * 
+	 * @param loader
+	 * @param jar
+	 * @param package_name
+	 * @param include_subpackage
+	 */
+	public static ClassLoader load_jar(ClassLoader loader, String package_name, boolean include_subpackage, InputStream... jars) {
+		return class_loader.proxy.attach(loader, DEFAULT_PARENT_CLASS_LOADER_NAME, file_system.collect_class(package_name, include_subpackage, jars));
+	}
+
+	public static ClassLoader load_jar(ClassLoader loader, String package_name, boolean include_subpackage, byte[]... multi_jar_bytes) {
+		return load_jar(loader, file_system.jar_streams(multi_jar_bytes));
+	}
+
+	/**
+	 * 从调用该方法的类所属的ClassLoader加载目标jar中的全部类
+	 * 
+	 * @param jar
+	 */
+	public static ClassLoader load_jar(InputStream... jars) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), jars);
+	}
+
+	public static ClassLoader load_jar(byte[]... multi_jar_bytes) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), file_system.jar_streams(multi_jar_bytes));
+	}
+
+	public static ClassLoader load_jar(String... jar_paths) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), file_system.jar_streams(caller, jar_paths));
+	}
+
+	/**
+	 * 从调用该方法的类所属的ClassLoader加载目标jar中指定路径下的类
+	 * 
+	 * @param jar
+	 * @param package_name
+	 * @param include_subpackage
+	 */
+	public static ClassLoader load_jar(String package_name, boolean include_subpackage, InputStream... jars) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), package_name, include_subpackage, jars);
+	}
+
+	public static ClassLoader load_jar(String package_name, boolean include_subpackage, byte[]... multi_jar_bytes) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), package_name, include_subpackage, file_system.jar_streams(multi_jar_bytes));
+	}
+
+	public static ClassLoader load_jar(String package_name, boolean include_subpackage, String... entry_jar_paths) {
+		Class<?> caller = internal_access.caller_class();
+		return load_jar(caller.getClassLoader(), package_name, include_subpackage, file_system.jar_streams(caller, entry_jar_paths));
 	}
 }

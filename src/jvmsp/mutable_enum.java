@@ -15,7 +15,7 @@ public interface mutable_enum<_T extends Enum<_T>> extends _crtp<_T> {
 	}
 
 	public default _T of(String name, int ordinal, Class<?>[] arg_types, Object... args) {
-		return of(this.getDerivedClass(), name, ordinal, arg_types, args);
+		return of(this.derived_class(), name, ordinal, arg_types, args);
 	}
 
 	/**

@@ -13,9 +13,9 @@ public abstract class jobject {
 	 */
 	public static final pointer placement_new(pointer ptr, Class<?> target_type, Class<?>[] arg_types, Object... args) {
 		Object target = ptr.cast(target_type).dereference();
-		MethodHandle constructor = callable.invokeVirtualConstructor(target_type, arg_types);
+		MethodHandle constructor = symbols.callable.constructor(target_type, arg_types);
 		try {
-			HandleBase.call(constructor, target, args);
+			symbols.call(constructor, target, args);
 		} catch (Throwable ex) {
 			System.err.println("Placement new for " + target_type + " failed");
 			ex.printStackTrace();
@@ -25,9 +25,9 @@ public abstract class jobject {
 
 	public static final pointer placement_new(pointer ptr, Class<?>[] arg_types, Object... args) {
 		Class<?> target_type = ptr.ptr_jtype;
-		MethodHandle constructor = callable.invokeVirtualConstructor(target_type, arg_types);
+		MethodHandle constructor = symbols.callable.constructor(target_type, arg_types);
 		try {
-			HandleBase.call(constructor, ptr.dereference(), args);
+			symbols.call(constructor, ptr.dereference(), args);
 		} catch (Throwable ex) {
 			System.err.println("Placement new for " + target_type + " failed");
 			ex.printStackTrace();
@@ -45,9 +45,9 @@ public abstract class jobject {
 	 */
 	public static final <T> T placement_new(T jobject, Class<?>[] arg_types, Object... args) {
 		Class<?> target_type = jobject.getClass();
-		MethodHandle constructor = callable.invokeVirtualConstructor(target_type, arg_types);
+		MethodHandle constructor = symbols.callable.constructor(target_type, arg_types);
 		try {
-			HandleBase.call(constructor, jobject, args);
+			symbols.call(constructor, jobject, args);
 		} catch (Throwable ex) {
 			System.err.println("Placement new for " + target_type + " failed");
 			ex.printStackTrace();
@@ -59,7 +59,7 @@ public abstract class jobject {
 	public static final <T> T copy(T jobject) {
 		Class<T> clazz = (Class<T>) jobject.getClass();
 		T o = unsafe.allocate(clazz);
-		unsafe.__memcpy(jobject, markWord.HEADER_BYTE_LENGTH, o, markWord.HEADER_BYTE_LENGTH, jtype.sizeof_object(clazz) - markWord.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+		unsafe.__memcpy(jobject, oops.HEADER_BYTE_LENGTH, o, oops.HEADER_BYTE_LENGTH, jtype.sizeof_object(clazz) - oops.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return o;
 	}
 }

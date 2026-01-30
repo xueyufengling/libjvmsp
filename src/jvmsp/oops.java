@@ -359,28 +359,63 @@ public class oops {
 	 * 强制改写对象头
 	 * 
 	 * @param obj
-	 * @param klassWord
+	 * @param klass_word
 	 * @return
 	 */
-	public static final boolean set_klass_word(Object obj, long klassWord) {
+	public static final boolean set_klass_word(Object obj, long klass_word) {
 		if (KLASS_WORD_LENGTH == 32) {
-			unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, (int) klassWord);
+			unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, (int) klass_word);
 			return true;
 		} else if (KLASS_WORD_LENGTH == 64) {
-			unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, klassWord);
+			unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, klass_word);
 			return true;
 		}
 		return false;
 	}
 
-	public static final boolean set_klass_word(long obj_base, long klassWord) {
+	public static final boolean set_klass_word(long obj_base, long klass_word) {
 		if (KLASS_WORD_LENGTH == 32) {
-			unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, (int) klassWord);
+			unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, (int) klass_word);
 			return true;
 		} else if (KLASS_WORD_LENGTH == 64) {
-			unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, klassWord);
+			unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, klass_word);
 			return true;
 		}
 		return false;
+	}
+
+	public static final Object cast(Object obj, long cast_type_klass_word) {
+		oops.set_klass_word(obj, cast_type_klass_word);
+		return obj;
+	}
+
+	public static final Object cast(Object obj, Object cast_type_obj) {
+		return cast(obj, oops.get_klass_word(cast_type_obj));
+	}
+
+	public static final Object cast(Object obj, Class<?> cast_type) {
+		return cast(obj, oops.get_klass_word(cast_type));
+	}
+
+	public static final Object cast(Object obj, String cast_type) {
+		return cast(obj, oops.get_klass_word(cast_type));
+	}
+
+	@SuppressWarnings("unchecked")
+	public static final <T> T safe_cast(Object obj, T cast_type_obj) {
+		return safe_cast(obj, (Class<T>) cast_type_obj.getClass());
+	}
+
+	/**
+	 * 安全的强制转换，没有继承关系的独立类的转换会抛出Exception。<br>
+	 * 主要用于Mixin。<br>
+	 * 
+	 * @param obj
+	 * @param cast_type
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static final <T> T safe_cast(Object obj, Class<T> cast_type) {
+		return (T) (Object) obj;
 	}
 }

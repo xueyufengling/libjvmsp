@@ -249,7 +249,7 @@ public class symbols {
 	 * @param args
 	 * @return
 	 */
-	public static Object invoke(MethodHandle method, Object obj, Object... args) {
+	public static Object call(MethodHandle method, Object obj, Object... args) {
 		Object[] wrapped_args = new Object[args.length + 1];
 		wrapped_args[0] = obj;
 		System.arraycopy(args, 0, wrapped_args, 1, args.length);
@@ -305,7 +305,7 @@ public class symbols {
 				MN_IS_TYPE, // nested type
 				MN_CALLER_SENSITIVE, // @CallerSensitive annotation detected
 				MN_TRUSTED_FINAL, // trusted final field
-				MN_REFERENCE_KIND_SHIFT, // refKind
+				MN_REFERENCE_KIND_SHIFT, // ref_kind
 				MN_REFERENCE_KIND_MASK;
 
 		/**
@@ -428,13 +428,13 @@ public class symbols {
 	/**
 	 * 获取成员的底层信息
 	 * 
-	 * @param memberName
+	 * @param member_name
 	 * @return
 	 */
-	public static vm_info get_vm_info(Object memberName) {
+	public static vm_info get_vm_info(Object member_name) {
 		Object[] vminfo = null;
 		try {
-			vminfo = (Object[]) getMemberVMInfo.invoke(memberName);
+			vminfo = (Object[]) getMemberVMInfo.invoke(member_name);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
@@ -504,14 +504,14 @@ public class symbols {
 		} catch (ClassNotFoundException ex) {
 			ex.printStackTrace();
 		}
-		BRIDGE = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "BRIDGE");
-		VARARGS = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "VARARGS");
-		SYNTHETIC = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "SYNTHETIC");
-		ANNOTATION = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "ANNOTATION");
-		ENUM = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "ENUM");
+		BRIDGE = (int) read_static(class_java_lang_invoke_MemberName, "BRIDGE", int.class);
+		VARARGS = (int) read_static(class_java_lang_invoke_MemberName, "VARARGS", int.class);
+		SYNTHETIC = (int) read_static(class_java_lang_invoke_MemberName, "SYNTHETIC", int.class);
+		ANNOTATION = (int) read_static(class_java_lang_invoke_MemberName, "ANNOTATION", int.class);
+		ENUM = (int) read_static(class_java_lang_invoke_MemberName, "ENUM", int.class);
 
-		CONSTRUCTOR_NAME = (String) ObjectManipulator.access(class_java_lang_invoke_MemberName, "CONSTRUCTOR_NAME");
-		RECOGNIZED_MODIFIERS = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "RECOGNIZED_MODIFIERS");
+		CONSTRUCTOR_NAME = (String) read_static(class_java_lang_invoke_MemberName, "CONSTRUCTOR_NAME", String.class);
+		RECOGNIZED_MODIFIERS = (int) read_static(class_java_lang_invoke_MemberName, "RECOGNIZED_MODIFIERS", int.class);
 
 		IS_METHOD = constants.MN_IS_METHOD; // method (not constructor)
 		IS_CONSTRUCTOR = constants.MN_IS_CONSTRUCTOR; // constructor
@@ -520,9 +520,9 @@ public class symbols {
 		CALLER_SENSITIVE = constants.MN_CALLER_SENSITIVE; // @CallerSensitive annotation detected
 		TRUSTED_FINAL = constants.MN_TRUSTED_FINAL; // trusted final field
 
-		ALL_ACCESS = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "ALL_ACCESS");
-		ALL_KINDS = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "ALL_KINDS");
-		IS_INVOCABLE = (int) ObjectManipulator.access(class_java_lang_invoke_MemberName, "IS_INVOCABLE");
+		ALL_ACCESS = (int) read_static(class_java_lang_invoke_MemberName, "ALL_ACCESS", int.class);
+		ALL_KINDS = (int) read_static(class_java_lang_invoke_MemberName, "ALL_KINDS", int.class);
+		IS_INVOCABLE = (int) read_static(class_java_lang_invoke_MemberName, "IS_INVOCABLE", int.class);
 
 		matchingFlagsSet = find_special_method(class_java_lang_invoke_MemberName, "matchingFlagsSet", boolean.class, int.class, int.class);
 		allFlagsSet = find_special_method(class_java_lang_invoke_MemberName, "allFlagsSet", boolean.class, int.class);
@@ -741,23 +741,23 @@ public class symbols {
 	/**
 	 * 将MemberName包装为MethodHandle
 	 * 
-	 * @param refKind      调用类型，实际上是字节码，从MethodHandleNativesConstants中查看，例如类的非静态成员方法是invokeVirtual。
+	 * @param ref_kind     调用类型，实际上是字节码，从MethodHandleNativesConstants中查看，例如类的非静态成员方法是invokeVirtual。
 	 * @param refc         调用者的所属类，即这个方法属于哪个类
 	 * @param method
 	 * @param callerLookup
 	 * @return
 	 */
-	public static MethodHandle direct_method(byte refKind, Class<?> refc, Object method, Lookup callerLookup) {
+	public static MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method, Lookup callerLookup) {
 		try {
-			return (MethodHandle) getDirectMethod.invoke(TRUSTED_LOOKUP, refKind, refc, method, callerLookup);
+			return (MethodHandle) getDirectMethod.invoke(TRUSTED_LOOKUP, ref_kind, refc, method, callerLookup);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
 		return (MethodHandle) UNREACHABLE_REFERENCE;
 	}
 
-	public static MethodHandle direct_method(byte refKind, Class<?> refc, Object method) {
-		return direct_method(refKind, refc, method, TRUSTED_LOOKUP);
+	public static MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method) {
+		return direct_method(ref_kind, refc, method, TRUSTED_LOOKUP);
 	}
 
 	private static MethodHandle getReferenceKind;
@@ -791,15 +791,15 @@ public class symbols {
 	 * 在一个对象上进行初始化
 	 * 
 	 * @param member_name
-	 * @param defClass
+	 * @param def_class
 	 * @param name
 	 * @param type        Class<?>或MethodType
 	 * @param flags
 	 * @return
 	 */
-	public static final Object init(Object member_name, Class<?> defClass, String name, Object type, int flags) {
+	public static final Object init(Object member_name, Class<?> def_class, String name, Object type, int flags) {
 		try {
-			return (Object) init.invoke(member_name, defClass, name, flags);
+			return (Object) init.invoke(member_name, def_class, name, flags);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
@@ -809,26 +809,26 @@ public class symbols {
 	/**
 	 * 构建一个字段或方法的名称
 	 * 
-	 * @param defClass
+	 * @param def_class
 	 * @param name
 	 * @param type
 	 * @param flags
 	 * @return
 	 */
-	public static final Object allocate(Class<?> defClass, String name, Object type, int flags) {
-		return init(unsafe.allocate(class_java_lang_invoke_MemberName), defClass, name, type, flags);
+	public static final Object allocate(Class<?> def_class, String name, Object type, int flags) {
+		return init(unsafe.allocate(class_java_lang_invoke_MemberName), def_class, name, type, flags);
 	}
 
 	/**
 	 * 构造函数类型
 	 * 
-	 * @param targetClass
+	 * @param target_class
 	 * @param arg_types
 	 * @return
 	 */
-	public static String constructor_description(Class<?> targetClass, Class<?>[] arg_types) {
+	public static String constructor_description(Class<?> target_class, Class<?>[] arg_types) {
 		StringBuilder result = new StringBuilder();
-		result.append(targetClass.getName()).append("(");
+		result.append(target_class.getName()).append("(");
 		for (int i = 0; i < arg_types.length; ++i) {
 			result.append(arg_types[i].getName());
 			if (i != arg_types.length)
@@ -836,5 +836,111 @@ public class symbols {
 		}
 		result.append(")");
 		return result.toString();
+	}
+
+	/**
+	 * 方法包装对象，可以修改方法调用相关参数和标志。
+	 */
+	public static class callable {
+		private int flags;
+		private Class<?> target_class;
+		private MethodHandle warpped_method;
+		private Object member_name;
+		private byte invoke_bytecode;
+
+		private callable(Class<?> target_class, String target_method_name, Class<?>... arg_types) {
+			this.target_class = target_class;
+			MethodHandle m = null;
+			if (target_method_name.equals(symbols.CONSTRUCTOR_NAME))
+				m = constructor(target_class, arg_types);// 目标函数是构造函数则将构造函数转换为可当作方法调用的构造函数
+			else
+				m = symbols.find_method(target_class, target_method_name, arg_types);
+			this.member_name = symbols.member_name(m);
+			this.flags = symbols.member_name_flags(member_name);
+			this.invoke_bytecode = symbols.reference_kind(member_name);
+		}
+
+		/**
+		 * 获取一个可以被当作实例方法调用的构造函数。
+		 * 
+		 * @param target_class
+		 * @param arg_types
+		 * @return
+		 */
+		public static MethodHandle constructor(Class<?> target_class, Class<?>... arg_types) {
+			Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
+			int flags = symbols.member_name_flags(member_name);
+			flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
+			flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
+			symbols.set_member_name_flags(member_name, flags);
+			return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
+		}
+
+		/**
+		 * 从一个可调用对象绑定字节码。
+		 * 
+		 * @param cls
+		 * @param target_method_name
+		 * @param arg_types
+		 * @return
+		 */
+		public static final callable bind(Class<?> cls, String target_method_name, Class<?>... arg_types) {
+			return new callable(cls, target_method_name, arg_types);
+		}
+
+		/**
+		 * 设置标志
+		 * 
+		 * @param flag
+		 * @param mark
+		 * @return
+		 */
+		public callable set_flag(int flag, boolean mark) {
+			this.flags = symbols.set_flag(this.flags, flag, mark);
+			return this;
+		}
+
+		/**
+		 * 目标方法是否是CallerSensitive的，由于检查是在C++层的constMethod，因此为MethodHandle设置该标志无效。
+		 * 
+		 * @param mark
+		 * @return
+		 */
+		public boolean is_caller_sensitive(boolean mark) {
+			return symbols.is_caller_sensitive(member_name);
+		}
+
+		/**
+		 * 设置标志并包装symbols为MethodHandle
+		 */
+		public callable warp() {
+			symbols.set_member_name_flags(member_name, flags);
+			warpped_method = symbols.direct_method(invoke_bytecode, target_class, member_name);
+			return this;
+		}
+
+		/**
+		 * 返回包装好的可调用对象的MethodHandle
+		 * 
+		 * @return
+		 */
+		public MethodHandle unwarp() {
+			return warpped_method;
+		}
+
+		/**
+		 * 调用该可调用对象
+		 * 
+		 * @param args
+		 * @return
+		 */
+		public Object call(Object... args) {
+			try {
+				return warpped_method.invokeWithArguments(args);
+			} catch (Throwable ex) {
+				ex.printStackTrace();
+			}
+			return symbols.UNREACHABLE_REFERENCE;
+		}
 	}
 }

@@ -3,11 +3,11 @@ package jvmsp;
 /**
  * 在父类中使用子类Class<?>对象
  * 
- * @param <Derived>
+ * @param <_Derived>
  */
-public interface _crtp<Derived> {
+public interface _crtp<_Derived> {
 	@SuppressWarnings("unchecked")
-	public default Class<Derived> getDerivedClass() {
-		return (Class<Derived>) this.getClass();
+	public default Class<_Derived> derived_class() {
+		return (Class<_Derived>) this.getClass();
 	}
 }

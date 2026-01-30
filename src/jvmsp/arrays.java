@@ -41,6 +41,6 @@ public class arrays {
 	}
 
 	public static final Class<?> get_list_type(Type listField) {
-		return GenericTypes.first_generic_class(listField);
+		return reflection.first_generic_class(listField);
 	}
 }
