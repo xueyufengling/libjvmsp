@@ -371,13 +371,11 @@ public abstract class reflection {
 		return null;
 	}
 
-	@CallerSensitive
 	public static Class<?> find_class(String name, boolean initialize) {
 		Class<?> caller = caller_class();
 		return find_class(name, initialize, caller.getClassLoader(), caller);
 	}
 
-	@CallerSensitive
 	public static Class<?> find_class(String name) {
 		Class<?> caller = caller_class();
 		return find_class(name, true, caller.getClassLoader(), caller);
@@ -857,8 +855,8 @@ public abstract class reflection {
 	 * @param cls
 	 * @return
 	 */
-	public static Map<Class<? extends Annotation>, Annotation> cached_annotations(Class<?> cls) {
-		return (Map<Class<? extends Annotation>, Annotation>) AnnotationData_annotations.get(cls);
+	public static Map<Class<?>, ?> cached_annotations(Class<?> cls) {
+		return (Map<Class<?>, ?>) AnnotationData_annotations.get(cls);
 	}
 
 	/**
@@ -867,14 +865,14 @@ public abstract class reflection {
 	 * @param e
 	 * @return
 	 */
-	public static Map<Class<? extends Annotation>, Annotation> declared_annotations(AnnotatedElement ae) {
+	public static Map<Class<?>, ?> declared_annotations(AnnotatedElement ae) {
 		try {
 			if (ae instanceof Class cls)
-				return (Map<Class<? extends Annotation>, Annotation>) AnnotationData_declaredAnnotations.get(Class_annotationData.invokeExact(cls));
+				return (Map<Class<?>, ?>) AnnotationData_declaredAnnotations.get(Class_annotationData.invokeExact(cls));
 			else if (ae instanceof Field f)
-				return (Map<Class<? extends Annotation>, Annotation>) Field_declaredAnnotations.invokeExact(f);
+				return (Map<Class<?>, ?>) Field_declaredAnnotations.invokeExact(f);
 			else if (ae instanceof Executable e)
-				return (Map<Class<? extends Annotation>, Annotation>) Executable_declaredAnnotations.invokeExact(e);
+				return (Map<Class<?>, ?>) Executable_declaredAnnotations.invokeExact(e);
 		} catch (Throwable ex) {
 			ex.printStackTrace();
 		}
@@ -887,7 +885,7 @@ public abstract class reflection {
 	 * @param ae
 	 * @return
 	 */
-	public static Map<Class<? extends Annotation>, Annotation> actual_used_annotations(AnnotatedElement ae) {
+	public static Map<Class<?>, ?> runtime_annotations(AnnotatedElement ae) {
 		if (ae instanceof Class cls)
 			return cached_annotations(cls);
 		else
@@ -910,37 +908,75 @@ public abstract class reflection {
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
-	public static void cast(AnnotatedElement ae, Class<? extends Annotation> target_annotation_cls, Class<?> dest_annotation_cls, Annotation dest_annotation) {
-		// 判断一个AnnotatedElement是否有某个注解，实际是判断缓存的注解map是否存在指定注解Class<?>的key
-		Map<Class<? extends Annotation>, Annotation> annoMap = actual_used_annotations(ae);
-		Annotation mirror_annotation = annoMap.remove(target_annotation_cls);// 移除镜像注解的key
-		mirror.cast(mirror_annotation, dest_annotation);
-		annoMap.put((Class<? extends Annotation>) dest_annotation_cls, mirror_annotation);// 填入目标注解
-	}
+	@FunctionalInterface
+	public static interface annotation_replace_operation {
+		/**
+		 * 在转换之前需要进行的操作
+		 * 
+		 * @param ae
+		 */
+		public void operate(AnnotatedElement ae);
 
-	public static void cast(AnnotatedElement ae, Class<? extends Annotation> target_annotation_cls, Annotation dest_annotation) {
-		cast(ae, target_annotation_cls, dest_annotation.annotationType(), dest_annotation);
+		public static final annotation_replace_operation NONE = (ae) -> {
+		};
 	}
 
 	/**
+	 * 替换目标元素的注解
 	 * 如果目标注解的类型和实际获取的对象annotationType()类型不一致，那么需要手动传入目标注解类型。<br>
 	 * 
 	 * @param ae
-	 * @param target_annotation_cls
-	 * @param dest_annotation_cls
-	 * @param dest_annotation
+	 * @param target_annotation_cls 将要被替换的目标注解类型
+	 * @param new_annotation_cls    要替换的新注解类型，该类型可以不是Annotation而是普通类型
+	 * @param new_annotation
+	 * @param op                    替换完成后执行的操作
 	 */
-	@SuppressWarnings("unchecked")
-	public static void replace(AnnotatedElement ae, Class<? extends Annotation> target_annotation_cls, Class<?> dest_annotation_cls, Annotation dest_annotation) {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static void replace(AnnotatedElement ae, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, annotation_replace_operation op) {
 		// 判断一个AnnotatedElement是否有某个注解，实际是判断缓存的注解map是否存在指定注解Class<?>的key
-		Map<Class<? extends Annotation>, Annotation> annoMap = actual_used_annotations(ae);
-		annoMap.remove(target_annotation_cls);// 移除镜像注解的key
-		annoMap.put((Class<? extends Annotation>) dest_annotation_cls, dest_annotation);// 填入目标注解
+		Map anno_map = runtime_annotations(ae);
+		anno_map.remove(target_annotation_cls);// 移除镜像注解的key
+		anno_map.put(new_annotation_cls, new_annotation);// 填入目标注解
+		op.operate(ae);
 	}
 
-	public static void replace(AnnotatedElement ae, Class<? extends Annotation> target_annotation_cls, Annotation dest_annotation) {
-		replace(ae, target_annotation_cls, dest_annotation.annotationType(), dest_annotation);
+	public static void replace(AnnotatedElement ae, Class<?> target_annotation_cls, Annotation new_annotation, annotation_replace_operation op) {
+		replace(ae, target_annotation_cls, new_annotation.annotationType(), new_annotation, op);
+	}
+
+	/**
+	 * 强制替换注解，将任何类型的new_annotation都修改klass word强制cast到new_annotation_cls类型
+	 * 
+	 * @param ae
+	 * @param target_annotation_cls
+	 * @param new_annotation_cls
+	 * @param new_annotation
+	 * @param op
+	 */
+	public static void force_replace(AnnotatedElement ae, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, annotation_replace_operation op) {
+		replace(ae, target_annotation_cls, new_annotation_cls, jtype.cast(new_annotation, new_annotation_cls), op);
+	}
+
+	/**
+	 * 将类加载器loader所加载的类的所有目标注解替换成新注解
+	 * 
+	 * @param loader
+	 * @param target_annotation_cls
+	 * @param new_annotation_cls
+	 * @param new_annotation
+	 * @param is_system             目标注解是否是系统级注解，如果是，那么必须将包含注解的类设置为系统类
+	 * @param op
+	 */
+	public static void force_replace(ClassLoader loader, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, boolean is_system, annotation_replace_operation op) {
+		ArrayList<AnnotatedElement> annotated = jtype.scan_annotated_elements(loader, target_annotation_cls);
+		for (AnnotatedElement ae : annotated) {
+			// 如果是系统注解，那么包含该注解的类也必须是BootstrapLoader加载的类
+			if (is_system) {
+				Class<?> decl_class = reflection.declaring_class(ae);
+				class_loader.as_bootstrap(decl_class);
+			}
+			reflection.force_replace(ae, target_annotation_cls, new_annotation_cls, new_annotation, op);
+		}
 	}
 
 	/**

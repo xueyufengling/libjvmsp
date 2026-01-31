@@ -107,12 +107,12 @@ public class file_system {
 	}
 
 	public static String classpath(uri.resolver resolver) {
-		Class<?> caller = internal_access.caller_class();// 获取调用该方法的类
+		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
 		return classpath(caller, resolver);
 	}
 
 	public static String classpath() {
-		Class<?> caller = internal_access.caller_class();// 获取调用该方法的类
+		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
 		return classpath(caller, uri.resolver.DEFAULT);
 	}
 
@@ -284,7 +284,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_local(String package_name, boolean include_subpackage) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return class_names_local(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -293,7 +293,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_local(String package_name) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return class_names_local(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -449,7 +449,7 @@ public class file_system {
 	}
 
 	public static byte[] resource_bytes(String path) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return resource_bytes(caller, path);// 获取调用该方法的类
 	}
 
@@ -463,7 +463,7 @@ public class file_system {
 	}
 
 	public static InputStream resource_stream(String path) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return resource_stream(caller, path);// 获取调用该方法的类
 	}
 
@@ -607,7 +607,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_in_jar(String package_name, boolean include_subpackage) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return class_names_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -616,7 +616,7 @@ public class file_system {
 	}
 
 	public static List<String> class_names_in_jar(String package_name) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return class_names_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -643,7 +643,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> classes_in_jar(String package_name, boolean include_subpackage) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return classes_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -652,7 +652,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> classes_in_jar(String package_name) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return classes_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
@@ -674,7 +674,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class, boolean include_subpackage) {
-		Class<?> caller = internal_access.caller_class();
+		Class<?> caller = reflection.caller_class();
 		return subclasses_in_jar(caller, package_name, super_class, include_subpackage);// 获取调用该方法的类
 	}
 
@@ -683,7 +683,7 @@ public class file_system {
 	}
 
 	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class) {
-		return subclasses_in_jar(internal_access.caller_class(), package_name, super_class);// 获取调用该方法的类
+		return subclasses_in_jar(reflection.caller_class(), package_name, super_class);// 获取调用该方法的类
 	}
 
 	// -------------------------------------------------------- foreach Operations --------------------------------------------------------------------
@@ -1000,9 +1000,9 @@ public class file_system {
 
 	// ----------------------------------------------------------------- Class --------------------------------------------------------------------------
 	public static void filter_class(InputStream jar, jar_entry_operation._class op) {
-		filter_type(jar, KlassPath.CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+		filter_type(jar, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
 			String full_path = entry.getName();
-			op.operate(full_path.substring(0, full_path.length() - KlassPath.CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
+			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
@@ -1013,17 +1013,17 @@ public class file_system {
 
 	// ------------
 	public static void filter_class(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation._class op) {
-		filter_type(jar, start_path, include_subpackage, KlassPath.CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+		filter_type(jar, start_path, include_subpackage, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
 			String full_path = entry.getName();
-			op.operate(full_path.substring(0, full_path.length() - KlassPath.CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
+			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
 
 	public static void filter_class(String start_path, boolean include_subpackage, file_entry_operation._class op) {
-		filter_type(start_path, include_subpackage, KlassPath.CLASS_EXTENSION_NAME, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+		filter_type(start_path, include_subpackage, CLASS_EXTENSION_NAME, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
 			String relative_bin_path = relative_file_dir.replace(File.separatorChar, '.') + '.' + file_name;// 例如pkg.example.A.class
-			op.operate(relative_bin_path.substring(0, relative_bin_path.length() - KlassPath.CLASS_EXTENSION_NAME.length()), entry);
+			op.operate(relative_bin_path.substring(0, relative_bin_path.length() - CLASS_EXTENSION_NAME.length()), entry);
 			return true;
 		});
 	}

@@ -112,7 +112,7 @@ public class pointer {
 	}
 
 	public boolean is_void_ptr_type() {
-		return ptr_jtype == void_ptr_type || ptr_cxx_type.equals(cxx_stdtypes.pointer);
+		return ptr_jtype == void_ptr_type || ptr_cxx_type.equals(cxx_type.pointer);
 	}
 
 	/**
@@ -158,7 +158,7 @@ public class pointer {
 	}
 
 	public static final pointer at(int _32bit_addr) {
-		return new pointer(cxx_stdtypes.uint_ptr(_32bit_addr));
+		return new pointer(cxx_type.uint_ptr(_32bit_addr));
 	}
 
 	/**
@@ -183,23 +183,23 @@ public class pointer {
 	/**
 	 * 强制转换指针
 	 * 
-	 * @param destType
+	 * @param dest_type
 	 * @return
 	 */
-	public pointer cast(Class<?> destType) {
-		this.ptr_jtype = destType;
+	public pointer cast(Class<?> dest_type) {
+		this.ptr_jtype = dest_type;
 		this.ptr_cxx_type = null;
-		this.stride = jtype.sizeof(destType);
-		if (!jtype.is_primitive(destType)) {
+		this.stride = jtype.sizeof(dest_type);
+		if (!jtype.is_primitive(dest_type)) {
 			// 每次cast()的时候更新目标对象的类型
-			ptr_type_klass_word = markWord.get_klass_word(destType);
+			ptr_type_klass_word = jtype.get_klass_word(dest_type);
 		}
 		return this;
 	}
 
-	public pointer cast(cxx_type destType) {
+	public pointer cast(cxx_type dest_type) {
 		this.ptr_jtype = null;
-		this.ptr_cxx_type = destType;
+		this.ptr_cxx_type = dest_type;
 		return null;
 	}
 
@@ -299,7 +299,7 @@ public class pointer {
 		return pointer.at(ref.address_of_reference(), ref.ref_type);
 	}
 
-	public static final pointer address_of(cxx_object cxx_obj) {
+	public static final pointer address_of(cxx_type.object cxx_obj) {
 		return cxx_obj.ptr.copy();
 	}
 
@@ -343,7 +343,7 @@ public class pointer {
 		if (is_void_ptr_type())
 			throw new RuntimeException("Cannot dereference a void* pointer at " + this.toString());
 		else if (ptr_cxx_type != null)
-			return new cxx_object(this, ptr_cxx_type);
+			return ptr_cxx_type.new object(this);
 		else if (ptr_jtype == byte.class)
 			return unsafe.read_byte(null, addr);
 		else if (ptr_jtype == char.class)
@@ -362,7 +362,7 @@ public class pointer {
 			return unsafe.read_double(null, addr);
 		else {
 			Object deref_obj = dereference_object(addr);
-			markWord.set_klass_word(deref_obj, ptr_type_klass_word);
+			jtype.set_klass_word(deref_obj, ptr_type_klass_word);
 			return deref_obj;
 		}
 	}
@@ -395,14 +395,14 @@ public class pointer {
 		else if (ptr_jtype == double.class)
 			unsafe.write(null, addr, jtype.double_value(v));
 		else
-			unsafe.__memcpy(v, markWord.HEADER_BYTE_LENGTH, dereference(), markWord.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - markWord.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.__memcpy(v, jtype.HEADER_BYTE_LENGTH, dereference(), jtype.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - jtype.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return this;
 	}
 
 	public final void print_memory(long size) {
 		pointer indicator = this.copy().cast(byte.class);
 		for (int i = 0; i < size; ++i, indicator.inc()) {
-			System.err.print(String.format("%02x", cxx_stdtypes.uint_ptr((byte) indicator.dereference())) + " ");
+			System.err.print(String.format("%02x", cxx_type.uint_ptr((byte) indicator.dereference())) + " ");
 		}
 	}
 }

@@ -1,6 +1,9 @@
-package jvmsp;
+package jvmsp.internal;
 
 import java.lang.invoke.MethodHandle;
+
+import jvmsp.reflection;
+import jvmsp.symbols;
 
 /**
  * 修改反射安全限制等

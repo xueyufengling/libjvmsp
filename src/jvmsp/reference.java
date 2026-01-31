@@ -43,7 +43,7 @@ public class reference {
 			return unsafe.read_double(null, offset);
 		else {
 			Object deref_obj = pointer.dereference_object(address_of_reference());
-			markWord.set_klass_word(deref_obj, ref_type_klass_word);
+			jtype.set_klass_word(deref_obj, ref_type_klass_word);
 			return deref_obj;
 		}
 	}
@@ -74,7 +74,7 @@ public class reference {
 		this.ref_type = destType;
 		if (!jtype.is_primitive(destType)) {
 			// 每次cast()的时候更新目标对象的类型
-			ref_type_klass_word = markWord.get_klass_word(destType);
+			ref_type_klass_word = jtype.get_klass_word(destType);
 		}
 		return this;
 	}
@@ -131,7 +131,7 @@ public class reference {
 		else if (ref_type == double.class)
 			unsafe.write(ref_base, offset, jtype.double_value(v));
 		else
-			unsafe.__memcpy(v, markWord.HEADER_BYTE_LENGTH, ref_base, markWord.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - markWord.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.__memcpy(v, jtype.HEADER_BYTE_LENGTH, ref_base, jtype.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - jtype.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return this;
 	}
 }

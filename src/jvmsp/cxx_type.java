@@ -8,6 +8,133 @@ import java.util.Objects;
  * C++对象内存布局计算
  */
 public class cxx_type {
+
+	public static class field implements Cloneable {
+
+		/**
+		 * 克隆字段，当分析继承结构需要修改offset时使用
+		 */
+		@Override
+		public field clone() {
+			try {
+				return (field) super.clone();
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+
+		@Override
+		public String toString() {
+			return type.toString() + ' ' + name;
+		}
+
+		private String name;
+
+		/**
+		 * 字段偏移量，由cxx_type类计算
+		 */
+		long offset = 0;
+
+		/**
+		 * 该字段的类型
+		 */
+		private cxx_type type;
+
+		/**
+		 * 声明该字段的类
+		 */
+		cxx_type decl_type;
+
+		/**
+		 * 字段偏移量
+		 * 
+		 * @return
+		 */
+		public long offset() {
+			return offset;
+		}
+
+		/**
+		 * 字段名称
+		 * 
+		 * @return
+		 */
+		public String name() {
+			return name;
+		}
+
+		/**
+		 * 字段类型
+		 * 
+		 * @return
+		 */
+		public cxx_type type() {
+			return type;
+		}
+
+		/**
+		 * 该字段属于哪个类
+		 * 
+		 * @return
+		 */
+		public cxx_type decl_type() {
+			return decl_type;
+		}
+
+		private field(String name, cxx_type type) {
+			this.name = name;
+			this.type = type;
+		}
+
+		/**
+		 * 定义字段
+		 * 
+		 * @param name
+		 * @param type
+		 * @return
+		 */
+		public static final field define(String name, cxx_type type) {
+			return new field(name, type);
+		}
+
+		/**
+		 * 访问一个基本类型字段
+		 * 
+		 * @param native_addr
+		 * @return
+		 */
+		final Object access(long native_addr) {
+			long access_addr = native_addr + offset;
+			if (type == _char || type == int8_t)
+				return unsafe.read_byte(null, access_addr);
+			else if (type == unsigned_char || type == uint8_t)
+				return uint8_t(unsafe.read_byte(null, access_addr));
+			else if (type == _short || type == int16_t)
+				return unsafe.read_short(null, access_addr);
+			else if (type == unsigned_short || type == uint16_t)
+				return uint16_t(unsafe.read_short(null, access_addr));
+			else if (type == _int || type == int32_t)
+				return unsafe.read_int(null, access_addr);
+			else if (type == unsigned_int || type == uint32_t || type == bool)
+				return uint32_t(unsafe.read_int(null, access_addr));
+			else if (type == _long_long || type == int64_t || type == unsigned_long_long || type == uint64_t)// 很遗憾，Java没有比64位无符号整数还大的基本类型，因此不论有无符号均储存在Java的有符号long类型
+				return unsafe.read_long(null, access_addr);
+			else if (type == _float)
+				return unsafe.read_float(null, access_addr);
+			else if (type == _double)
+				return unsafe.read_double(null, access_addr);
+			else if (type == WORD || type == pointer || type == uintptr_t) {
+				if (cxx_type.sizeof(type) == 4)
+					return uint32_t(unsafe.read_int(null, access_addr));
+				else if (cxx_type.sizeof(type) == 8)
+					return unsafe.read_long(null, access_addr);
+			} else
+				return type.new object(access_addr);
+			return 0;
+		}
+	}
+
 	/**
 	 * 所有定义的类型
 	 */
@@ -54,7 +181,7 @@ public class cxx_type {
 	/**
 	 * 所有直接或间接基类的字段全部展开存放的数组
 	 */
-	private ArrayList<cxx_field> base_fields;
+	private ArrayList<field> base_fields;
 
 	/**
 	 * 派生类，即本类的对象顶，是本类第一个字段的偏移量
@@ -105,11 +232,11 @@ public class cxx_type {
 	 * @param current_offset 计算开始前的偏移量
 	 * @return 计算完成后的末尾偏移量
 	 */
-	private long resolve_base_fields(ArrayList<cxx_field> arr, long current_offset) {
+	private long resolve_base_fields(ArrayList<field> arr, long current_offset) {
 		for (int i = 0; i < base_types.length; ++i)// 基类字段放在最前方
 			current_offset = base_types[i].resolve_base_fields(arr, current_offset);
 		for (int i = 0; i < fields.size(); ++i) {
-			cxx_field current_field = fields.get(i).clone();
+			field current_field = fields.get(i).clone();
 			cxx_type current_field_type = current_field.type();
 			long as = Math.min(current_field_type.pragma_pack(), current_field_type.override_align_size(this));// 字段对齐数
 			if (current_offset % as != 0)
@@ -124,7 +251,7 @@ public class cxx_type {
 	/**
 	 * 本身的字段
 	 */
-	private ArrayList<cxx_field> fields;
+	private ArrayList<field> fields;
 
 	/**
 	 * 更新size的标记
@@ -200,7 +327,7 @@ public class cxx_type {
 	 * @param field
 	 * @return
 	 */
-	public cxx_field decl_field(cxx_field field) {
+	public field decl_field(field field) {
 		if (is_primitive() || field.type().equals(this))// 禁止给原生类型添加字段，或添加类本身作为字段
 			throw new RuntimeException("Cannot append field \"" + field + "\" to " + this + ". append fields to primitive types or append self as a field are not allowed.");
 		fields.add(field);
@@ -209,8 +336,8 @@ public class cxx_type {
 		return field;
 	}
 
-	public cxx_field decl_field(String name, cxx_type type) {
-		return decl_field(cxx_field.define(name, type));
+	public field decl_field(String name, cxx_type type) {
+		return decl_field(field.define(name, type));
 	}
 
 	/**
@@ -227,7 +354,7 @@ public class cxx_type {
 		} else {
 			long current_offset = derived_top;
 			for (int idx = 0; idx < fields.size(); ++idx) {
-				cxx_field f = fields.get(idx);
+				field f = fields.get(idx);
 				cxx_type f_type = f.type();// 字段f的类型
 				long as = Math.min(pragma_pack, f_type.align_size());// 字段对齐数
 				if (as > align_size)
@@ -282,7 +409,7 @@ public class cxx_type {
 	 * @param idx
 	 * @return
 	 */
-	public cxx_field declared_field_at(int idx) {
+	public field declared_field_at(int idx) {
 		return is_primitive() ? null : fields.get(idx);
 	}
 
@@ -292,7 +419,7 @@ public class cxx_type {
 	 * @param idx
 	 * @return
 	 */
-	public cxx_field field_at(int idx) {
+	public field field_at(int idx) {
 		if (is_primitive() || idx < 0)
 			return null;
 		int base_f_num = base_fields.size();
@@ -331,10 +458,10 @@ public class cxx_type {
 		return -1;
 	}
 
-	public cxx_field declared_field(String field_name) {
+	public field declared_field(String field_name) {
 		if (!is_primitive()) {
 			for (int idx = 0; idx < fields.size(); ++idx) {// 优先使用派生类的字段
-				cxx_field f = fields.get(idx);
+				field f = fields.get(idx);
 				if (f.name().equals(field_name))
 					return f;
 			}
@@ -348,15 +475,15 @@ public class cxx_type {
 	 * @param field_name
 	 * @return
 	 */
-	public cxx_field field(String field_name) {
+	public field field(String field_name) {
 		if (!is_primitive()) {
 			for (int idx = 0; idx < fields.size(); ++idx) {// 优先使用派生类的字段
-				cxx_field f = fields.get(idx);
+				field f = fields.get(idx);
 				if (f.name().equals(field_name))
 					return f;
 			}
 			for (int idx = 0; idx < base_fields.size(); ++idx) {
-				cxx_field f = base_fields.get(idx);
+				field f = base_fields.get(idx);
 				if (f.name().equals(field_name))// 派生类没有该字段则查找基类字段
 					return f;
 			}
@@ -402,9 +529,9 @@ public class cxx_type {
 		 * @param print_idx_as_from 显示打印字段从哪个索引开始
 		 * @param fields
 		 */
-		private static void print_fields_layout(long print_idx_as_from, ArrayList<cxx_field> fields, int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static void print_fields_layout(long print_idx_as_from, ArrayList<field> fields, int type_element_size_in_tab, int number_element_size_in_tab) {
 			for (int i = 0; i < fields.size(); ++i) {
-				cxx_field f = fields.get(i);
+				field f = fields.get(i);
 				System.out.println("│ " + layout_info_element("" + (print_idx_as_from + i), 1) + layout_info_element("in: " + f.decl_type.toString(), type_element_size_in_tab) + layout_info_element(f.toString(), type_element_size_in_tab) + layout_info_element("offset: " + f.offset + ",", number_element_size_in_tab) + layout_info_element("size: " + sizeof(f.type()), number_element_size_in_tab) + "│");
 			}
 		}
@@ -472,5 +599,132 @@ public class cxx_type {
 
 	public void print_mem_layout() {
 		mem_layout_printer.print_mem_layout(this);
+	}
+
+	public static final cxx_type _char = cxx_type.define_primitive("char", 1);
+	public static final cxx_type unsigned_char = cxx_type.define_primitive("unsigned char", cxx_type.sizeof(_char));
+	public static final cxx_type _short = cxx_type.define_primitive("short", 2);
+	public static final cxx_type unsigned_short = cxx_type.define_primitive("unsigned short", cxx_type.sizeof(_short));
+	public static final cxx_type _int = cxx_type.define_primitive("int", 4);
+	public static final cxx_type unsigned_int = cxx_type.define_primitive("unsigned int", cxx_type.sizeof(_int));
+	public static final cxx_type bool = cxx_type.define_primitive("bool", cxx_type.sizeof(_int));
+	public static final cxx_type _long_long = cxx_type.define_primitive("long long", 8);
+	public static final cxx_type unsigned_long_long = cxx_type.define_primitive("unsigned long long", cxx_type.sizeof(_long_long));
+	public static final cxx_type _float = cxx_type.define_primitive("float", cxx_type.sizeof(_int));
+	public static final cxx_type _double = cxx_type.define_primitive("double", cxx_type.sizeof(_long_long));
+	public static final cxx_type _void = cxx_type.define_primitive("void", 0);
+
+	/**
+	 * 无符号机器数据字
+	 */
+	public static final cxx_type WORD;
+
+	static {
+		if (virtual_machine.ON_64_BIT_JVM)
+			WORD = cxx_type.define_primitive("WORD", 8);
+		else
+			WORD = cxx_type.define_primitive("WORD", 4);
+	}
+
+	public static final cxx_type pointer = cxx_type.define_primitive("void*", cxx_type.sizeof(WORD));
+
+	public static final cxx_type pointer(String type) {
+		return cxx_type.define_primitive(type + '*', cxx_type.sizeof(WORD));
+	}
+
+	public static final cxx_type pointer(cxx_type type) {
+		return cxx_type.define_primitive(type.name() + '*', cxx_type.sizeof(WORD));
+	}
+
+	public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", cxx_type.sizeof(pointer));
+
+	public static final cxx_type uintptr_t(String type) {
+		return cxx_type.define_primitive(type + '*', cxx_type.sizeof(WORD));
+	}
+
+	public static final cxx_type uintptr_t(cxx_type type) {
+		return cxx_type.define_primitive(type.name() + '*', cxx_type.sizeof(WORD));
+	}
+
+	public static final cxx_type int8_t = cxx_type.define_primitive("int8_t", 1);
+	public static final cxx_type uint8_t = cxx_type.define_primitive("uint8_t", cxx_type.sizeof(int8_t));
+	public static final cxx_type int16_t = cxx_type.define_primitive("int16_t", 2);
+	public static final cxx_type uint16_t = cxx_type.define_primitive("uint16_t", cxx_type.sizeof(int16_t));
+	public static final cxx_type int32_t = cxx_type.define_primitive("int32_t", 4);
+	public static final cxx_type uint32_t = cxx_type.define_primitive("uint32_t", cxx_type.sizeof(int32_t));
+	public static final cxx_type int64_t = cxx_type.define_primitive("int64_t", 8);
+	public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", cxx_type.sizeof(int64_t));
+
+	/**
+	 * 用于将signed int类型储存的unsigned int值转换为unsigned long值。<br>
+	 * 用法：{@code uint64_t addr = (int32_t) & UINT32_T_MASK;}
+	 */
+	public static final long UINT32_T_MASK = 0xFFFFFFFFL;
+
+	public static final long uint_ptr(int oop_addr) {
+		return oop_addr & UINT32_T_MASK;
+	}
+
+	public static final long UINT16_T_MASK = 0xFFFFL;
+
+	public static final long uint_ptr(short s) {
+		return s & UINT16_T_MASK;
+	}
+
+	public static final long UINT8_T_MASK = 0xFFL;
+
+	public static final long uint_ptr(byte b) {
+		return b & UINT8_T_MASK;
+	}
+
+	public static final long uint_ptr(char c) {
+		return c & UINT8_T_MASK;
+	}
+
+	public static final int UINT8_T_MASK_I = 0xFF;
+
+	public static final int uint8_t(byte b) {
+		return b & UINT8_T_MASK_I;
+	}
+
+	public static final int uint8_t(char c) {
+		return c & UINT8_T_MASK_I;
+	}
+
+	public static final int UINT16_T_MASK_I = 0xFFFF;
+
+	public static final int uint16_t(short s) {
+		return s & UINT16_T_MASK_I;
+	}
+
+	public static final long uint32_t(int i) {
+		return i & UINT32_T_MASK;
+	}
+
+	/**
+	 * C++对象操作
+	 */
+	public class object {
+		final pointer ptr;
+
+		object(pointer ptr) {
+			this.ptr = ptr.copy().cast(cxx_type.this);
+		}
+
+		object(long addr) {
+			this.ptr = pointer.at(addr, getClass());
+		}
+
+		public final Object access(String field_name) {
+			return cxx_type.this.field(field_name).access(ptr.addr);
+		}
+
+		public final Object access(field f) {
+			return f.access(ptr.addr);
+		}
+	}
+
+	public static class jtypes {
+		public static final cxx_type oop = define_primitive("oop", sizeof(unsigned_int));
 	}
 }

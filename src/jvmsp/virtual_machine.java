@@ -164,7 +164,7 @@ public class virtual_machine {
 	public static void dump_heap(String fileName, boolean live) {
 		try {
 			instance_HotSpotDiagnosticMXBean.dumpHeap(fileName, live);
-		} catch (Exception ex) {
+		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
 	}
@@ -229,11 +229,11 @@ public class virtual_machine {
 	static {
 		instance_RuntimeMXBean = ManagementFactory.getRuntimeMXBean();
 		try {
-			instance_VMManagement = ObjectManipulator.access(instance_RuntimeMXBean, "jvm");// 获取JVM管理类
+			instance_VMManagement = reflection.read(instance_RuntimeMXBean, "jvm");// 获取JVM管理类
 			class_VMManagement = instance_VMManagement.getClass();
 			VMManagementImpl_getProcessId = symbols.find_special_method(class_VMManagement, class_VMManagement, "getProcessId", int.class);// 获取进程ID的native方法
 			// 获取系统属性引用
-			instance_Properties = (Properties) ObjectManipulator.access(System.class, "props");
+			instance_Properties = (Properties) reflection.read(System.class, "props");
 			// 获取所有系统ClassLoaders
 			class_ClassLoaders = Class.forName("jdk.internal.loader.ClassLoaders");
 			// 虚拟机参数Flag类及其成员方法
@@ -257,7 +257,7 @@ public class virtual_machine {
 	 */
 	public static Object builtin_class_loaders(String class_loader_name) {
 		try {
-			return ObjectManipulator.access(class_ClassLoaders, class_loader_name);
+			return reflection.read(class_ClassLoaders, class_loader_name);
 		} catch (SecurityException | IllegalArgumentException ex) {
 			System.err.println("Class loader name can only be BOOT_LOADER | PLATFORM_LOADER | APP_LOADER");
 		}
@@ -268,9 +268,9 @@ public class virtual_machine {
 	public static ArrayList<URL> builtin_class_loader_classpath(String class_loader_name) {
 		try {
 			Object class_loader = builtin_class_loaders(class_loader_name);
-			Object url_classpath = ObjectManipulator.access(class_loader, "ucp");// jdk.internal.loader.URLClassPath
+			Object url_classpath = reflection.read(class_loader, "ucp");// jdk.internal.loader.URLClassPath
 			if (url_classpath != null)// BOOT_LOADER的ucp为null
-				return (ArrayList<URL>) ObjectManipulator.access(url_classpath, "path");
+				return (ArrayList<URL>) reflection.read(url_classpath, "path");
 		} catch (SecurityException | IllegalArgumentException ex) {
 			System.err.println("Cannot get class loader classpath");
 		}
@@ -349,7 +349,7 @@ public class virtual_machine {
 			ex.printStackTrace();
 		}
 		class_HotSpotVirtualMachine = cls;
-		ObjectManipulator.setBoolean(class_HotSpotVirtualMachine, "ALLOW_ATTACH_SELF", true);// 设置instrument可以从程序attach，不需要在启动JVM时传入参数jdk.attach.allowAttachSelf=true
+		unsafe.write(class_HotSpotVirtualMachine, "ALLOW_ATTACH_SELF", true);// 设置instrument可以从程序attach，不需要在启动JVM时传入参数jdk.attach.allowAttachSelf=true
 	}
 
 	/**
@@ -430,6 +430,6 @@ public class virtual_machine {
 				_oop_has_klass_gap = false;
 			}
 		}
-		_oop_base_offset_in_bytes = markWord.HEADER_BYTE_LENGTH;
+		_oop_base_offset_in_bytes = jtype.HEADER_BYTE_LENGTH;
 	}
 }

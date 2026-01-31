@@ -13,6 +13,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 public class bytecode {
+	public interface method_operator {
+		public void modify(MethodInfo method_info, MethodVisitor method_visitor);
+	}
+
 	protected byte[] original_bytecode;
 	protected ClassWriter class_writer;
 	protected ClassReader class_reader;
@@ -20,7 +24,7 @@ public class bytecode {
 	protected ArrayList<String> fileds_to_be_removed;
 	protected ArrayList<FieldInfo> fileds_to_be_added;
 	protected ArrayList<MethodInfo> methods_to_be_removed;
-	protected HashMap<MethodInfo, MethodOperator> methods_to_be_modified;
+	protected HashMap<MethodInfo, method_operator> methods_to_be_modified;
 
 	protected bytecode(byte[] bytecode) {
 		original_bytecode = bytecode;
@@ -49,7 +53,7 @@ public class bytecode {
 		return this;
 	}
 
-	public bytecode modifyMethod(String method_declaration, MethodOperator modifier) {
+	public bytecode modifyMethod(String method_declaration, method_operator modifier) {
 		methods_to_be_modified.put(MethodInfo.from(method_declaration), modifier);
 		return this;
 	}
@@ -66,7 +70,7 @@ public class bytecode {
 			@Override
 			public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 				MethodVisitor mv = null;
-				for (Entry<MethodInfo, MethodOperator> entry : methods_to_be_modified.entrySet()) {
+				for (Entry<MethodInfo, method_operator> entry : methods_to_be_modified.entrySet()) {
 					MethodInfo info = entry.getKey();
 					if (info.getMethodName() == name && info.getMethodDescriptor() == desc) {
 						mv = cv.visitMethod(access, name, desc, signature, exceptions);
@@ -103,7 +107,6 @@ public class bytecode {
 	 */
 
 	/**
-	 * 
 	 * @param type_name
 	 * @return
 	 */

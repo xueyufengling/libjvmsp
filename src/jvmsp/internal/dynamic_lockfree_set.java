@@ -1,11 +1,11 @@
-package jvmsp;
+package jvmsp.internal;
 
 import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class DynamicConcurrentArrayList<T> {
+public class dynamic_lockfree_set<T> {
 	/**
 	 * 未处理
 	 */
@@ -15,7 +15,7 @@ public class DynamicConcurrentArrayList<T> {
 	 */
 	private CopyOnWriteArrayList<T> processed = new CopyOnWriteArrayList<>();
 
-	public void forEach(Consumer<T> op, BiConsumer<T, Throwable> ex_op) throws Throwable {
+	public void foreach(Consumer<T> op, BiConsumer<T, Throwable> ex_op) throws Throwable {
 		int last_unprocessed_count = unprocessed.size();
 		Throwable last_ex = null;
 		while (!unprocessed.isEmpty()) {
@@ -52,8 +52,8 @@ public class DynamicConcurrentArrayList<T> {
 	};
 
 	@SuppressWarnings("unchecked")
-	public void forEach(Consumer<T> op) throws Throwable {
-		forEach(op, (BiConsumer<T, Throwable>) IGNORE_RUNTIME_EXCEPTION);
+	public void foreach(Consumer<T> op) throws Throwable {
+		foreach(op, (BiConsumer<T, Throwable>) IGNORE_RUNTIME_EXCEPTION);
 	}
 
 	public void add(T e) {
