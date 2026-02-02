@@ -261,7 +261,7 @@ public final class unsafe {
 			if (OOP_SIZE == 4) {
 				int addr = (int) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset);// 地址是个32位无符号整数，不能直接强转成有符号的long整数。
 				if (virtual_machine.ON_64_BIT_JVM)// 64位的JVM上，对象地址却只有4字节，就说明需要向左位移来得到真实地址。
-					return jtype.decode_oop(addr);
+					return java_type.decode_oop(addr);
 				else
 					return cxx_type.uint_ptr(addr);
 			} else
@@ -276,7 +276,7 @@ public final class unsafe {
 		try {
 			if (OOP_SIZE == 4) {
 				if (virtual_machine.ON_64_BIT_JVM)
-					putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, jtype.encode_oop(addr));// 向右位移并丢弃高32位
+					putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, java_type.encode_oop(addr));// 向右位移并丢弃高32位
 				else
 					putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, addr);
 			} else

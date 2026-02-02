@@ -1,19 +1,24 @@
 package jvmsp.internal;
 
 import java.util.Collection;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class dynamic_lockfree_set<T> {
+/**
+ * 当遍历时如果写入，则也会遍历新写入的元素
+ * 
+ * @param <T>
+ */
+public class iterate_on_write_list<T> {
 	/**
 	 * 未处理
 	 */
-	private CopyOnWriteArrayList<T> unprocessed = new CopyOnWriteArrayList<>();
+	private ConcurrentLinkedDeque<T> unprocessed = new ConcurrentLinkedDeque<>();
 	/**
 	 * 已处理列表
 	 */
-	private CopyOnWriteArrayList<T> processed = new CopyOnWriteArrayList<>();
+	private ConcurrentLinkedDeque<T> processed = new ConcurrentLinkedDeque<>();
 
 	public void foreach(Consumer<T> op, BiConsumer<T, Throwable> ex_op) throws Throwable {
 		int last_unprocessed_count = unprocessed.size();
@@ -38,7 +43,7 @@ public class dynamic_lockfree_set<T> {
 			} // 重新迭代时新加入的元素已经同步到unprocessed
 			unprocessed.removeAll(processed);
 		}
-		CopyOnWriteArrayList<T> tmp = processed;
+		ConcurrentLinkedDeque<T> tmp = processed;
 		processed = unprocessed;
 		unprocessed = tmp;
 	}
@@ -47,7 +52,7 @@ public class dynamic_lockfree_set<T> {
 	};
 
 	public static final BiConsumer<Object, Throwable> PRINT_RUNTIME_EXCEPTION = (Object e, Throwable ex) -> {
-		System.err.println("Iterating element " + e + " throws RuntimeException");
+		System.err.println("iterating element " + e + " throws RuntimeException");
 		ex.printStackTrace();
 	};
 

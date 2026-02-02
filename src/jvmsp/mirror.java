@@ -9,7 +9,7 @@ import java.lang.reflect.AnnotatedElement;
  * 
  * @param <_Mirror> 镜像类
  */
-public interface mirror<_Mirror> extends jtype._crtp<_Mirror> {
+public interface mirror<_Mirror> extends java_type._crtp<_Mirror> {
 	/**
 	 * 目标类
 	 * 
@@ -31,7 +31,7 @@ public interface mirror<_Mirror> extends jtype._crtp<_Mirror> {
 	 */
 	@SuppressWarnings("unchecked")
 	public default <_T> _T reflect() {
-		return (_T) jtype.cast(this, reflect_class());
+		return (_T) java_type.cast(this, reflect_class());
 	}
 
 	/**
@@ -41,7 +41,7 @@ public interface mirror<_Mirror> extends jtype._crtp<_Mirror> {
 	 */
 	@SuppressWarnings("unchecked")
 	public default _Mirror unreflect() {
-		return (_Mirror) jtype.cast(this, unreflect_class());
+		return (_Mirror) java_type.cast(this, unreflect_class());
 	}
 
 	/**

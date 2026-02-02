@@ -16,7 +16,7 @@ import java.util.HashMap;
 /**
  * Java类型所占字节数
  */
-public abstract class jtype {
+public abstract class java_type {
 	/**
 	 * 在32位JVM或64位JVM中UseCompressedOops开启的情况下，对象引用占4字节
 	 */
@@ -35,6 +35,20 @@ public abstract class jtype {
 	 */
 	public static final boolean is_primitive(Class<?> type) {
 		return type == void.class || type == byte.class || type == char.class || type == boolean.class || type == short.class || type == int.class || type == float.class || type == long.class || type == double.class;
+	}
+
+	/**
+	 * 是否是基本类型的Boxing Type
+	 * 
+	 * @param type
+	 * @return
+	 */
+	public static final boolean is_primitive_boxing(Class<?> type) {
+		return type == Integer.class || type == Long.class || type == Boolean.class || type == Double.class || type == Float.class || type == Byte.class || type == Short.class || type == Character.class;
+	}
+
+	public static final boolean is_primitive_boxing(Object obj) {
+		return is_primitive_boxing(obj.getClass());
 	}
 
 	/**
@@ -190,7 +204,7 @@ public abstract class jtype {
 	public static final <T> T copy(T jobject) {
 		Class<T> clazz = (Class<T>) jobject.getClass();
 		T o = unsafe.allocate(clazz);
-		unsafe.__memcpy(jobject, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, jtype.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+		unsafe.__memcpy(jobject, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return o;
 	}
 
@@ -612,7 +626,7 @@ public abstract class jtype {
 
 	@SuppressWarnings("unchecked")
 	public static final <T> T undefined(long cast_type_klass_word) {
-		return (T) jtype.cast(new Object(), cast_type_klass_word);
+		return (T) java_type.cast(new Object(), cast_type_klass_word);
 	}
 
 	/**
@@ -624,17 +638,17 @@ public abstract class jtype {
 	 */
 	@SuppressWarnings("unchecked")
 	public static final <T> T undefined(T dest_type_obj) {
-		return (T) jtype.cast(new Object(), dest_type_obj);
+		return (T) java_type.cast(new Object(), dest_type_obj);
 	}
 
 	@SuppressWarnings("unchecked")
 	public static final <T> T undefined(Object obj, Class<?> cast_type) {
-		return (T) jtype.cast(new Object(), cast_type);
+		return (T) java_type.cast(new Object(), cast_type);
 	}
 
 	@SuppressWarnings("unchecked")
 	public static final <T> T undefined(Object obj, String cast_type) {
-		return (T) jtype.cast(new Object(), cast_type);
+		return (T) java_type.cast(new Object(), cast_type);
 	}
 
 	/**

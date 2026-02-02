@@ -67,7 +67,7 @@ public class pointer {
 	 * 仅拷贝构造指针使用！
 	 * 
 	 * @param addr
-	 * @param jtype
+	 * @param java_type
 	 * @param stride
 	 * @param ptr_type_klass_word
 	 */
@@ -189,10 +189,10 @@ public class pointer {
 	public pointer cast(Class<?> dest_type) {
 		this.ptr_jtype = dest_type;
 		this.ptr_cxx_type = null;
-		this.stride = jtype.sizeof(dest_type);
-		if (!jtype.is_primitive(dest_type)) {
+		this.stride = java_type.sizeof(dest_type);
+		if (!java_type.is_primitive(dest_type)) {
 			// 每次cast()的时候更新目标对象的类型
-			ptr_type_klass_word = jtype.get_klass_word(dest_type);
+			ptr_type_klass_word = java_type.get_klass_word(dest_type);
 		}
 		return this;
 	}
@@ -362,7 +362,7 @@ public class pointer {
 			return unsafe.read_double(null, addr);
 		else {
 			Object deref_obj = dereference_object(addr);
-			jtype.set_klass_word(deref_obj, ptr_type_klass_word);
+			java_type.set_klass_word(deref_obj, ptr_type_klass_word);
 			return deref_obj;
 		}
 	}
@@ -379,23 +379,23 @@ public class pointer {
 			throw new RuntimeException("Cannot dereference a void* pointer at " + this.toString());
 
 		else if (ptr_jtype == byte.class)
-			unsafe.write(null, addr, jtype.byte_value(v));
+			unsafe.write(null, addr, java_type.byte_value(v));
 		else if (ptr_jtype == char.class)
-			unsafe.write(null, addr, jtype.char_value(v));
+			unsafe.write(null, addr, java_type.char_value(v));
 		else if (ptr_jtype == boolean.class)
-			unsafe.write(null, addr, jtype.boolean_value(v));
+			unsafe.write(null, addr, java_type.boolean_value(v));
 		else if (ptr_jtype == short.class)
-			unsafe.write(null, addr, jtype.short_value(v));
+			unsafe.write(null, addr, java_type.short_value(v));
 		else if (ptr_jtype == int.class)
-			unsafe.write(null, addr, jtype.int_value(v));
+			unsafe.write(null, addr, java_type.int_value(v));
 		else if (ptr_jtype == float.class)
-			unsafe.write(null, addr, jtype.float_value(v));
+			unsafe.write(null, addr, java_type.float_value(v));
 		else if (ptr_jtype == long.class)
-			unsafe.write(null, addr, jtype.long_value(v));
+			unsafe.write(null, addr, java_type.long_value(v));
 		else if (ptr_jtype == double.class)
-			unsafe.write(null, addr, jtype.double_value(v));
+			unsafe.write(null, addr, java_type.double_value(v));
 		else
-			unsafe.__memcpy(v, jtype.HEADER_BYTE_LENGTH, dereference(), jtype.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - jtype.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.__memcpy(v, java_type.HEADER_BYTE_LENGTH, dereference(), java_type.HEADER_BYTE_LENGTH, java_type.sizeof_object(v.getClass()) - java_type.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return this;
 	}
 

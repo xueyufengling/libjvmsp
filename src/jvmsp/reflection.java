@@ -25,6 +25,12 @@ import java.util.Set;
  * 反射工具，大部分功能可以直接使用Manipulator调用
  */
 public abstract class reflection {
+	public static final StackWalker stack_walker;
+
+	static {
+		stack_walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);// 最常用，最先初始化
+	}
+
 	private static Class<?> class_jdk_internal_reflect_Reflection = null;
 
 	/**
@@ -954,7 +960,7 @@ public abstract class reflection {
 	 * @param op
 	 */
 	public static void force_replace(AnnotatedElement ae, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, annotation_replace_operation op) {
-		replace(ae, target_annotation_cls, new_annotation_cls, jtype.cast(new_annotation, new_annotation_cls), op);
+		replace(ae, target_annotation_cls, new_annotation_cls, java_type.cast(new_annotation, new_annotation_cls), op);
 	}
 
 	/**
@@ -968,7 +974,7 @@ public abstract class reflection {
 	 * @param op
 	 */
 	public static void force_replace(ClassLoader loader, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, boolean is_system, annotation_replace_operation op) {
-		ArrayList<AnnotatedElement> annotated = jtype.scan_annotated_elements(loader, target_annotation_cls);
+		ArrayList<AnnotatedElement> annotated = java_type.scan_annotated_elements(loader, target_annotation_cls);
 		for (AnnotatedElement ae : annotated) {
 			// 如果是系统注解，那么包含该注解的类也必须是BootstrapLoader加载的类
 			if (is_system) {
@@ -1236,12 +1242,6 @@ public abstract class reflection {
 	 */
 	public enum unwind_option {
 		SKIP_COUNT_BY_FRAME, SKIP_COUNT_BY_CLASS
-	}
-
-	public static final StackWalker stack_walker;
-
-	static {
-		stack_walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);// 最常用，最先初始化
 	}
 
 	/**

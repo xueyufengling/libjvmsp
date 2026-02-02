@@ -43,7 +43,7 @@ public class reference {
 			return unsafe.read_double(null, offset);
 		else {
 			Object deref_obj = pointer.dereference_object(address_of_reference());
-			jtype.set_klass_word(deref_obj, ref_type_klass_word);
+			java_type.set_klass_word(deref_obj, ref_type_klass_word);
 			return deref_obj;
 		}
 	}
@@ -72,9 +72,9 @@ public class reference {
 	 */
 	public reference cast(Class<?> destType) {
 		this.ref_type = destType;
-		if (!jtype.is_primitive(destType)) {
+		if (!java_type.is_primitive(destType)) {
 			// 每次cast()的时候更新目标对象的类型
-			ref_type_klass_word = jtype.get_klass_word(destType);
+			ref_type_klass_word = java_type.get_klass_word(destType);
 		}
 		return this;
 	}
@@ -115,23 +115,23 @@ public class reference {
 	 */
 	public reference assign(Object v) {
 		if (ref_type == byte.class)
-			unsafe.write(ref_base, offset, jtype.byte_value(v));
+			unsafe.write(ref_base, offset, java_type.byte_value(v));
 		else if (ref_type == char.class)
-			unsafe.write(ref_base, offset, jtype.char_value(v));
+			unsafe.write(ref_base, offset, java_type.char_value(v));
 		else if (ref_type == boolean.class)
-			unsafe.write(ref_base, offset, jtype.boolean_value(v));
+			unsafe.write(ref_base, offset, java_type.boolean_value(v));
 		else if (ref_type == short.class)
-			unsafe.write(ref_base, offset, jtype.short_value(v));
+			unsafe.write(ref_base, offset, java_type.short_value(v));
 		else if (ref_type == int.class)
-			unsafe.write(ref_base, offset, jtype.int_value(v));
+			unsafe.write(ref_base, offset, java_type.int_value(v));
 		else if (ref_type == float.class)
-			unsafe.write(ref_base, offset, jtype.float_value(v));
+			unsafe.write(ref_base, offset, java_type.float_value(v));
 		else if (ref_type == long.class)
-			unsafe.write(ref_base, offset, jtype.long_value(v));
+			unsafe.write(ref_base, offset, java_type.long_value(v));
 		else if (ref_type == double.class)
-			unsafe.write(ref_base, offset, jtype.double_value(v));
+			unsafe.write(ref_base, offset, java_type.double_value(v));
 		else
-			unsafe.__memcpy(v, jtype.HEADER_BYTE_LENGTH, ref_base, jtype.HEADER_BYTE_LENGTH, jtype.sizeof_object(v.getClass()) - jtype.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.__memcpy(v, java_type.HEADER_BYTE_LENGTH, ref_base, java_type.HEADER_BYTE_LENGTH, java_type.sizeof_object(v.getClass()) - java_type.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 		return this;
 	}
 }

@@ -288,6 +288,15 @@ public class virtual_machine {
 	}
 
 	/**
+	 * 获取运行时的Java版本号
+	 * 
+	 * @return
+	 */
+	public static String java_version() {
+		return get_property("java.runtime.version");
+	}
+
+	/**
 	 * 无视权限设置系统属性
 	 * 
 	 * @param key
@@ -418,7 +427,12 @@ public class virtual_machine {
 	public static final boolean _oop_has_klass_gap;
 
 	static {
-		if (get_bool_option("UseCompactObjectHeaders")) {
+		boolean UseCompactObjectHeaders = false;
+		try {
+			UseCompactObjectHeaders = get_bool_option("UseCompactObjectHeaders");
+		} catch (Exception ex) {
+		}
+		if (UseCompactObjectHeaders) {
 			_klass_mode = object_layout.Compact;
 			_oop_has_klass_gap = false;
 		} else {
@@ -430,6 +444,6 @@ public class virtual_machine {
 				_oop_has_klass_gap = false;
 			}
 		}
-		_oop_base_offset_in_bytes = jtype.HEADER_BYTE_LENGTH;
+		_oop_base_offset_in_bytes = java_type.HEADER_BYTE_LENGTH;
 	}
 }

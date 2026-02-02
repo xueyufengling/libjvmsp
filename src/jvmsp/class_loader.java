@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
-import jvmsp.internal.dynamic_lockfree_set;
+import jvmsp.internal.iterate_on_write_list;
 
 public class class_loader {
 	private static MethodHandle ClassLoader_defineClass1;
@@ -208,7 +208,7 @@ public class class_loader {
 		as_bootstrap(e.getDeclaringClass());
 	}
 
-	private static final dynamic_lockfree_set<class_definition> class_defs = new dynamic_lockfree_set<>();
+	private static final iterate_on_write_list<class_definition> class_defs = new iterate_on_write_list<>();
 
 	public static final void define(Collection<class_definition> defs) throws Throwable {
 		class_defs.add(defs);

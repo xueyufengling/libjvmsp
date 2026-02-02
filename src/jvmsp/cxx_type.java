@@ -306,7 +306,7 @@ public class cxx_type {
 	 * @param type
 	 * @return
 	 */
-	static final cxx_type define_primitive(String type, long size) {
+	private static final cxx_type define_primitive(String type, long size) {
 		cxx_type new_type = new cxx_type(type, size);
 		definedTypes.put(type, new_type);
 		return new_type;
@@ -712,7 +712,7 @@ public class cxx_type {
 		}
 
 		object(long addr) {
-			this.ptr = pointer.at(addr, getClass());
+			this.ptr = jvmsp.pointer.at(addr);
 		}
 
 		public final Object access(String field_name) {
