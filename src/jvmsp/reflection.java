@@ -24,14 +24,16 @@ import java.util.Set;
 /**
  * 反射工具，大部分功能可以直接使用Manipulator调用
  */
-public abstract class reflection {
+public abstract class reflection
+{
 	public static final StackWalker stack_walker;
 
-	static {
+	static
+	{
 		stack_walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);// 最常用，最先初始化
 	}
 
-	private static Class<?> class_jdk_internal_reflect_Reflection = null;
+	private static Class<?> jdk_internal_reflect_Reflection = null;
 
 	/**
 	 * 反射的过滤字段表，位于该map的字段无法被反射获取
@@ -48,42 +50,48 @@ public abstract class reflection {
 	 */
 	private static VarHandle java_lang_reflect_AccessibleObject_override;
 
-	static {
+	static
+	{
 		java_lang_reflect_AccessibleObject_override = symbols.find_var(AccessibleObject.class, "override", boolean.class);
-		try {
-			class_jdk_internal_reflect_Reflection = Class.forName("jdk.internal.reflect.Reflection");
-		} catch (ClassNotFoundException ex) {
+		try
+		{
+			jdk_internal_reflect_Reflection = Class.forName("jdk.internal.reflect.Reflection");
+		}
+		catch (ClassNotFoundException ex)
+		{
 			ex.printStackTrace();
 		}
-		Reflection_fieldFilterMap = symbols.find_static_var(class_jdk_internal_reflect_Reflection, "fieldFilterMap", Map.class);
-		Reflection_methodFilterMap = symbols.find_static_var(class_jdk_internal_reflect_Reflection, "methodFilterMap", Map.class);
+		Reflection_fieldFilterMap = symbols.find_static_var(jdk_internal_reflect_Reflection, "fieldFilterMap", Map.class);
+		Reflection_methodFilterMap = symbols.find_static_var(jdk_internal_reflect_Reflection, "methodFilterMap", Map.class);
 	}
 
 	/**
 	 * 初始化一个类
 	 * 
-	 * @param cls
+	 * @param clazz
 	 * @throws ClassNotFoundException
 	 */
-	public static final void initialize_class(Class<?> cls) throws ClassNotFoundException {
-		Class.forName(cls.getName(), true, cls.getClassLoader());
+	public static final void initialize_class(Class<?> clazz) throws ClassNotFoundException
+	{
+		Class.forName(clazz.getName(), true, clazz.getClassLoader());
 	}
 
 	/**
-	 * 无视权限设置是否可访问。
-	 * 注意：如果access_obj为null，JVM将直接崩溃。
+	 * 无视权限设置是否可访问。 注意：如果access_obj为null，JVM将直接崩溃。
 	 * 
 	 * @param <_AccessObj>
 	 * @param accessible_obj
 	 * @param accessible
 	 * @return
 	 */
-	public static <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj, boolean accessible) {
+	public static final <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj, boolean accessible)
+	{
 		java_lang_reflect_AccessibleObject_override.set(accessible_obj, accessible);
 		return accessible_obj;
 	}
 
-	public static <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj) {
+	public static final <_AccessObj extends AccessibleObject> _AccessObj set_accessible(_AccessObj accessible_obj)
+	{
 		return set_accessible(accessible_obj, true);
 	}
 
@@ -92,7 +100,8 @@ public abstract class reflection {
 	 * 
 	 * @return
 	 */
-	public static Map<Class<?>, Set<String>> get_field_filter() {
+	public static final Map<Class<?>, Set<String>> get_field_filter()
+	{
 		return (Map<Class<?>, Set<String>>) Reflection_fieldFilterMap.get();
 	}
 
@@ -101,35 +110,40 @@ public abstract class reflection {
 	 * 
 	 * @return
 	 */
-	public static Map<Class<?>, Set<String>> get_method_filter() {
+	public static final Map<Class<?>, Set<String>> get_method_filter()
+	{
 		return (Map<Class<?>, Set<String>>) Reflection_methodFilterMap.get();
 	}
 
 	/**
 	 * 设置字段反射过滤，Java设置了一些非常核心的类无法通过反射获取即设置反射过滤，此操作将会替换原有的过滤限制。危险操作。
 	 */
-	public static void set_field_filter(Map<Class<?>, Set<String>> filter_map) {
+	public static final void set_field_filter(Map<Class<?>, Set<String>> filter_map)
+	{
 		Reflection_fieldFilterMap.set(filter_map);
 	}
 
 	/**
 	 * 设置方法反射过滤，Java设置了一些非常核心的类无法通过反射获取即设置反射过滤，此操作将会替换原有的过滤限制。危险操作。
 	 */
-	public static void set_method_filter(Map<Class<?>, Set<String>> filter_map) {
+	public static final void set_method_filter(Map<Class<?>, Set<String>> filter_map)
+	{
 		Reflection_methodFilterMap.set(filter_map);
 	}
 
 	/**
 	 * 移除反射过滤，使得全部字段均可通过反射获取，Java设置了一些非常核心的类无法通过反射获取即设置反射过滤，此操作将会移除该限制。危险操作。
 	 */
-	public static void remove_field_filter() {
+	public static final void remove_field_filter()
+	{
 		set_field_filter(new HashMap<Class<?>, Set<String>>());
 	}
 
 	/**
 	 * 移除反射过滤，使得全部方法均可通过反射获取，Java设置了一些非常核心的类无法通过反射获取即设置反射过滤，此操作将会移除该限制。危险操作。
 	 */
-	public static void remove_method_filter() {
+	public static final void remove_method_filter()
+	{
 		set_method_filter(new HashMap<Class<?>, Set<String>>());
 	}
 
@@ -138,7 +152,8 @@ public abstract class reflection {
 	 * 
 	 * @param op
 	 */
-	public static final void no_field_filter(Runnable op) {
+	public static final void no_field_filter(Runnable op)
+	{
 		Map<Class<?>, Set<String>> filter_map = get_field_filter();
 		remove_field_filter();
 		op.run();
@@ -148,15 +163,16 @@ public abstract class reflection {
 	/**
 	 * 不经过反射过滤获取字段
 	 * 
-	 * @param cls
+	 * @param clazz
 	 * @param field_name
 	 * @return
 	 */
-	public static final Field no_field_filter_find(Class<?> cls, String field_name) {
+	public static final Field no_field_filter_find(Class<?> clazz, String field_name)
+	{
 		Field f = null;
 		Map<Class<?>, Set<String>> filter_map = get_field_filter();
 		remove_field_filter();
-		f = find_field(cls, field_name);
+		f = find_field(clazz, field_name);
 		set_field_filter(filter_map);
 		return f;
 	}
@@ -172,8 +188,10 @@ public abstract class reflection {
 	private static MethodHandle Class_forName0;
 	private static MethodHandle Reflection_isCallerSensitive;
 
-	static {
-		try {
+	static
+	{
+		try
+		{
 			Class_getDeclaredFields0 = symbols.find_special_method(Class.class, Class.class, "getDeclaredFields0", Field[].class, boolean.class);
 			Class_privateGetDeclaredFields = symbols.find_special_method(Class.class, Class.class, "privateGetDeclaredFields", Field[].class, boolean.class);
 			Class_getDeclaredMethods0 = symbols.find_special_method(Class.class, Class.class, "getDeclaredMethods0", Method[].class, boolean.class);
@@ -183,14 +201,17 @@ public abstract class reflection {
 			Class_searchMethods = symbols.find_static_method(Class.class, "searchMethods", Method.class, Method[].class, String.class, Class[].class);
 			Class_getConstructor0 = symbols.find_special_method(Class.class, Class.class, "getConstructor0", Constructor.class, Class[].class, int.class);
 			Class_forName0 = symbols.find_static_method(Class.class, "forName0", Class.class, String.class, boolean.class, ClassLoader.class, Class.class);
-			Reflection_isCallerSensitive = symbols.find_static_method(class_jdk_internal_reflect_Reflection, "isCallerSensitive", boolean.class, Method.class);
-		} catch (SecurityException | IllegalArgumentException ex) {
+			Reflection_isCallerSensitive = symbols.find_static_method(jdk_internal_reflect_Reflection, "isCallerSensitive", boolean.class, Method.class);
+		}
+		catch (SecurityException | IllegalArgumentException ex)
+		{
 			ex.printStackTrace();
 		}
 	}
 
-	public static Field set_accessible(Class<?> cls, String field_name, boolean accessible) {
-		Field f = reflection.find_field(cls, field_name);
+	public static final Field set_accessible(Class<?> clazz, String field_name, boolean accessible)
+	{
+		Field f = find_field(clazz, field_name);
 		set_accessible(f, accessible);
 		return f;
 	}
@@ -202,48 +223,74 @@ public abstract class reflection {
 	 * @param clazz 要获取的类
 	 * @return 字段列表
 	 */
-	public static Field[] __get_declared_fields(Class<?> clazz, boolean public_only) {
-		try {
+	public static final Field[] __find_declared_fields(Class<?> clazz, boolean public_only)
+	{
+		try
+		{
 			return (Field[]) Class_getDeclaredFields0.invokeExact(clazz, public_only);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
-	}
-
-	public static Field[] __get_declared_fields(Class<?> clazz) {
-		return __get_declared_fields(clazz, false);
-	}
-
-	public static Field __get_declared_field(Class<?> clazz, String field_name) {
-		try {
-			return (Field) Class_searchFields.invokeExact(__get_declared_fields(clazz), field_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared fields of '" + clazz + "' failed", ex);
 		}
-		return null;
 	}
 
-	public static Field[] get_declared_fields(Class<?> clazz, boolean public_only) {
-		try {
+	public static final Field[] __find_declared_fields(Class<?> clazz)
+	{
+		return __find_declared_fields(clazz, false);
+	}
+
+	public static final Field __find_declared_field(Class<?> clazz, String field_name)
+	{
+		try
+		{
+			return (Field) Class_searchFields.invokeExact(__find_declared_fields(clazz), field_name);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared field '" + field_name + "' of '" + clazz + "' failed", ex);
+		}
+	}
+
+	public static final Field[] find_declared_fields(Class<?> clazz, boolean public_only)
+	{
+		try
+		{
 			return (Field[]) Class_privateGetDeclaredFields.invokeExact(clazz, public_only);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared fields of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static Field[] get_declared_fields(Class<?> clazz) {
-		return get_declared_fields(clazz, false);
+	public static final Field[] find_declared_fields(Class<?> clazz)
+	{
+		return find_declared_fields(clazz, false);
 	}
 
-	public static Field get_declared_field(Class<?> clazz, String field_name) {
-		try {
-			return (Field) Class_searchFields.invokeExact(get_declared_fields(clazz), field_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	/**
+	 * 查找本类声明的字段
+	 * 
+	 * @param clazz
+	 * @param field_name
+	 * @return
+	 */
+	public static final Field find_declared_field(Class<?> clazz, String field_name)
+	{
+		try
+		{
+			return (Field) Class_searchFields.invokeExact(find_declared_fields(clazz), field_name);
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared field '" + field_name + "' of '" + clazz + "' failed", ex);
+		}
+	}
+
+	public static final Field find_declared_field(Object obj, String field_name)
+	{
+		return find_declared_field(obj.getClass(), field_name);
 	}
 
 	/**
@@ -252,26 +299,33 @@ public abstract class reflection {
 	 * @param clazz 要获取的类
 	 * @return 字段列表
 	 */
-	public static Method[] __get_declared_methods(Class<?> clazz, boolean public_only) {
-		try {
+	public static final Method[] __find_declared_methods(Class<?> clazz, boolean public_only)
+	{
+		try
+		{
 			return (Method[]) Class_getDeclaredMethods0.invokeExact(clazz, false);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared methods of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static Method[] __get_declared_methods(Class<?> clazz) {
-		return __get_declared_methods(clazz, false);
+	public static final Method[] __find_declared_methods(Class<?> clazz)
+	{
+		return __find_declared_methods(clazz, false);
 	}
 
-	public static Method __get_declared_method(Class<?> clazz, String method_name, Class<?>... arg_types) {
-		try {
-			return (Method) Class_searchMethods.invokeExact(__get_declared_methods(clazz), method_name, arg_types);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	public static final Method __find_declared_method(Class<?> clazz, String method_name, Class<?>... arg_types)
+	{
+		try
+		{
+			return (Method) Class_searchMethods.invokeExact(__find_declared_methods(clazz), method_name, arg_types);
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared method '" + method_name + "' of '" + clazz + "' failed", ex);
+		}
 	}
 
 	/**
@@ -281,26 +335,33 @@ public abstract class reflection {
 	 * @param public_only
 	 * @return
 	 */
-	public static Method[] get_declared_methods(Class<?> clazz, boolean public_only) {
-		try {
+	public static final Method[] find_declared_methods(Class<?> clazz, boolean public_only)
+	{
+		try
+		{
 			return (Method[]) Class_privateGetDeclaredMethods.invokeExact(clazz, false);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared methods of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static Method[] get_declared_methods(Class<?> clazz) {
-		return get_declared_methods(clazz, false);
+	public static final Method[] find_declared_methods(Class<?> clazz)
+	{
+		return find_declared_methods(clazz, false);
 	}
 
-	public static Method get_declared_method(Class<?> clazz, String method_name, Class<?>... arg_types) {
-		try {
-			return (Method) Class_searchMethods.invokeExact(get_declared_methods(clazz), method_name, arg_types);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	public static final Method find_declared_method(Class<?> clazz, String method_name, Class<?>... arg_types)
+	{
+		try
+		{
+			return (Method) Class_searchMethods.invokeExact(find_declared_methods(clazz), method_name, arg_types);
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared method '" + method_name + "' of '" + clazz + "' failed", ex);
+		}
 	}
 
 	/**
@@ -311,8 +372,9 @@ public abstract class reflection {
 	 * @param arg_types
 	 * @return
 	 */
-	public static boolean is_static(Class<?> clazz, String method_name, Class<?>... arg_types) {
-		Method m = reflection.get_declared_method(clazz, method_name, arg_types);
+	public static final boolean is_static(Class<?> clazz, String method_name, Class<?>... arg_types)
+	{
+		Method m = find_declared_method(clazz, method_name, arg_types);
 		return Modifier.isStatic(m.getModifiers());
 	}
 
@@ -324,17 +386,21 @@ public abstract class reflection {
 	 * @param public_only
 	 * @return
 	 */
-	public static <_T> Constructor<_T>[] __get_declared_constructors(Class<?> clazz, boolean public_only) {
-		try {
+	public static final <_T> Constructor<_T>[] __find_declared_constructors(Class<?> clazz, boolean public_only)
+	{
+		try
+		{
 			return (Constructor<_T>[]) Class_getDeclaredConstructors0.invokeExact(clazz, public_only);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared constructors of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static <_T> Constructor<_T>[] __get_declared_constructors(Class<?> clazz) {
-		return __get_declared_constructors(clazz, false);
+	public static final <_T> Constructor<_T>[] __find_declared_constructors(Class<?> clazz)
+	{
+		return __find_declared_constructors(clazz, false);
 	}
 
 	/**
@@ -346,17 +412,21 @@ public abstract class reflection {
 	 * @param argTypes 构造函数的参数类型
 	 * @return
 	 */
-	public static <_T> Constructor<_T> __get_declared_constructor(Class<_T> clazz, int which, Class<?>... argTypes) {
-		try {
+	public static final <_T> Constructor<_T> __find_declared_constructor(Class<_T> clazz, int which, Class<?>... argTypes)
+	{
+		try
+		{
 			return (Constructor<_T>) Class_getConstructor0.invokeExact(clazz, argTypes, which);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find declared constructor of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static <_T> Constructor<_T> __get_declared_constructor(Class<_T> clazz, Class<?>... argTypes) {
-		return __get_declared_constructor(clazz, Member.DECLARED, argTypes);
+	public static final <_T> Constructor<_T> __find_declared_constructor(Class<_T> clazz, Class<?>... argTypes)
+	{
+		return __find_declared_constructor(clazz, Member.DECLARED, argTypes);
 	}
 
 	/**
@@ -368,30 +438,43 @@ public abstract class reflection {
 	 * @param caller
 	 * @return
 	 */
-	public static Class<?> find_class(String name, boolean initialize, ClassLoader loader, Class<?> caller) {
-		try {
+	public static final Class<?> find_class(String name, boolean initialize, ClassLoader loader, Class<?> caller)
+	{
+		try
+		{
 			return (Class<?>) Class_forName0.invokeExact(name, initialize, loader, caller);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("find class '" + name + "' failed", ex);
+		}
 	}
 
-	public static Class<?> find_class(String name, boolean initialize) {
+	public static final Class<?> find_class(String name, boolean initialize, ClassLoader loader)
+	{
+		Class<?> caller = caller_class();
+		return find_class(name, initialize, loader, caller);
+	}
+
+	public static final Class<?> find_class(String name, boolean initialize)
+	{
 		Class<?> caller = caller_class();
 		return find_class(name, initialize, caller.getClassLoader(), caller);
 	}
 
-	public static Class<?> find_class(String name) {
+	public static final Class<?> find_class(String name)
+	{
 		Class<?> caller = caller_class();
 		return find_class(name, true, caller.getClassLoader(), caller);
 	}
 
-	public static Class<?> find_sys_class(String name, boolean initialize) {
+	public static final Class<?> find_sys_class(String name, boolean initialize)
+	{
 		return find_class(name, initialize, null, Class.class);
 	}
 
-	public static Class<?> find_sys_class(String name) {
+	public static final Class<?> find_sys_class(String name)
+	{
 		return find_sys_class(name, true);
 	}
 
@@ -401,97 +484,153 @@ public abstract class reflection {
 	 * @param full_name 带有包的完整类名
 	 * @return
 	 */
-	public static String class_name(String full_name) {
+	public static final String class_name(String full_name)
+	{
 		return full_name.substring(full_name.lastIndexOf('.') + 1);
 	}
 
-	public static String class_name(Object obj) {
+	public static final String class_name(Object obj)
+	{
 		return class_name(obj.getClass().getName());
 	}
 
-	public static String package_name(String full_name) {
+	public static final String package_name(String full_name)
+	{
 		return full_name.substring(0, full_name.lastIndexOf('.'));
 	}
 
 	/**
 	 * 查询类成员，如果该类没有则递归查找父类
 	 */
-	public static Field find_field(Object obj, String name) {
-		Class<?> cls;
-		if (obj instanceof Class<?> c)
-			cls = c;
-		else
-			cls = obj.getClass();
-		Field result = get_declared_field(cls, name);
-		if (result == null) {
-			Class<?> supercls = cls.getSuperclass();
-			if (supercls == null) {
-				throw new IllegalArgumentException("cannot find field " + name + " in " + obj);
-			} else
-				return find_field(supercls, name);
+	public static final Field find_field(Class<?> clazz, String name)
+	{
+		return _find_field(clazz, clazz, name);
+	}
+
+	public static final Field find_field(Object obj, String name)
+	{
+		return find_field(obj.getClass(), name);
+	}
+
+	private static Field _find_field(Class<?> start_clazz, Class<?> current_clazz, String name)
+	{
+		Field result = find_declared_field(current_clazz, name);
+		if (result == null)
+		{
+			Class<?> super_clazz = current_clazz.getSuperclass();
+			if (super_clazz == null)
+			{
+				throw new IllegalArgumentException("cannot find field " + name + " in " + start_clazz);
+			}
+			else
+				return _find_field(start_clazz, super_clazz, name);
 		}
 		return result;
 	}
 
 	/**
-	 * 使用反射无视权限访问成员，如果是静态成员则传入Class<?>，非静态成员则传入对象本身，jdk.internal.reflect.Reflection会对反射获取的字段进行过滤，因此这些字段不能访问。如需访问使用Handle的方法进行
+	 * 读本类字段。使用反射无视权限访问成员，如果是静态成员则传入null，非静态成员则传入对象本身。<br>
+	 * jdk.internal.reflect.Reflection会对反射获取的字段进行过滤，因此这些字段不能访问。如需访问使用VarHandle的方法进行
 	 * 
 	 * @param obj        非静态成员所属对象本身或静态成员对应的Class<?>
 	 * @param field_name 要访问的字段
 	 * @return 成员的值
 	 */
-	public static Object read(Object obj, Field field) {
-		try {
+	public static final Object read(Object obj, Field field)
+	{
+		try
+		{
 			return set_accessible(field, true).get(obj);
-		} catch (IllegalAccessException ex) {
-			System.err.println("IllegalAccessException thrown when reading field " + field + " in " + obj);
-			ex.printStackTrace();
 		}
-		return null;
+		catch (IllegalAccessException ex)
+		{
+			throw new java.lang.InternalError("reading field '" + field + "' in '" + obj + "' faield", ex);
+		}
 	}
 
-	public static Object read(Object obj, String field) {
-		return read(obj, find_field(obj, field));
+	public static final Object read(Object obj, String field)
+	{
+		return read(obj, find_declared_field(obj.getClass(), field));
+	}
+
+	public static final Object read(Class<?> clazz, String field)
+	{
+		return read(null, find_declared_field(clazz, field));
 	}
 
 	/**
 	 * 访问值，若目标字段不存在则返回默认值
 	 * 
 	 * @param obj
-	 * @param field_name
+	 * @param field
 	 * @param default_value
 	 * @return
 	 */
-	public static Object read_or_default(Object obj, String field_name, Object default_value) {
-		try {
-			return reflection.set_accessible(reflection.find_field(obj, field_name)).get(obj);
-		} catch (Throwable ex) {
+	public static final Object read_or_default(Object obj, Field field, Object default_value)
+	{
+		try
+		{
+			return set_accessible(field, true).get(obj);
+		}
+		catch (Throwable ex)
+		{
 			return default_value;
 		}
 	}
 
-	public static Object read_or_default(Object obj, Field field, Object default_value) {
-		try {
-			return reflection.set_accessible(field).get(obj);
-		} catch (Throwable ex) {
+	public static final Object read_or_default(Object obj, String field_name, Object default_value)
+	{
+		try
+		{
+			return set_accessible(find_declared_field(obj.getClass(), field_name), true).get(obj);
+		}
+		catch (Throwable ex)
+		{
 			return default_value;
 		}
 	}
 
-	public static boolean write(Object obj, Field field, Object value) {
-		try {
-			set_accessible(field, true);
-			field.set(obj, value);
-		} catch (IllegalAccessException ex) {
-			System.err.println("IllegalAccessException thrown when writing field " + field + " with value " + value + " in " + obj);
-			ex.printStackTrace();
-			return false;
+	public static final Object read_or_default(Class<?> clazz, String field_name, Object default_value)
+	{
+		try
+		{
+			return set_accessible(find_declared_field(clazz, field_name), true).get(null);
 		}
-		return true;
+		catch (Throwable ex)
+		{
+			return default_value;
+		}
 	}
 
-	public static boolean write(Object obj, String field, Object value) {
-		return write(obj, find_field(obj, field), value);
+	/**
+	 * 写本类字段，如果是静态字段则obj将忽略（可以传入null），非静态字段需要传入待修改的对象
+	 * 
+	 * @param obj
+	 * @param field
+	 * @param value
+	 * @return
+	 */
+	public static final boolean write(Object obj, Field field, Object value)
+	{
+		try
+		{
+			set_accessible(field, true).set(obj, value);
+			return true;
+		}
+		catch (IllegalAccessException ex)
+		{
+			throw new java.lang.InternalError("writing field '" + field + "' with value '" + value + "' in '" + obj + "' faield", ex);
+		}
+	}
+
+	public static final boolean write(Object obj, String field, Object value)
+	{
+		return write(obj, find_declared_field(obj.getClass(), field), value);
+	}
+
+	public static final Object write(Class<?> clazz, String field, Object value)
+	{
+		return write(null, find_declared_field(clazz, field), value);
 	}
 
 	/**
@@ -502,30 +641,36 @@ public abstract class reflection {
 	 * @param arg_types
 	 * @param args
 	 */
-	public static Object call(Object obj, String method_name, Class<?>[] arg_types, Object... args) {
-		try {
-			return set_accessible(reflection.find_method(obj, method_name, arg_types)).invoke(obj, args);
-		} catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex) {
-			System.err.println("call method failed. obj = " + obj.toString() + ", method_name = " + method_name);
-			ex.printStackTrace();
+	public static final Object call(Object obj, String method_name, Class<?>[] arg_types, Object... args)
+	{
+		try
+		{
+			return set_accessible(find_method(obj, method_name, arg_types)).invoke(obj, args);
 		}
-		return null;
+		catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex)
+		{
+			throw new java.lang.InternalError("call " + obj.toString() + "." + method_name + "() failed", ex);
+		}
 	}
 
-	public static Object call(Object obj, Method method, Object... args) {
-		try {
+	public static final Object call(Object obj, Method method, Object... args)
+	{
+		try
+		{
 			return set_accessible(method).invoke(obj, args);
-		} catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex) {
-			System.err.println("call method failed. obj = " + obj.toString() + ", method_name = " + method.getName());
-			ex.printStackTrace();
 		}
-		return null;
+		catch (IllegalArgumentException | IllegalAccessException | SecurityException | InvocationTargetException ex)
+		{
+			throw new java.lang.InternalError("call " + obj.toString() + "." + method.getName() + "() failed", ex);
+		}
 	}
 
-	public static String method_description(String name, Class<?>... arg_types) {
+	public static final String method_description(String name, Class<?>... arg_types)
+	{
 		String method_description = name + '(';
 		if (arg_types != null)
-			for (int a = 0; a < arg_types.length; ++a) {
+			for (int a = 0; a < arg_types.length; ++a)
+			{
 				method_description += arg_types[a].getName();
 				if (a != arg_types.length - 1)
 					method_description += ", ";
@@ -542,8 +687,9 @@ public abstract class reflection {
 	 * @param arg_types
 	 * @return
 	 */
-	public static Method find_method_self(Class<?> clazz, String name, Class<?>... arg_types) {
-		return get_declared_method(clazz, name, arg_types == null ? (new Class<?>[] {}) : arg_types);
+	public static final Method find_method_self(Class<?> clazz, String name, Class<?>... arg_types)
+	{
+		return find_declared_method(clazz, name, arg_types == null ? (new Class<?>[] {}) : arg_types);
 	}
 
 	/**
@@ -554,19 +700,24 @@ public abstract class reflection {
 	 * @param arg_types
 	 * @return
 	 */
-	public static Method find_method_inherited(Class<?> clazz, String name, Class<?>... arg_types) {
-		Method result = get_declared_method(clazz, name, arg_types == null ? (new Class<?>[] {}) : arg_types);
-		if (result == null) {
-			Class<?> supercls = clazz.getSuperclass();
+	public static final Method find_method_inherited(Class<?> clazz, String name, Class<?>... arg_types)
+	{
+		Method result = find_declared_method(clazz, name, arg_types == null ? (new Class<?>[] {}) : arg_types);
+		if (result == null)
+		{
+			Class<?> super_clazz = clazz.getSuperclass();
 			Class<?>[] interfaces = clazz.getInterfaces();
-			if (supercls == null && interfaces.length == 0) {
-				System.err.println("cannot find method " + name + " in neither super class nor implemented interfaces");
-				return null;
-			} else {
-				Method method = find_method_self(supercls, name, arg_types);
+			if (super_clazz == null && interfaces.length == 0)
+			{
+				throw new java.lang.InternalError("cannot find '" + clazz + "' method '" + name + "' in neither super class nor implemented interfaces");
+			}
+			else
+			{
+				Method method = find_method_self(super_clazz, name, arg_types);
 				if (method != null)// 如果父类有方法则优先返回父类的方法
 					return method;
-				else {// 从接口中搜寻方法
+				else
+				{// 从接口中搜寻方法
 					for (Class<?> i : interfaces)
 						method = find_method_self(i, name, arg_types);
 				}
@@ -584,58 +735,68 @@ public abstract class reflection {
 	 * @param arg_types
 	 * @return
 	 */
-	public static Method find_method(Object obj, String name, Class<?>... arg_types) {
-		Class<?> cls;
+	public static final Method find_method(Object obj, String name, Class<?>... arg_types)
+	{
+		Class<?> clazz;
 		if (obj instanceof Class<?> c)
-			cls = c;
+			clazz = c;
 		else
-			cls = obj.getClass();
+			clazz = obj.getClass();
 		Method method = null;
-		ArrayList<ArrayList<Class<?>>> chain = resolve_inherit_implament_chain(cls);
-		FOUND: for (int depth = 0; depth < chain.size(); ++depth) {
+		ArrayList<ArrayList<Class<?>>> chain = resolve_inherit_implament_chain(clazz);
+		FOUND: for (int depth = 0; depth < chain.size(); ++depth)
+		{
 			ArrayList<Class<?>> equal_depth_classes = chain.get(depth);
 			for (int i = 0; i < equal_depth_classes.size(); ++i)
 				if ((method = find_method_self(equal_depth_classes.get(i), name, arg_types)) != null)
 					break FOUND;
 		}
-		if (method == null) {
-			System.err.println("method " + method_description(name, arg_types) + " not found in class " + cls.getName() + " or its parents");
+		if (method == null)
+		{
+			throw new java.lang.InternalError("method " + method_description(name, arg_types) + " not found in class " + clazz.getName() + " or its parents");
 		}
 		return method;
 	}
 
-	private static void _resolve_inherit_chain(Class<?> clazz, ArrayList<Class<?>> chain) {
+	private static void _resolve_inherit_chain(Class<?> clazz, ArrayList<Class<?>> chain)
+	{
 		chain.add(clazz);
-		Class<?> supercls = clazz.getSuperclass();
-		if (supercls != null)
-			_resolve_inherit_chain(supercls, chain);
+		Class<?> super_clazz = clazz.getSuperclass();
+		if (super_clazz != null)
+			_resolve_inherit_chain(super_clazz, chain);
 	}
 
-	public static Class<?>[] resolve_inherit_chain(Class<?> clazz) {
+	public static final Class<?>[] resolve_inherit_chain(Class<?> clazz)
+	{
 		ArrayList<Class<?>> chain = new ArrayList<>();
 		_resolve_inherit_chain(clazz, chain);
 		return chain.toArray(new Class<?>[chain.size()]);
 	}
 
-	private static ArrayList<ArrayList<Class<?>>> _resolve_inherit_implament_chain(Class<?> self, int current_depth, ArrayList<ArrayList<Class<?>>> chain) {
+	private static ArrayList<ArrayList<Class<?>>> _resolve_inherit_implament_chain(Class<?> self, int current_depth, ArrayList<ArrayList<Class<?>>> chain)
+	{
 		ArrayList<Class<?>> current_depth_classes = null;
 		while (current_depth_classes == null)
-			try {
+			try
+			{
 				current_depth_classes = chain.get(current_depth);
-			} catch (IndexOutOfBoundsException ex) {
+			}
+			catch (IndexOutOfBoundsException ex)
+			{
 				chain.add(new ArrayList<>());
 			}
 		current_depth_classes.add(self);
-		Class<?> supercls = self.getSuperclass();
-		if (supercls != null)
-			_resolve_inherit_implament_chain(supercls, current_depth + 1, chain);
+		Class<?> super_clazz = self.getSuperclass();
+		if (super_clazz != null)
+			_resolve_inherit_implament_chain(super_clazz, current_depth + 1, chain);
 		Class<?>[] interfaces = self.getInterfaces();
 		for (Class<?> i : interfaces)
 			_resolve_inherit_implament_chain(i, current_depth + 1, chain);
 		return chain;
 	}
 
-	public static ArrayList<ArrayList<Class<?>>> resolve_inherit_implament_chain(Class<?> clazz) {
+	public static final ArrayList<ArrayList<Class<?>>> resolve_inherit_implament_chain(Class<?> clazz)
+	{
 		ArrayList<ArrayList<Class<?>>> chain = new ArrayList<>();
 		return _resolve_inherit_implament_chain(clazz, 0, chain);
 	}
@@ -646,7 +807,8 @@ public abstract class reflection {
 	 * @param args 要推断的参数列表
 	 * @return
 	 */
-	public static Class<?>[][] resolve_arg_types_chain(Object... args) {
+	public static final Class<?>[][] resolve_arg_types_chain(Object... args)
+	{
 		Class<?>[][] arg_types = new Class<?>[args.length][];
 		for (int idx = 0; idx < args.length; ++idx)
 			arg_types[idx] = resolve_inherit_chain(args[idx].getClass());
@@ -659,35 +821,40 @@ public abstract class reflection {
 	 * @param args 要推断的参数列表
 	 * @return
 	 */
-	public static Class<?>[] resolve_arg_types(Object... args) {
+	public static final Class<?>[] resolve_arg_types(Object... args)
+	{
 		Class<?>[] arg_types = new Class<?>[args.length];
 		for (int idx = 0; idx < args.length; ++idx)
 			arg_types[idx] = args[idx].getClass();
 		return arg_types;
 	}
 
-	public static Object invoke(Object obj, String method_name, Class<?>[] arg_types, Object... args) {
+	public static final Object invoke(Object obj, String method_name, Class<?>[] arg_types, Object... args)
+	{
 		Method method = find_method(obj, method_name, arg_types);
-		try {
+		try
+		{
 			set_accessible(method, true);
 			return method.invoke(obj, args);
-		} catch (IllegalAccessException | InvocationTargetException ex) {
-			System.err.println(ex.getClass().getSimpleName() + " thrown invoking method " + method_name + " with arguments " + args + " in object " + obj.toString());
-			ex.printStackTrace();
-			return null;
+		}
+		catch (IllegalAccessException | InvocationTargetException ex)
+		{
+			throw new java.lang.InternalError("call " + method_name + "() with arguments '" + args + "' in object '" + obj.toString() + "' failed", ex);
 		}
 	}
 
-	public static Constructor<?> find_constructor(Object obj, Class<?>... arg_types) {
-		Class<?> cls;
+	public static final Constructor<?> find_constructor(Object obj, Class<?>... arg_types)
+	{
+		Class<?> clazz;
 		if (obj instanceof Class<?> c)
-			cls = c;
+			clazz = c;
 		else
-			cls = obj.getClass();
-		Constructor<?> result = __get_declared_constructor(cls, arg_types == null ? (new Class<?>[] {}) : arg_types);
-		if (result == null) {
-			Class<?> supercls = cls.getSuperclass();
-			return supercls == null ? null : find_constructor(supercls, arg_types);
+			clazz = obj.getClass();
+		Constructor<?> result = __find_declared_constructor(clazz, arg_types == null ? (new Class<?>[] {}) : arg_types);
+		if (result == null)
+		{
+			Class<?> super_clazz = clazz.getSuperclass();
+			return super_clazz == null ? null : find_constructor(super_clazz, arg_types);
 		}
 		return result;
 	}
@@ -699,15 +866,17 @@ public abstract class reflection {
 	 * @param args
 	 * @return
 	 */
-	public static Object construct(Object obj, Class<?>[] arg_types, Object... args) {
+	public static final Object construct(Object obj, Class<?>[] arg_types, Object... args)
+	{
 		Constructor<?> constructor = find_constructor(obj, arg_types);
-		try {
+		try
+		{
 			set_accessible(constructor, true);
 			return constructor.newInstance(args);
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-			System.err.println("Reflection throws exception contructing " + obj.toString() + " with arguments " + args);
-			ex.printStackTrace();
-			return null;
+		}
+		catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex)
+		{
+			throw new java.lang.InternalError("construct '" + obj.toString() + "' with arguments '" + args + "' faield", ex);
 		}
 	}
 
@@ -718,11 +887,12 @@ public abstract class reflection {
 	 * @param super_class 超类
 	 * @return clazz具有超类super_class则返回true，否则返回false
 	 */
-	public static boolean has_super(Class<?> clazz, Class<?> super_class) {
-		Class<?> supercls = clazz.getSuperclass();
-		if (supercls == super_class)
+	public static final boolean has_super(Class<?> clazz, Class<?> super_class)
+	{
+		Class<?> super_clazz = clazz.getSuperclass();
+		if (super_clazz == super_class)
 			return true;
-		return supercls == null ? false : has_super(supercls, super_class);
+		return super_clazz == null ? false : has_super(super_clazz, super_class);
 	}
 
 	/**
@@ -732,7 +902,8 @@ public abstract class reflection {
 	 * @param type
 	 * @return
 	 */
-	public static boolean is(Field f, Class<?> type) {
+	public static final boolean is(Field f, Class<?> type)
+	{
 		return type.isAssignableFrom(f.getType());
 	}
 
@@ -743,7 +914,8 @@ public abstract class reflection {
 	 * @param parent
 	 * @return
 	 */
-	public static boolean is(Class<?> son, Class<?> parent) {
+	public static final boolean is(Class<?> son, Class<?> parent)
+	{
 		return parent.isAssignableFrom(son);
 	}
 
@@ -753,13 +925,16 @@ public abstract class reflection {
 	 * @param m
 	 * @return
 	 */
-	public static boolean is_caller_sensitive(Method m) {
-		try {
+	public static final boolean is_caller_sensitive(Method m)
+	{
+		try
+		{
 			return (boolean) Reflection_isCallerSensitive.invokeExact(m);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return false;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("method '" + m.toString() + "' check is caller sensitive faield", ex);
+		}
 	}
 
 	/**
@@ -775,19 +950,24 @@ public abstract class reflection {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static <_T> _T enclosing_class_instance(Class<_T> target, Object obj) {
-		if (target == null || obj == null) {
+	public static final <_T> _T enclosing_class_instance(Class<_T> target, Object obj)
+	{
+		if (target == null || obj == null)
+		{
 			return null;
 		}
-		Class<?> cls = obj.getClass();
-		Class<?> outerCls = cls.getEnclosingClass();
-		if (outerCls == null) {
+		Class<?> clazz = obj.getClass();
+		Class<?> outerCls = clazz.getEnclosingClass();
+		if (outerCls == null)
+		{
 			return null;// obj没有外部类
 		}
 		_T outerObj = null;
-		Field[] fields = reflection.get_declared_fields(cls);
-		for (Field field : fields) {
-			if (field.getType() == outerCls && field.getName().startsWith("this$")) {// 找到上一层外部类的实例引用字段
+		Field[] fields = find_declared_fields(clazz);
+		for (Field field : fields)
+		{
+			if (field.getType() == outerCls && field.getName().startsWith("this$"))
+			{// 找到上一层外部类的实例引用字段
 				outerObj = (_T) read(obj, field);
 				if (outerCls == target)
 					return outerObj;
@@ -804,14 +984,16 @@ public abstract class reflection {
 	 * @param obj
 	 * @return
 	 */
-	public static Object enclosing_class_instance(Object obj) {
+	public static final Object enclosing_class_instance(Object obj)
+	{
 		return obj == null ? null : enclosing_class_instance(obj.getClass().getEnclosingClass(), obj);
 	}
 
 	/**
 	 * 包相关
 	 */
-	public static List<String> class_names_in_package(Class<?> any_class_in_package, file_system.uri.resolver resolver, String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_in_package(Class<?> any_class_in_package, file_system.uri.resolver resolver, String package_name, boolean include_subpackage)
+	{
 		String path = file_system.classpath(any_class_in_package, resolver);
 		if (path.endsWith(file_system.JAR_EXTENSION_NAME))
 			return file_system.class_names_in_jar(any_class_in_package, resolver, package_name, include_subpackage);
@@ -819,20 +1001,24 @@ public abstract class reflection {
 			return file_system.class_names_local(any_class_in_package, resolver, package_name, include_subpackage);
 	}
 
-	public static List<String> class_names_in_package(Class<?> any_class_in_package, String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	{
 		return class_names_in_package(any_class_in_package, file_system.uri.resolver.DEFAULT, package_name, include_subpackage);
 	}
 
-	public static List<String> class_names_in_package(String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_in_package(String package_name, boolean include_subpackage)
+	{
 		Class<?> caller = caller_class();
 		return class_names_in_package(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static List<String> class_names_in_package(Class<?> any_class_in_package, String package_name) {
+	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name)
+	{
 		return class_names_in_package(any_class_in_package, package_name, false);
 	}
 
-	public static List<String> class_names_in_package(String package_name) {
+	public static final List<String> class_names_in_package(String package_name)
+	{
 		Class<?> caller = caller_class();
 		return class_names_in_package(caller, package_name);// 获取调用该方法的类
 	}
@@ -846,8 +1032,9 @@ public abstract class reflection {
 	private static MethodHandle Field_declaredAnnotations;
 	private static MethodHandle Executable_declaredAnnotations;
 
-	static {
-		Class<?> class_AnnotationData = reflection.find_class("java.lang.Class$AnnotationData");
+	static
+	{
+		Class<?> class_AnnotationData = find_class("java.lang.Class$AnnotationData");
 		Class_annotationData = symbols.find_special_method(Class.class, Class.class, "annotationData", class_AnnotationData);
 		AnnotationData_annotations = symbols.find_var(class_AnnotationData, "annotations", Map.class);
 		AnnotationData_declaredAnnotations = symbols.find_var(class_AnnotationData, "declaredAnnotations", Map.class);
@@ -858,11 +1045,12 @@ public abstract class reflection {
 	/**
 	 * 获取类缓存的注解数据，Class.getAnnotation()获取的注解都是此处缓存的注解数据
 	 * 
-	 * @param cls
+	 * @param clazz
 	 * @return
 	 */
-	public static Map<Class<?>, ?> cached_annotations(Class<?> cls) {
-		return (Map<Class<?>, ?>) AnnotationData_annotations.get(cls);
+	public static final Map<Class<?>, ?> cached_annotations(Class<?> clazz)
+	{
+		return (Map<Class<?>, ?>) AnnotationData_annotations.get(clazz);
 	}
 
 	/**
@@ -871,16 +1059,20 @@ public abstract class reflection {
 	 * @param e
 	 * @return
 	 */
-	public static Map<Class<?>, ?> declared_annotations(AnnotatedElement ae) {
-		try {
-			if (ae instanceof Class cls)
-				return (Map<Class<?>, ?>) AnnotationData_declaredAnnotations.get(Class_annotationData.invokeExact(cls));
+	public static final Map<Class<?>, ?> declared_annotations(AnnotatedElement ae)
+	{
+		try
+		{
+			if (ae instanceof Class clazz)
+				return (Map<Class<?>, ?>) AnnotationData_declaredAnnotations.get(Class_annotationData.invokeExact(clazz));
 			else if (ae instanceof Field f)
 				return (Map<Class<?>, ?>) Field_declaredAnnotations.invokeExact(f);
 			else if (ae instanceof Executable e)
 				return (Map<Class<?>, ?>) Executable_declaredAnnotations.invokeExact(e);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get raw declared annotations of '" + ae.toString() + "' faield", ex);
 		}
 		return null;
 	}
@@ -891,9 +1083,10 @@ public abstract class reflection {
 	 * @param ae
 	 * @return
 	 */
-	public static Map<Class<?>, ?> runtime_annotations(AnnotatedElement ae) {
-		if (ae instanceof Class cls)
-			return cached_annotations(cls);
+	public static final Map<Class<?>, ?> runtime_annotations(AnnotatedElement ae)
+	{
+		if (ae instanceof Class clazz)
+			return cached_annotations(clazz);
 		else
 			return declared_annotations(ae);
 	}
@@ -904,9 +1097,10 @@ public abstract class reflection {
 	 * @param ae
 	 * @return
 	 */
-	public static Class<?> declaring_class(AnnotatedElement ae) {
-		if (ae instanceof Class cls)
-			return cls;
+	public static final Class<?> declaring_class(AnnotatedElement ae)
+	{
+		if (ae instanceof Class clazz)
+			return clazz;
 		else if (ae instanceof Field f)
 			return f.getDeclaringClass();
 		else if (ae instanceof Executable e)
@@ -915,7 +1109,8 @@ public abstract class reflection {
 	}
 
 	@FunctionalInterface
-	public static interface annotation_replace_operation {
+	public static interface annotation_replace_operation
+	{
 		/**
 		 * 在转换之前需要进行的操作
 		 * 
@@ -923,110 +1118,125 @@ public abstract class reflection {
 		 */
 		public void operate(AnnotatedElement ae);
 
-		public static final annotation_replace_operation NONE = (ae) -> {
+		public static annotation_replace_operation NONE = (ae) ->
+		{
 		};
 	}
 
 	/**
-	 * 替换目标元素的注解
-	 * 如果目标注解的类型和实际获取的对象annotationType()类型不一致，那么需要手动传入目标注解类型。<br>
+	 * 替换目标元素的注解 如果目标注解的类型和实际获取的对象annotationType()类型不一致，那么需要手动传入目标注解类型。<br>
 	 * 
 	 * @param ae
-	 * @param target_annotation_cls 将要被替换的目标注解类型
-	 * @param new_annotation_cls    要替换的新注解类型，该类型可以不是Annotation而是普通类型
+	 * @param target_annotation_clazz 将要被替换的目标注解类型
+	 * @param new_annotation_clazz    要替换的新注解类型，该类型可以不是Annotation而是普通类型
 	 * @param new_annotation
-	 * @param op                    替换完成后执行的操作
+	 * @param op                      替换完成后执行的操作
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static void replace(AnnotatedElement ae, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, annotation_replace_operation op) {
+	@SuppressWarnings(
+	{ "unchecked", "rawtypes" })
+	public static final void replace(AnnotatedElement ae, Class<?> target_annotation_clazz, Class<?> new_annotation_clazz, Object new_annotation, annotation_replace_operation op)
+	{
 		// 判断一个AnnotatedElement是否有某个注解，实际是判断缓存的注解map是否存在指定注解Class<?>的key
 		Map anno_map = runtime_annotations(ae);
-		anno_map.remove(target_annotation_cls);// 移除镜像注解的key
-		anno_map.put(new_annotation_cls, new_annotation);// 填入目标注解
+		anno_map.remove(target_annotation_clazz);// 移除镜像注解的key
+		anno_map.put(new_annotation_clazz, new_annotation);// 填入目标注解
 		op.operate(ae);
 	}
 
-	public static void replace(AnnotatedElement ae, Class<?> target_annotation_cls, Annotation new_annotation, annotation_replace_operation op) {
-		replace(ae, target_annotation_cls, new_annotation.annotationType(), new_annotation, op);
+	public static final void replace(AnnotatedElement ae, Class<?> target_annotation_clazz, Annotation new_annotation, annotation_replace_operation op)
+	{
+		replace(ae, target_annotation_clazz, new_annotation.annotationType(), new_annotation, op);
 	}
 
 	/**
-	 * 强制替换注解，将任何类型的new_annotation都修改klass word强制cast到new_annotation_cls类型
+	 * 强制替换注解，将任何类型的new_annotation都修改klass word强制cast到new_annotation_clazz类型
 	 * 
 	 * @param ae
-	 * @param target_annotation_cls
-	 * @param new_annotation_cls
+	 * @param target_annotation_clazz
+	 * @param new_annotation_clazz
 	 * @param new_annotation
 	 * @param op
 	 */
-	public static void force_replace(AnnotatedElement ae, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, annotation_replace_operation op) {
-		replace(ae, target_annotation_cls, new_annotation_cls, java_type.cast(new_annotation, new_annotation_cls), op);
+	public static final void force_replace(AnnotatedElement ae, Class<?> target_annotation_clazz, Class<?> new_annotation_clazz, Object new_annotation, annotation_replace_operation op)
+	{
+		replace(ae, target_annotation_clazz, new_annotation_clazz, java_type.cast(new_annotation, new_annotation_clazz), op);
 	}
 
 	/**
 	 * 将类加载器loader所加载的类的所有目标注解替换成新注解
 	 * 
 	 * @param loader
-	 * @param target_annotation_cls
-	 * @param new_annotation_cls
+	 * @param target_annotation_clazz
+	 * @param new_annotation_clazz
 	 * @param new_annotation
-	 * @param is_system             目标注解是否是系统级注解，如果是，那么必须将包含注解的类设置为系统类
+	 * @param is_system               目标注解是否是系统级注解，如果是，那么必须将包含注解的类设置为系统类
 	 * @param op
 	 */
-	public static void force_replace(ClassLoader loader, Class<?> target_annotation_cls, Class<?> new_annotation_cls, Object new_annotation, boolean is_system, annotation_replace_operation op) {
-		ArrayList<AnnotatedElement> annotated = java_type.scan_annotated_elements(loader, target_annotation_cls);
-		for (AnnotatedElement ae : annotated) {
+	public static final void force_replace(ClassLoader loader, Class<?> target_annotation_clazz, Class<?> new_annotation_clazz, Object new_annotation, boolean is_system, annotation_replace_operation op)
+	{
+		ArrayList<AnnotatedElement> annotated = java_type.scan_annotated_elements(loader, target_annotation_clazz);
+		for (AnnotatedElement ae : annotated)
+		{
 			// 如果是系统注解，那么包含该注解的类也必须是BootstrapLoader加载的类
-			if (is_system) {
-				Class<?> decl_class = reflection.declaring_class(ae);
+			if (is_system)
+			{
+				Class<?> decl_class = declaring_class(ae);
 				class_loader.as_bootstrap(decl_class);
 			}
-			reflection.force_replace(ae, target_annotation_cls, new_annotation_cls, new_annotation, op);
+			force_replace(ae, target_annotation_clazz, new_annotation_clazz, new_annotation, op);
 		}
 	}
 
 	/**
 	 * 泛型相关
 	 */
-	public static enum entry_type {
+	public static enum entry_type
+	{
 		INTERFACE, CLASS, RAW_TYPE, UPPER_BOUNDS, LOWER_BOUNDS
 	}
 
 	/**
 	 * 单个类或上界类数组、下界类数组
 	 */
-	public static class generic_entry {
+	public static final class generic_entry
+	{
 		public final entry_type type;
 		private Class<?>[] result;
 
-		generic_entry(entry_type type, Class<?>... result) {
+		generic_entry(entry_type type, Class<?>... result)
+		{
 			this.type = type;
 			this.result = result;
 		}
 
-		public Class<?> single_type() {
+		public Class<?> single_type()
+		{
 			if (type == entry_type.INTERFACE | type == entry_type.CLASS || type == entry_type.RAW_TYPE)
 				return result[0];
 			else
 				return null;
 		}
 
-		public Class<?> type() {
+		public Class<?> type()
+		{
 			return result[0];
 		}
 
-		public Class<?> type(int idx) {
+		public Class<?> type(int idx)
+		{
 			return result[idx];
 		}
 
-		public Class<?>[] upper_bounds() {
+		public Class<?>[] upper_bounds()
+		{
 			if (type == entry_type.UPPER_BOUNDS)
 				return result;
 			else
 				return null;
 		}
 
-		public Class<?>[] lower_bounds() {
+		public Class<?>[] lower_bounds()
+		{
 			if (type == entry_type.LOWER_BOUNDS)
 				return result;
 			else
@@ -1034,27 +1244,29 @@ public abstract class reflection {
 		}
 
 		/**
-		 * 判断是否result中存在任意一个Class<?>严格地是cls类
+		 * 判断是否result中存在任意一个Class<?>严格地是clazz类
 		 * 
-		 * @param cls
+		 * @param clazz
 		 * @return
 		 */
-		public boolean equals_any(Class<?> cls) {
+		public boolean equals_any(Class<?> clazz)
+		{
 			for (Class<?> c : result)
-				if (cls == c)
+				if (clazz == c)
 					return true;
 			return false;
 		}
 
 		/**
-		 * 判断是否result中存在任意一个Class<?>是cls或其子类
+		 * 判断是否result中存在任意一个Class<?>是clazz或其子类
 		 * 
-		 * @param cls
+		 * @param clazz
 		 * @return
 		 */
-		public boolean is_any(Class<?> cls) {
+		public boolean is_any(Class<?> clazz)
+		{
 			for (Class<?> c : result)
-				if (reflection.is(c, cls))
+				if (is(c, clazz))
 					return true;
 			return false;
 		}
@@ -1067,11 +1279,13 @@ public abstract class reflection {
 	 * @param types
 	 * @return
 	 */
-	public static boolean is(Field f, int[] indices, Class<?>... types) {
+	public static final boolean is(Field f, int[] indices, Class<?>... types)
+	{
 		generic_entry[] classes = generic_classes(f, indices);
 		if (classes.length != types.length)
 			return false;
-		for (int idx = 0; idx < types.length; ++idx) {
+		for (int idx = 0; idx < types.length; ++idx)
+		{
 			if (!classes[idx].is_any(types[idx]))
 				return false;
 		}
@@ -1085,7 +1299,8 @@ public abstract class reflection {
 	 * @param types
 	 * @return
 	 */
-	public static boolean is(Field f, Class<?>... types) {
+	public static final boolean is(Field f, Class<?>... types)
+	{
 		return is(f, new int[] {}, types);
 	}
 
@@ -1096,116 +1311,143 @@ public abstract class reflection {
 	 * @param types
 	 * @return
 	 */
-	public static boolean generic_start_with(Field f, int[] indices, Class<?>... types) {
+	public static final boolean generic_start_with(Field f, int[] indices, Class<?>... types)
+	{
 		generic_entry[] classes = generic_classes(f, indices);
-		for (int idx = 0; idx < types.length; ++idx) {
+		for (int idx = 0; idx < types.length; ++idx)
+		{
 			if (!classes[idx].is_any(types[idx]))
 				return false;
 		}
 		return true;
 	}
 
-	public static boolean generic_start_with(Field f, Class<?>... types) {
+	public static final boolean generic_start_with(Field f, Class<?>... types)
+	{
 		return generic_start_with(f, new int[] {}, types);
 	}
 
-	public static generic_entry[] generic_classes(Field f, int... indices) {
+	public static final generic_entry[] generic_classes(Field f, int... indices)
+	{
 		return generic_classes(f.getGenericType(), indices);
 	}
 
 	/**
 	 * 获取指定嵌套深度索引的泛型参数
 	 * 
-	 * @param currentType
+	 * @param current_type
 	 * @param indices
 	 * @return
 	 */
-	public static Type generic_type(Type currentType, int... indices) {
-		Type[] actualTypeArguments = null;
-		for (int nest_depth = 0; nest_depth < indices.length; ++nest_depth) {
+	public static final Type generic_type(Type current_type, int... indices)
+	{
+		Type[] actual_type_arguments = null;
+		for (int nest_depth = 0; nest_depth < indices.length; ++nest_depth)
+		{
 			// 没有泛型参数则直接返回
-			if (currentType instanceof ParameterizedType currentParameterizedType) {
+			if (current_type instanceof ParameterizedType current_parameterized_type)
+			{
 				int nest_idx = indices[nest_depth];
-				actualTypeArguments = currentParameterizedType.getActualTypeArguments();
+				actual_type_arguments = current_parameterized_type.getActualTypeArguments();
 				// 索引超出该深度的泛型参数个数
-				if (nest_idx < 0 || nest_idx >= actualTypeArguments.length) {
+				if (nest_idx < 0 || nest_idx >= actual_type_arguments.length)
+				{
 					return null;
 				}
 				// 除非是最后一层，否则继续向下查找
-				currentType = actualTypeArguments[nest_idx];
-			} else
+				current_type = actual_type_arguments[nest_idx];
+			}
+			else
 				return null;
 		}
-		return currentType;
+		return current_type;
 	}
 
 	/**
 	 * 获取指定字段的指定嵌套深度的泛型参数的Class<?>
 	 * 
-	 * @param currentType 当前的类型
-	 * @param indices     从最外层开始，向内的索引
+	 * @param current_type 当前的类型
+	 * @param indices      从最外层开始，向内的索引
 	 * @return
 	 */
-	public static generic_entry[] generic_classes(Type currentType, int... indices) {
-		Type[] actualTypeArguments = null;
-		currentType = generic_type(currentType, indices);
+	public static final generic_entry[] generic_classes(Type current_type, int... indices)
+	{
+		Type[] actual_type_arguments = null;
+		current_type = generic_type(current_type, indices);
 		// 获取最终深度的特定索引的全部泛型参数
-		if (currentType instanceof ParameterizedType pt)
-			actualTypeArguments = pt.getActualTypeArguments();
+		if (current_type instanceof ParameterizedType pt)
+			actual_type_arguments = pt.getActualTypeArguments();
 		else
-			actualTypeArguments = new Type[] { currentType };
-		generic_entry[] entries = new generic_entry[actualTypeArguments.length];
-		for (int idx = 0; idx < actualTypeArguments.length; ++idx) {
-			currentType = actualTypeArguments[idx];
-			if (currentType instanceof Class cls) {
-				entries[idx] = new generic_entry(entry_type.CLASS, cls);
+			actual_type_arguments = new Type[]
+			{ current_type };
+		generic_entry[] entries = new generic_entry[actual_type_arguments.length];
+		for (int idx = 0; idx < actual_type_arguments.length; ++idx)
+		{
+			current_type = actual_type_arguments[idx];
+			if (current_type instanceof Class clazz)
+			{
+				entries[idx] = new generic_entry(entry_type.CLASS, clazz);
 				continue;
 			}
 			// 如果参数还是泛型类，就直接getRawType()
-			else if (currentType instanceof ParameterizedType parameterizedType) {
-				Type rawType = parameterizedType.getRawType();
-				if (rawType instanceof Class cls) {
-					entries[idx] = new generic_entry(entry_type.RAW_TYPE, cls);
+			else if (current_type instanceof ParameterizedType parameterized_type)
+			{
+				Type rawType = parameterized_type.getRawType();
+				if (rawType instanceof Class clazz)
+				{
+					entries[idx] = new generic_entry(entry_type.RAW_TYPE, clazz);
 					continue;
 				}
-			} else if (currentType instanceof WildcardType wildcardType) {
-				Type[] upper_bounds = wildcardType.getUpperBounds();
-				Type[] lower_bounds = wildcardType.getLowerBounds();
-				if (upper_bounds.length != 0) {
-					Class<?>[] upper_bounds_clsarr = new Class[upper_bounds.length];
-					for (int i = 0; i < upper_bounds_clsarr.length; ++i) {
-						upper_bounds_clsarr[idx] = _resolve_type_class(upper_bounds[i]);
+			}
+			else if (current_type instanceof WildcardType wildcard_type)
+			{
+				Type[] upper_bounds = wildcard_type.getUpperBounds();
+				Type[] lower_bounds = wildcard_type.getLowerBounds();
+				if (upper_bounds.length != 0)
+				{
+					Class<?>[] upper_bounds_clazzarr = new Class[upper_bounds.length];
+					for (int i = 0; i < upper_bounds_clazzarr.length; ++i)
+					{
+						upper_bounds_clazzarr[idx] = _resolve_type_class(upper_bounds[i]);
 					}
-					entries[idx] = new generic_entry(entry_type.UPPER_BOUNDS, upper_bounds_clsarr);
-				} else if (lower_bounds.length != 0) {
-					Class<?>[] lower_bounds_clsarr = new Class[lower_bounds.length];
-					for (int i = 0; i < lower_bounds_clsarr.length; ++i) {
-						lower_bounds_clsarr[idx] = _resolve_type_class(lower_bounds[i]);
+					entries[idx] = new generic_entry(entry_type.UPPER_BOUNDS, upper_bounds_clazzarr);
+				}
+				else if (lower_bounds.length != 0)
+				{
+					Class<?>[] lower_bounds_clazzarr = new Class[lower_bounds.length];
+					for (int i = 0; i < lower_bounds_clazzarr.length; ++i)
+					{
+						lower_bounds_clazzarr[idx] = _resolve_type_class(lower_bounds[i]);
 					}
-					entries[idx] = new generic_entry(entry_type.LOWER_BOUNDS, lower_bounds_clsarr);
+					entries[idx] = new generic_entry(entry_type.LOWER_BOUNDS, lower_bounds_clazzarr);
 				}
 				continue;
-			} else
+			}
+			else
 				entries[idx] = null;
 		}
 		return entries;
 	}
 
 	/**
-	 * 如果currentType是Class<?>则直接返回class，如果是带泛型参数的class，则返回rawType
+	 * 如果current_type是Class<?>则直接返回class，如果是带泛型参数的class，则返回rawType
 	 * 
-	 * @param currentType
+	 * @param current_type
 	 * @return
 	 */
-	public static Class<?> _resolve_type_class(Type currentType) {
-		if (currentType instanceof Class cls) {
-			return cls;
+	public static final Class<?> _resolve_type_class(Type current_type)
+	{
+		if (current_type instanceof Class clazz)
+		{
+			return clazz;
 		}
 		// 如果参数还是泛型类，就直接getRawType()
-		else if (currentType instanceof ParameterizedType parameterizedType) {
-			Type rawType = parameterizedType.getRawType();
-			if (rawType instanceof Class cls) {
-				return cls;
+		else if (current_type instanceof ParameterizedType parameterized_type)
+		{
+			Type rawType = parameterized_type.getRawType();
+			if (rawType instanceof Class clazz)
+			{
+				return clazz;
 			}
 		}
 		return null;
@@ -1214,14 +1456,16 @@ public abstract class reflection {
 	/**
 	 * 获取最外层的第一个泛型参数
 	 * 
-	 * @param registryKeyField
+	 * @param f
 	 * @return
 	 */
-	public static Class<?> first_generic_class(Field f) {
+	public static final Class<?> first_generic_class(Field f)
+	{
 		return generic_classes(f)[0].type();
 	}
 
-	public static Class<?> first_generic_class(Type t) {
+	public static final Class<?> first_generic_class(Type t)
+	{
 		return generic_classes(t)[0].type();
 	}
 
@@ -1233,35 +1477,40 @@ public abstract class reflection {
 	 * 栈追踪时执行的操作
 	 */
 	@FunctionalInterface
-	public interface unwind_operation {
+	public interface unwind_operation
+	{
 		public void operate(StackWalker.StackFrame stack_frame);
 	}
 
 	/**
 	 * 栈追踪设置
 	 */
-	public enum unwind_option {
+	public enum unwind_option
+	{
 		SKIP_COUNT_BY_FRAME, SKIP_COUNT_BY_CLASS
 	}
 
 	/**
 	 * 栈追踪<br>
 	 * 本方法对应的栈帧始终是0，<br>
-	 * skip 1 会返回直接调用本方法trackStackFrame(int skip_frame_count)的栈帧，即getCallerClass()方法本身栈帧<br>
-	 * skip 2 会返回调用getCallerClass()的方法栈帧
+	 * skip 1 会返回直接调用本方法unwind(int skip_frame_count)的栈帧，即调用者方法本身栈帧<br>
+	 * skip 2 会返回调用该调用者的方法栈帧
 	 * 
 	 * @param skip_frame_count
 	 * @return
 	 */
-	public static StackWalker.StackFrame unwind(int skip_frame_count) {
+	public static final StackWalker.StackFrame unwind(int skip_frame_count)
+	{
 		return stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get());
 	}
 
-	public static void unwind(int skip_frame_count, unwind_operation op) {
+	public static final void unwind(int skip_frame_count, unwind_operation op)
+	{
 		op.operate(stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get()));
 	}
 
-	public static Class<?> unwind_class(int skip_frame_count) {
+	public static final Class<?> unwind_class(int skip_frame_count)
+	{
 		return stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get().getDeclaringClass());
 	}
 
@@ -1276,21 +1525,27 @@ public abstract class reflection {
 	 * @return
 	 * @since Java 9
 	 */
-	public static Class<?> unwind_class(int skip_count, unwind_option option) {
-		switch (option) {
+	public static final Class<?> unwind_class(int skip_count, unwind_option option)
+	{
+		switch (option)
+		{
 		case SKIP_COUNT_BY_FRAME:
 			return unwind_class(skip_count);
-		case SKIP_COUNT_BY_CLASS: {
+		case SKIP_COUNT_BY_CLASS:
+		{
 			int skipped_class_count = 0;
 			int skip_frame = 1;// 以JavaLang作为起点
 			Class<?> caller_record = unwind_class(skip_frame);
 			Class<?> stack_frame_class = null;
-			if (skip_count > 0) {
-				for (;;) {
+			if (skip_count > 0)
+			{
+				for (;;)
+				{
 					stack_frame_class = unwind_class(++skip_frame);
 					if (caller_record == stack_frame_class)
 						continue;
-					else {
+					else
+					{
 						caller_record = stack_frame_class;// 将下一个与当前caller_record不同的类记录作为追踪结果
 						if (++skipped_class_count >= skip_count)
 							break;
@@ -1305,29 +1560,32 @@ public abstract class reflection {
 
 	/**
 	 * 获取直接调用该方法的类<br>
-	 * 例如A()调用B()，B()调用get_context_class()，那么返回B()栈帧
+	 * 例如A()调用B()，B()调用context_class()，那么返回B()栈帧
 	 * 
 	 * @return
 	 * @since Java 9
 	 * @CallerSensitive
 	 */
-	public static Class<?> context_class() {
+	public static final Class<?> context_class()
+	{
 		return unwind_class(2);
 	}
 
 	/**
 	 * 获取一次间接调用该方法的类<br>
-	 * 例如A()调用B()，B()调用getOuterCallerClass()，那么返回A()栈帧
+	 * 例如A()调用B()，B()调用caller_class()，那么返回A()栈帧
 	 * 
 	 * @return
 	 * @since Java 9
 	 * @CallerSensitive
 	 */
-	public static Class<?> caller_class() {
+	public static final Class<?> caller_class()
+	{
 		return unwind_class(3);
 	}
 
-	public static Class<?> caller_class_as_param() {
+	public static final Class<?> caller_class_as_param()
+	{
 		return unwind_class(4);
 	}
 }

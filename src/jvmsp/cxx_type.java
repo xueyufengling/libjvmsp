@@ -7,25 +7,32 @@ import java.util.Objects;
 /**
  * C++对象内存布局计算
  */
-public class cxx_type {
+public class cxx_type
+{
 
-	public static class field implements Cloneable {
+	public static final class field implements Cloneable
+	{
 
 		/**
 		 * 克隆字段，当分析继承结构需要修改offset时使用
 		 */
 		@Override
-		public field clone() {
-			try {
+		public field clone()
+		{
+			try
+			{
 				return (field) super.clone();
-			} catch (CloneNotSupportedException e) {
+			}
+			catch (CloneNotSupportedException e)
+			{
 				e.printStackTrace();
 			}
 			return null;
 		}
 
 		@Override
-		public String toString() {
+		public String toString()
+		{
 			return type.toString() + ' ' + name;
 		}
 
@@ -51,7 +58,8 @@ public class cxx_type {
 		 * 
 		 * @return
 		 */
-		public long offset() {
+		public long offset()
+		{
 			return offset;
 		}
 
@@ -60,7 +68,8 @@ public class cxx_type {
 		 * 
 		 * @return
 		 */
-		public String name() {
+		public String name()
+		{
 			return name;
 		}
 
@@ -69,7 +78,8 @@ public class cxx_type {
 		 * 
 		 * @return
 		 */
-		public cxx_type type() {
+		public cxx_type type()
+		{
 			return type;
 		}
 
@@ -78,11 +88,13 @@ public class cxx_type {
 		 * 
 		 * @return
 		 */
-		public cxx_type decl_type() {
+		public cxx_type decl_type()
+		{
 			return decl_type;
 		}
 
-		private field(String name, cxx_type type) {
+		private field(String name, cxx_type type)
+		{
 			this.name = name;
 			this.type = type;
 		}
@@ -94,7 +106,8 @@ public class cxx_type {
 		 * @param type
 		 * @return
 		 */
-		public static final field define(String name, cxx_type type) {
+		public static final field define(String name, cxx_type type)
+		{
 			return new field(name, type);
 		}
 
@@ -104,7 +117,8 @@ public class cxx_type {
 		 * @param native_addr
 		 * @return
 		 */
-		final Object access(long native_addr) {
+		final Object access(long native_addr)
+		{
 			long access_addr = native_addr + offset;
 			if (type == _char || type == int8_t)
 				return unsafe.read_byte(null, access_addr);
@@ -124,12 +138,14 @@ public class cxx_type {
 				return unsafe.read_float(null, access_addr);
 			else if (type == _double)
 				return unsafe.read_double(null, access_addr);
-			else if (type == WORD || type == pointer || type == uintptr_t) {
+			else if (type == WORD || type == pointer || type == uintptr_t)
+			{
 				if (cxx_type.sizeof(type) == 4)
 					return uint32_t(unsafe.read_int(null, access_addr));
 				else if (cxx_type.sizeof(type) == 8)
 					return unsafe.read_long(null, access_addr);
-			} else
+			}
+			else
 				return type.new object(access_addr);
 			return 0;
 		}
@@ -141,29 +157,36 @@ public class cxx_type {
 	private static final HashMap<String, cxx_type> definedTypes = new HashMap<>();
 
 	@Override
-	public cxx_type clone() {
-		try {
+	public cxx_type clone()
+	{
+		try
+		{
 			return (cxx_type) super.clone();
-		} catch (CloneNotSupportedException e) {
+		}
+		catch (CloneNotSupportedException e)
+		{
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(Object obj)
+	{
 		if (obj == this)
 			return true;
 		return (obj instanceof cxx_type type) && this.name.equals(type.name);
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode()
+	{
 		return Objects.hashCode(name) ^ Objects.hashCode(size) ^ Objects.hashCode(base_types) ^ Objects.hashCode(fields);
 	}
 
 	@Override
-	public String toString() {
+	public String toString()
+	{
 		return name;
 	}
 
@@ -193,7 +216,8 @@ public class cxx_type {
 	 */
 	private long default_align_size;
 
-	public long default_align_size() {
+	public long default_align_size()
+	{
 		return resolve().default_align_size;
 	}
 
@@ -202,7 +226,8 @@ public class cxx_type {
 	 */
 	private long pragma_pack;
 
-	public long pragma_pack() {
+	public long pragma_pack()
+	{
 		return pragma_pack;
 	}
 
@@ -211,7 +236,8 @@ public class cxx_type {
 	 */
 	private long align_size;
 
-	public long align_size() {
+	public long align_size()
+	{
 		return resolve().align_size;
 	}
 
@@ -221,7 +247,8 @@ public class cxx_type {
 	 * @param override_pragma_pack
 	 * @return
 	 */
-	private long override_align_size(cxx_type override_pragma_pack) {
+	private long override_align_size(cxx_type override_pragma_pack)
+	{
 		return Math.min(align_size(), override_pragma_pack.pragma_pack);
 	}
 
@@ -232,10 +259,12 @@ public class cxx_type {
 	 * @param current_offset 计算开始前的偏移量
 	 * @return 计算完成后的末尾偏移量
 	 */
-	private long resolve_base_fields(ArrayList<field> arr, long current_offset) {
+	private long resolve_base_fields(ArrayList<field> arr, long current_offset)
+	{
 		for (int i = 0; i < base_types.length; ++i)// 基类字段放在最前方
 			current_offset = base_types[i].resolve_base_fields(arr, current_offset);
-		for (int i = 0; i < fields.size(); ++i) {
+		for (int i = 0; i < fields.size(); ++i)
+		{
 			field current_field = fields.get(i).clone();
 			cxx_type current_field_type = current_field.type();
 			long as = Math.min(current_field_type.pragma_pack(), current_field_type.override_align_size(this));// 字段对齐数
@@ -266,11 +295,13 @@ public class cxx_type {
 	 * @param base_types
 	 * @return
 	 */
-	public static final cxx_type define(String type, long pragma_pack, cxx_type... base_types) {
+	public static final cxx_type define(String type, long pragma_pack, cxx_type... base_types)
+	{
 		return definedTypes.computeIfAbsent(type, (String t) -> new cxx_type(type, pragma_pack, base_types));
 	}
 
-	public static final cxx_type define(String type, cxx_type... base_types) {
+	public static final cxx_type define(String type, cxx_type... base_types)
+	{
 		return define(type, Long.MAX_VALUE, base_types);
 	}
 
@@ -280,7 +311,8 @@ public class cxx_type {
 	 * @param name
 	 * @param size
 	 */
-	private cxx_type(String name, long size) {
+	private cxx_type(String name, long size)
+	{
 		this.name = name;
 		this.size = size;
 		this.align_size = size;
@@ -289,7 +321,8 @@ public class cxx_type {
 		this.dirty_flag = false;
 	}
 
-	private cxx_type(String name, long pragma_pack, cxx_type... base_types) {
+	private cxx_type(String name, long pragma_pack, cxx_type... base_types)
+	{
 		this.name = name;
 		this.size = 0;
 		this.pragma_pack = pragma_pack;
@@ -306,7 +339,8 @@ public class cxx_type {
 	 * @param type
 	 * @return
 	 */
-	private static final cxx_type define_primitive(String type, long size) {
+	private static final cxx_type define_primitive(String type, long size)
+	{
 		cxx_type new_type = new cxx_type(type, size);
 		definedTypes.put(type, new_type);
 		return new_type;
@@ -317,7 +351,8 @@ public class cxx_type {
 	 * 
 	 * @return
 	 */
-	public final boolean is_primitive() {
+	public final boolean is_primitive()
+	{
 		return fields == null;
 	}
 
@@ -327,7 +362,8 @@ public class cxx_type {
 	 * @param field
 	 * @return
 	 */
-	public field decl_field(field field) {
+	public field decl_field(field field)
+	{
 		if (is_primitive() || field.type().equals(this))// 禁止给原生类型添加字段，或添加类本身作为字段
 			throw new RuntimeException("Cannot append field \"" + field + "\" to " + this + ". append fields to primitive types or append self as a field are not allowed.");
 		fields.add(field);
@@ -336,7 +372,8 @@ public class cxx_type {
 		return field;
 	}
 
-	public field decl_field(String name, cxx_type type) {
+	public field decl_field(String name, cxx_type type)
+	{
 		return decl_field(field.define(name, type));
 	}
 
@@ -345,15 +382,20 @@ public class cxx_type {
 	 * 
 	 * @return
 	 */
-	private long resolve_offset_and_size() {
-		if (base_types.length == 0 && fields.isEmpty()) {// 空结构体
+	private long resolve_offset_and_size()
+	{
+		if (base_types.length == 0 && fields.isEmpty())
+		{// 空结构体
 			size = 1;
 			align_size = 1;
 			default_align_size = 1;
 			pragma_pack = 1;
-		} else {
+		}
+		else
+		{
 			long current_offset = derived_top;
-			for (int idx = 0; idx < fields.size(); ++idx) {
+			for (int idx = 0; idx < fields.size(); ++idx)
+			{
 				field f = fields.get(idx);
 				cxx_type f_type = f.type();// 字段f的类型
 				long as = Math.min(pragma_pack, f_type.align_size());// 字段对齐数
@@ -374,10 +416,14 @@ public class cxx_type {
 	 * 
 	 * @return
 	 */
-	private cxx_type resolve() {
-		if (is_primitive() || !dirty_flag) {
+	private cxx_type resolve()
+	{
+		if (is_primitive() || !dirty_flag)
+		{
 			return this;
-		} else {
+		}
+		else
+		{
 			dirty_flag = false;
 			resolve_offset_and_size();
 			return this;
@@ -390,7 +436,8 @@ public class cxx_type {
 	 * @param t
 	 * @return
 	 */
-	public static final long sizeof(cxx_type t) {
+	public static final long sizeof(cxx_type t)
+	{
 		return t.resolve().size;
 	}
 
@@ -399,7 +446,8 @@ public class cxx_type {
 	 * 
 	 * @return
 	 */
-	public String name() {
+	public String name()
+	{
 		return name;
 	}
 
@@ -409,7 +457,8 @@ public class cxx_type {
 	 * @param idx
 	 * @return
 	 */
-	public field declared_field_at(int idx) {
+	public field declared_field_at(int idx)
+	{
 		return is_primitive() ? null : fields.get(idx);
 	}
 
@@ -419,7 +468,8 @@ public class cxx_type {
 	 * @param idx
 	 * @return
 	 */
-	public field field_at(int idx) {
+	public field field_at(int idx)
+	{
 		if (is_primitive() || idx < 0)
 			return null;
 		int base_f_num = base_fields.size();
@@ -432,7 +482,8 @@ public class cxx_type {
 			return null;
 	}
 
-	public int declared_field_index(String field_name) {
+	public int declared_field_index(String field_name)
+	{
 		if (!is_primitive())
 			for (int idx = 0; idx < fields.size(); ++idx)// 优先使用派生类的字段
 				if (fields.get(idx).name().equals(field_name))
@@ -446,8 +497,10 @@ public class cxx_type {
 	 * @param field_name
 	 * @return
 	 */
-	public int field_index(String field_name) {
-		if (!is_primitive()) {
+	public int field_index(String field_name)
+	{
+		if (!is_primitive())
+		{
 			for (int idx = 0; idx < fields.size(); ++idx)// 优先使用派生类的字段
 				if (fields.get(idx).name().equals(field_name))
 					return idx;
@@ -458,9 +511,12 @@ public class cxx_type {
 		return -1;
 	}
 
-	public field declared_field(String field_name) {
-		if (!is_primitive()) {
-			for (int idx = 0; idx < fields.size(); ++idx) {// 优先使用派生类的字段
+	public field declared_field(String field_name)
+	{
+		if (!is_primitive())
+		{
+			for (int idx = 0; idx < fields.size(); ++idx)
+			{// 优先使用派生类的字段
 				field f = fields.get(idx);
 				if (f.name().equals(field_name))
 					return f;
@@ -475,14 +531,18 @@ public class cxx_type {
 	 * @param field_name
 	 * @return
 	 */
-	public field field(String field_name) {
-		if (!is_primitive()) {
-			for (int idx = 0; idx < fields.size(); ++idx) {// 优先使用派生类的字段
+	public field field(String field_name)
+	{
+		if (!is_primitive())
+		{
+			for (int idx = 0; idx < fields.size(); ++idx)
+			{// 优先使用派生类的字段
 				field f = fields.get(idx);
 				if (f.name().equals(field_name))
 					return f;
 			}
-			for (int idx = 0; idx < base_fields.size(); ++idx) {
+			for (int idx = 0; idx < base_fields.size(); ++idx)
+			{
 				field f = base_fields.get(idx);
 				if (f.name().equals(field_name))// 派生类没有该字段则查找基类字段
 					return f;
@@ -495,32 +555,39 @@ public class cxx_type {
 	 * C++对象内存布局打印工具，<br>
 	 * 当打印字符不对齐时请修改tab_size的值，并且使用带参数的打印函数。<br>
 	 */
-	private static final class mem_layout_printer {
+	private static final class mem_layout_printer
+	{
 
-		public static int type_element_size_in_tab = 3;
-		public static int number_element_size_in_tab = 2;
+		public static final int type_element_size_in_tab = 3;
+		public static final int number_element_size_in_tab = 2;
 
-		private static final int line_size_in_char(int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final int line_size_in_char(int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			return (1 + type_element_size_in_tab * 2 + number_element_size_in_tab * 2) * tab_size;
 		}
 
-		private static final int line_size_in_tab(int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final int line_size_in_tab(int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			return (1 + type_element_size_in_tab * 2 + number_element_size_in_tab * 2);
 		}
 
-		private static final String print_mem_layout_split_line(int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final String print_mem_layout_split_line(int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			return "├" + "─".repeat(line_size_in_char(type_element_size_in_tab, number_element_size_in_tab) - 1) + "┤";
 		}
 
-		private static final String print_mem_layout_start_line(int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final String print_mem_layout_start_line(int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			return "┌" + "─".repeat(line_size_in_char(type_element_size_in_tab, number_element_size_in_tab) - 1) + "┐";
 		}
 
-		private static final String print_mem_layout_end_line(int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final String print_mem_layout_end_line(int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			return "└" + "─".repeat(line_size_in_char(type_element_size_in_tab, number_element_size_in_tab) - 1) + "┘";
 		}
 
-		private static final String header_text(String text, int type_element_size_in_tab, int number_element_size_in_tab) {
+		private static final String header_text(String text, int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			int line_start_tab = type_element_size_in_tab + 1;
 			return "│" + "\t".repeat(line_start_tab) + layout_info_element(text, line_size_in_tab(type_element_size_in_tab, number_element_size_in_tab) - line_start_tab) + "│";
 		}
@@ -529,14 +596,16 @@ public class cxx_type {
 		 * @param print_idx_as_from 显示打印字段从哪个索引开始
 		 * @param fields
 		 */
-		private static void print_fields_layout(long print_idx_as_from, ArrayList<field> fields, int type_element_size_in_tab, int number_element_size_in_tab) {
-			for (int i = 0; i < fields.size(); ++i) {
+		private static void print_fields_layout(long print_idx_as_from, ArrayList<field> fields, int type_element_size_in_tab, int number_element_size_in_tab)
+		{
+			for (int i = 0; i < fields.size(); ++i)
+			{
 				field f = fields.get(i);
 				System.out.println("│ " + layout_info_element("" + (print_idx_as_from + i), 1) + layout_info_element("in: " + f.decl_type.toString(), type_element_size_in_tab) + layout_info_element(f.toString(), type_element_size_in_tab) + layout_info_element("offset: " + f.offset + ",", number_element_size_in_tab) + layout_info_element("size: " + sizeof(f.type()), number_element_size_in_tab) + "│");
 			}
 		}
 
-		public static int tab_size = 8;
+		public static final int tab_size = 8;
 
 		/**
 		 * 制表符对齐
@@ -545,7 +614,8 @@ public class cxx_type {
 		 * @param size_in_tab_num
 		 * @return
 		 */
-		private static String layout_info_element(String text, int size_in_tab_num) {
+		private static String layout_info_element(String text, int size_in_tab_num)
+		{
 			int append_size = size_in_tab_num * tab_size - text.length();
 			if (append_size <= 0)
 				return text;
@@ -555,7 +625,8 @@ public class cxx_type {
 			return text + "\t".repeat(append_tab_num);
 		}
 
-		public static void print_mem_layout(cxx_type t) {
+		public static final void print_mem_layout(cxx_type t)
+		{
 			print_mem_layout(t, type_element_size_in_tab, number_element_size_in_tab);
 		}
 
@@ -566,25 +637,31 @@ public class cxx_type {
 		 * @param type_element_size_in_tab   声明的类、字段描述占几个tab长度
 		 * @param number_element_size_in_tab 偏移量、字段大小占几个tab长度
 		 */
-		public static void print_mem_layout(cxx_type t, int type_element_size_in_tab, int number_element_size_in_tab) {
+		public static final void print_mem_layout(cxx_type t, int type_element_size_in_tab, int number_element_size_in_tab)
+		{
 			System.out.println(print_mem_layout_start_line(type_element_size_in_tab, number_element_size_in_tab));
 			System.out.println("│" + "\t".repeat(type_element_size_in_tab + 1) + layout_info_element(t.toString(), 3) + layout_info_element("alignment: " + t.align_size() + ",", 2) + layout_info_element("size: " + sizeof(t), 2) + "│");
-			if (!t.is_primitive()) {
-				if (t.base_types.length != 0) {
+			if (!t.is_primitive())
+			{
+				if (t.base_types.length != 0)
+				{
 					System.out.print("│" + "\t".repeat(type_element_size_in_tab + 1));
 					String inherit_info = "Inherited: ";
-					for (int i = 0; i < t.base_types.length; ++i) {
+					for (int i = 0; i < t.base_types.length; ++i)
+					{
 						inherit_info += t.base_types[i];
 						if (i != t.base_types.length - 1)
 							inherit_info += ", ";
 					}
 					System.out.print(layout_info_element(inherit_info, 7) + "│\n");
 				}
-				if (!t.base_fields.isEmpty()) {
+				if (!t.base_fields.isEmpty())
+				{
 					System.out.println(print_mem_layout_split_line(type_element_size_in_tab, number_element_size_in_tab) + "\n" + header_text("** Base Fields **", type_element_size_in_tab, number_element_size_in_tab) + "\n" + print_mem_layout_split_line(type_element_size_in_tab, number_element_size_in_tab));
 					print_fields_layout(0, t.base_fields, type_element_size_in_tab, number_element_size_in_tab);
 				}
-				if (!t.fields.isEmpty()) {
+				if (!t.fields.isEmpty())
+				{
 					System.out.println(print_mem_layout_split_line(type_element_size_in_tab, number_element_size_in_tab) + "\n" + header_text("** Declared Fields **", type_element_size_in_tab, number_element_size_in_tab) + "\n" + print_mem_layout_split_line(type_element_size_in_tab, number_element_size_in_tab));
 					print_fields_layout(t.base_fields.size(), t.fields, type_element_size_in_tab, number_element_size_in_tab);
 				}
@@ -593,11 +670,13 @@ public class cxx_type {
 		}
 	}
 
-	public void print_mem_layout(int type_element_size_in_tab, int number_element_size_in_tab) {
+	public void print_mem_layout(int type_element_size_in_tab, int number_element_size_in_tab)
+	{
 		mem_layout_printer.print_mem_layout(this, type_element_size_in_tab, number_element_size_in_tab);
 	}
 
-	public void print_mem_layout() {
+	public void print_mem_layout()
+	{
 		mem_layout_printer.print_mem_layout(this);
 	}
 
@@ -619,7 +698,8 @@ public class cxx_type {
 	 */
 	public static final cxx_type WORD;
 
-	static {
+	static
+	{
 		if (virtual_machine.ON_64_BIT_JVM)
 			WORD = cxx_type.define_primitive("WORD", 8);
 		else
@@ -628,21 +708,25 @@ public class cxx_type {
 
 	public static final cxx_type pointer = cxx_type.define_primitive("void*", cxx_type.sizeof(WORD));
 
-	public static final cxx_type pointer(String type) {
+	public static final cxx_type pointer(String type)
+	{
 		return cxx_type.define_primitive(type + '*', cxx_type.sizeof(WORD));
 	}
 
-	public static final cxx_type pointer(cxx_type type) {
+	public static final cxx_type pointer(cxx_type type)
+	{
 		return cxx_type.define_primitive(type.name() + '*', cxx_type.sizeof(WORD));
 	}
 
 	public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", cxx_type.sizeof(pointer));
 
-	public static final cxx_type uintptr_t(String type) {
+	public static final cxx_type uintptr_t(String type)
+	{
 		return cxx_type.define_primitive(type + '*', cxx_type.sizeof(WORD));
 	}
 
-	public static final cxx_type uintptr_t(cxx_type type) {
+	public static final cxx_type uintptr_t(cxx_type type)
+	{
 		return cxx_type.define_primitive(type.name() + '*', cxx_type.sizeof(WORD));
 	}
 
@@ -661,70 +745,84 @@ public class cxx_type {
 	 */
 	public static final long UINT32_T_MASK = 0xFFFFFFFFL;
 
-	public static final long uint_ptr(int oop_addr) {
+	public static final long uint_ptr(int oop_addr)
+	{
 		return oop_addr & UINT32_T_MASK;
 	}
 
 	public static final long UINT16_T_MASK = 0xFFFFL;
 
-	public static final long uint_ptr(short s) {
+	public static final long uint_ptr(short s)
+	{
 		return s & UINT16_T_MASK;
 	}
 
 	public static final long UINT8_T_MASK = 0xFFL;
 
-	public static final long uint_ptr(byte b) {
+	public static final long uint_ptr(byte b)
+	{
 		return b & UINT8_T_MASK;
 	}
 
-	public static final long uint_ptr(char c) {
+	public static final long uint_ptr(char c)
+	{
 		return c & UINT8_T_MASK;
 	}
 
 	public static final int UINT8_T_MASK_I = 0xFF;
 
-	public static final int uint8_t(byte b) {
+	public static final int uint8_t(byte b)
+	{
 		return b & UINT8_T_MASK_I;
 	}
 
-	public static final int uint8_t(char c) {
+	public static final int uint8_t(char c)
+	{
 		return c & UINT8_T_MASK_I;
 	}
 
 	public static final int UINT16_T_MASK_I = 0xFFFF;
 
-	public static final int uint16_t(short s) {
+	public static final int uint16_t(short s)
+	{
 		return s & UINT16_T_MASK_I;
 	}
 
-	public static final long uint32_t(int i) {
+	public static final long uint32_t(int i)
+	{
 		return i & UINT32_T_MASK;
 	}
 
 	/**
 	 * C++对象操作
 	 */
-	public class object {
+	public class object
+	{
 		final pointer ptr;
 
-		object(pointer ptr) {
+		object(pointer ptr)
+		{
 			this.ptr = ptr.copy().cast(cxx_type.this);
 		}
 
-		object(long addr) {
+		object(long addr)
+		{
 			this.ptr = jvmsp.pointer.at(addr);
 		}
 
-		public final Object access(String field_name) {
+		public final Object access(String field_name)
+		{
 			return cxx_type.this.field(field_name).access(ptr.addr);
 		}
 
-		public final Object access(field f) {
+		public final Object access(field f)
+		{
 			return f.access(ptr.addr);
 		}
 	}
 
-	public static class jtypes {
+	public static final class jtypes
+	{
 		public static final cxx_type oop = define_primitive("oop", sizeof(unsigned_int));
 	}
 }

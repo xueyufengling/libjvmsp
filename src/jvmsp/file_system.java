@@ -23,15 +23,18 @@ import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
 import java.util.stream.Stream;
 
-public class file_system {
+public class file_system
+{
 
 	public static final int DEFAULT_BUFFER_SIZE = 1024;
 
-	public static boolean is_root(String dir) {
+	public static final boolean is_root(String dir)
+	{
 		return dir == null || dir.equals("") || dir.equals("/");
 	}
 
-	public static boolean is_wndows_os() {
+	public static final boolean is_wndows_os()
+	{
 		return System.getProperty("os.name").toLowerCase().contains("win");
 	}
 
@@ -44,12 +47,17 @@ public class file_system {
 	 * @return
 	 */
 	@Deprecated(forRemoval = false)
-	public static String class_code_source_location(Class<?> clazz) {
+	public static final String class_code_source_location(Class<?> clazz)
+	{
 		URL location = clazz.getProtectionDomain().getCodeSource().getLocation();
-		if (location != null) {
-			try {
+		if (location != null)
+		{
+			try
+			{
 				return URLDecoder.decode(location.getPath(), StandardCharsets.UTF_8.name());
-			} catch (UnsupportedEncodingException ex) {
+			}
+			catch (UnsupportedEncodingException ex)
+			{
 				throw new AssertionError("UTF-8 not supported", ex);
 			}
 		}
@@ -57,8 +65,7 @@ public class file_system {
 	}
 
 	/**
-	 * 注意！Class的加载器被KlassLoader.setClassLoader()更改后，该方法将无法解析URI，只能返回null！
-	 * 获取指定class的文件所在目录URI，可能是本地class文件，也可能是jar打包的class文件<br>
+	 * 注意！Class的加载器被KlassLoader.setClassLoader()更改后，该方法将无法解析URI，只能返回null！ 获取指定class的文件所在目录URI，可能是本地class文件，也可能是jar打包的class文件<br>
 	 * 例如Minecraft模组BlueArchive: Rendezvous的模组jar中主类URI路径为/D:/JavaProjects/testClient/.minecraft/mods/ba-1.0.0.jar#191!/ba<br>
 	 * 其中!为Java URL的分隔符，前面是jar包路径，后面是jar包内的路径。<br>
 	 * #191为FML的ClassLoader自行添加的标识符，不同框架添加的标识符可能不一样，也可能不额外添加标识符<br>
@@ -66,17 +73,21 @@ public class file_system {
 	 * @param any_class
 	 * @return
 	 */
-	public static String local_class_location_uri(Class<?> any_class) {
+	public static final String local_class_location_uri(Class<?> any_class)
+	{
 		String path = null;
 		if (any_class.getResource(any_class.getSimpleName() + CLASS_EXTENSION_NAME) == null)// 目标class的文件找不到
 			return null;
-		try {
+		try
+		{
 			if (any_class.getClassLoader() == null)
 				path = ClassLoader.getSystemResource("").toURI().getPath();
 			else
 				path = any_class.getResource("").toURI().getPath();
-		} catch (URISyntaxException ex) {
-			ex.printStackTrace();
+		}
+		catch (URISyntaxException ex)
+		{
+			throw new java.lang.InternalError("get uri of local class '" + any_class + "' failed", ex);
 		}
 		return path;
 	}
@@ -87,11 +98,13 @@ public class file_system {
 	 * @param any_class_in_jar jar内的任意一个类
 	 * @return class的本地文件路径；当class在jar内时返回jar的绝对路径
 	 */
-	public static String local_class_location(Class<?> any_class, uri.resolver resolver) {
+	public static final String local_class_location(Class<?> any_class, uri.resolver resolver)
+	{
 		return uri.resolve(local_class_location_uri(any_class), resolver).filesystem_path;
 	}
 
-	public static String local_class_location(Class<?> any_class) {
+	public static final String local_class_location(Class<?> any_class)
+	{
 		return local_class_location(any_class, uri.resolver.DEFAULT);
 	}
 
@@ -102,16 +115,19 @@ public class file_system {
 	 * @param resolver  路径解析器，根据URI分割为合法的文件系统路径和Entry路径
 	 * @return
 	 */
-	public static String classpath(Class<?> any_class, uri.resolver resolver) {
+	public static final String classpath(Class<?> any_class, uri.resolver resolver)
+	{
 		return local_class_location(any_class, resolver);
 	}
 
-	public static String classpath(uri.resolver resolver) {
+	public static final String classpath(uri.resolver resolver)
+	{
 		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
 		return classpath(caller, resolver);
 	}
 
-	public static String classpath() {
+	public static final String classpath()
+	{
 		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
 		return classpath(caller, uri.resolver.DEFAULT);
 	}
@@ -122,13 +138,17 @@ public class file_system {
 	 * @param path
 	 * @return
 	 */
-	public static String normalized_abs_path(String path) {
+	public static final String normalized_abs_path(String path)
+	{
 		char ch = path.charAt(0);// 检查开头有没有多余的路径分隔符
 		boolean is_windows = is_wndows_os();
-		if (ch == File.separatorChar || ch == '/') {
+		if (ch == File.separatorChar || ch == '/')
+		{
 			if (is_windows)
 				path = path.substring(1);
-		} else {
+		}
+		else
+		{
 			if (!is_windows)
 				path = "/" + path;
 		}
@@ -145,10 +165,10 @@ public class file_system {
 	 * @param path
 	 * @return
 	 */
-	public static String normalized_rlt_path(String path) {
+	public static final String normalized_rlt_path(String path)
+	{
 		/*
-		 * 若path为""，则不可charAt()，需要直接视作根路径返回。
-		 * 在Debug环境下可能会出现此种情况
+		 * 若path为""，则不可charAt()，需要直接视作根路径返回。 在Debug环境下可能会出现此种情况
 		 */
 		if (path == null || path.equals(""))
 			return "/";
@@ -161,16 +181,20 @@ public class file_system {
 		return path;
 	}
 
-	public static byte[] read(Path path) {
-		try {
+	public static final byte[] read(Path path)
+	{
+		try
+		{
 			return Files.readAllBytes(path);
-		} catch (IOException ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("read bytes of '" + path + "' failed", ex);
+		}
 	}
 
-	public static class uri {
+	public static final class uri
+	{
 		public final String filesystem_path;
 		/**
 		 * JarEntry内的路径，有可能是嵌套的，嵌套依然以!分割
@@ -180,35 +204,43 @@ public class file_system {
 		public static final String JAR_FILE_URL_HEADER = "jar:";
 		public static final String FILE_URL_HEADER = "file:";
 
-		uri(String filesystem_path, String entry_path) {
+		uri(String filesystem_path, String entry_path)
+		{
 			this.filesystem_path = filesystem_path;
 			this.entry_path = entry_path;
 		}
 
-		uri(String filesystem_path) {
+		uri(String filesystem_path)
+		{
 			this(filesystem_path, null);
 		}
 
-		public static uri from(String filesystem_path, String entry_path) {
+		public static final uri from(String filesystem_path, String entry_path)
+		{
 			return new uri(filesystem_path, entry_path);
 		}
 
-		public static uri from(String filesystem_path) {
+		public static final uri from(String filesystem_path)
+		{
 			return new uri(filesystem_path);
 		}
 
-		public static uri resolve(String uri, resolver resolver) {
+		public static final uri resolve(String uri, resolver resolver)
+		{
 			return resolver.resolve(uri);
 		}
 
 		@FunctionalInterface
-		public static interface resolver {
+		public static interface resolver
+		{
 			public uri resolve(String uri);
 
-			public static final resolver STD = (String uri) -> {
+			public static final resolver STD = (String uri) ->
+			{
 				String filesystem_path = uri;
 				String entry_path = null;
-				if (uri.startsWith(JAR_FILE_URL_HEADER)) {// 该class在jar内
+				if (uri.startsWith(JAR_FILE_URL_HEADER))
+				{// 该class在jar内
 					int path_sep_idx = uri.indexOf('!');
 					filesystem_path = uri.substring(JAR_FILE_URL_HEADER.length(), path_sep_idx);
 					entry_path = uri.substring(path_sep_idx + 1);
@@ -218,7 +250,8 @@ public class file_system {
 				return from(filesystem_path, entry_path);
 			};
 
-			public static final resolver FML = (String uri) -> {
+			public static final resolver FML = (String uri) ->
+			{
 				uri std_path = STD.resolve(uri);
 				String filesystem_path = std_path.filesystem_path;
 				String entry_path = std_path.entry_path;
@@ -228,12 +261,13 @@ public class file_system {
 				return from(filesystem_path, entry_path);
 			};
 
-			public static resolver DEFAULT = FML;
+			public static final resolver DEFAULT = FML;
 		}
 	}
 
 	@FunctionalInterface
-	public interface file_entry_operation {
+	public interface file_entry_operation
+	{
 		/**
 		 * 遍历处理JarEntry
 		 * 
@@ -244,7 +278,8 @@ public class file_system {
 		public boolean operate(String start_path, Path entry);
 
 		@FunctionalInterface
-		public static interface file {
+		public static interface file
+		{
 			/**
 			 * 单个文件处理
 			 * 
@@ -257,7 +292,8 @@ public class file_system {
 		}
 
 		@FunctionalInterface
-		public static interface _class {
+		public static interface _class
+		{
 			/**
 			 * 单个文件处理
 			 * 
@@ -269,9 +305,11 @@ public class file_system {
 		}
 	}
 
-	public static List<String> class_names_local(Class<?> any_class_in_package, uri.resolver resolver, String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_local(Class<?> any_class_in_package, uri.resolver resolver, String package_name, boolean include_subpackage)
+	{
 		List<String> class_names = new ArrayList<>();
-		file_system.filter_class(classpath(any_class_in_package, resolver), include_subpackage, (String class_full_name, Path entry) -> {
+		file_system.filter_class(classpath(any_class_in_package, resolver), include_subpackage, (String class_full_name, Path entry) ->
+		{
 			if (class_full_name.startsWith(package_name))
 				class_names.add(class_full_name);
 			return true;
@@ -279,20 +317,24 @@ public class file_system {
 		return class_names;
 	}
 
-	public static List<String> class_names_local(Class<?> any_class_in_package, String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_local(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	{
 		return class_names_local(any_class_in_package, uri.resolver.DEFAULT, package_name, include_subpackage);
 	}
 
-	public static List<String> class_names_local(String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_local(String package_name, boolean include_subpackage)
+	{
 		Class<?> caller = reflection.caller_class();
 		return class_names_local(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static List<String> class_names_local(Class<?> any_class_in_package, String package_name) {
+	public static final List<String> class_names_local(Class<?> any_class_in_package, String package_name)
+	{
 		return class_names_local(any_class_in_package, package_name, false);
 	}
 
-	public static List<String> class_names_local(String package_name) {
+	public static final List<String> class_names_local(String package_name)
+	{
 		Class<?> caller = reflection.caller_class();
 		return class_names_local(caller, package_name);// 获取调用该方法的类
 	}
@@ -303,20 +345,23 @@ public class file_system {
 	 * 如果使用没有{@code any_class_in_jar}参数的方法，那么将获取调用者所在类作为{@code any_class_in_jar}参数
 	 */
 
-	public static class jar_entry_data {
+	public static final class jar_entry_data
+	{
 		public final String file_dir;
 		public final String file_name;
 		public final JarEntry entry;
 		public final byte[] data;
 
-		public jar_entry_data(String file_dir, String file_name, JarEntry entry, byte[] data) {
+		public jar_entry_data(String file_dir, String file_name, JarEntry entry, byte[] data)
+		{
 			this.file_dir = file_dir;
 			this.file_name = file_name;
 			this.entry = entry;
 			this.data = data;
 		}
 
-		public jar_entry_data(JarEntry entry, byte[] data) {
+		public jar_entry_data(JarEntry entry, byte[] data)
+		{
 			String path = entry.getName();
 			int sep = path.lastIndexOf('/');
 			this.file_dir = sep == -1 ? null : path.substring(0, sep);
@@ -325,17 +370,20 @@ public class file_system {
 			this.data = data;
 		}
 
-		public static jar_entry_data from(String file_dir, String file_name, JarEntry entry, byte[] data) {
+		public static final jar_entry_data from(String file_dir, String file_name, JarEntry entry, byte[] data)
+		{
 			return new jar_entry_data(file_dir, file_name, entry, data);
 		}
 
-		public static jar_entry_data from(JarEntry entry, byte[] data) {
+		public static final jar_entry_data from(JarEntry entry, byte[] data)
+		{
 			return new jar_entry_data(entry, data);
 		}
 	}
 
 	@FunctionalInterface
-	public interface jar_entry_operation {
+	public interface jar_entry_operation
+	{
 		/**
 		 * 遍历处理JarEntry
 		 * 
@@ -346,7 +394,8 @@ public class file_system {
 		public boolean operate(JarEntry entry, ByteArrayOutputStream bytes);
 
 		@FunctionalInterface
-		public static interface file {
+		public static interface file
+		{
 			/**
 			 * 单个文件处理
 			 * 
@@ -359,7 +408,8 @@ public class file_system {
 		}
 
 		@FunctionalInterface
-		public static interface _class {
+		public static interface _class
+		{
 			/**
 			 * 单个文件处理
 			 * 
@@ -373,7 +423,8 @@ public class file_system {
 
 	public static final String JAR_EXTENSION_NAME = ".jar";
 
-	// ------------------------------------------------------------ Internal Utils ----------------------------------------------------------------------------
+	// ------------------------------------------------------------ Internal Utils
+	// ----------------------------------------------------------------------------
 
 	/**
 	 * 从InputStream中获取指定path的JarEntry
@@ -385,10 +436,13 @@ public class file_system {
 	 */
 	@Deprecated
 	@SuppressWarnings("unused")
-	private static JarEntry get_jar_entry(InputStream jar, String path) throws IOException {
+	private static JarEntry get_jar_entry(InputStream jar, String path) throws IOException
+	{
 		JarEntry entry = null;
-		try (JarInputStream jar_stream = new JarInputStream(jar)) {
-			while ((entry = jar_stream.getNextJarEntry()) != null) {
+		try (JarInputStream jar_stream = new JarInputStream(jar))
+		{
+			while ((entry = jar_stream.getNextJarEntry()) != null)
+			{
 				if (entry.getName().equals(path))
 					break;
 			}
@@ -405,11 +459,13 @@ public class file_system {
 	 * @throws IOException
 	 */
 	@Deprecated
-	public static ByteArrayOutputStream get_jar_entry_bytes(JarInputStream jar_stream, int buffer_size) throws IOException {
+	public static final ByteArrayOutputStream get_jar_entry_bytes(JarInputStream jar_stream, int buffer_size) throws IOException
+	{
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		byte[] buffer = new byte[buffer_size];
 		int read = 0;
-		while ((read = jar_stream.read(buffer)) != -1) {
+		while ((read = jar_stream.read(buffer)) != -1)
+		{
 			bos.write(buffer, 0, read);
 		}
 		return bos;
@@ -424,11 +480,14 @@ public class file_system {
 	 * @throws IOException
 	 */
 	@Deprecated
-	public static jar_entry_data read_jar_entry(InputStream jar, String path) throws IOException {
+	public static final jar_entry_data read_jar_entry(InputStream jar, String path) throws IOException
+	{
 		jar_entry_data data = null;
-		try (JarInputStream jar_stream = new JarInputStream(jar)) {
+		try (JarInputStream jar_stream = new JarInputStream(jar))
+		{
 			JarEntry entry = null;
-			while ((entry = jar_stream.getNextJarEntry()) != null) {
+			while ((entry = jar_stream.getNextJarEntry()) != null)
+			{
 				if (entry.getName().equals(path))
 					data = jar_entry_data.from(entry, get_jar_entry_bytes(jar_stream, file_system.DEFAULT_BUFFER_SIZE).toByteArray());
 			}
@@ -438,31 +497,39 @@ public class file_system {
 
 	// -------------------------------------------------------- Resources ----------------------------------------------------------------------
 
-	public static byte[] resource_bytes(Class<?> any_class_in_jar, String path) {
-		byte[] bytes = null;
-		try (InputStream res = any_class_in_jar.getResource(path).openStream()) {
-			bytes = res.readAllBytes();
-		} catch (IOException ex) {
-			ex.printStackTrace();
+	public static final byte[] resource_bytes(Class<?> any_class_in_jar, String path)
+	{
+
+		try (InputStream res = any_class_in_jar.getResource(path).openStream())
+		{
+			return res.readAllBytes();
 		}
-		return bytes;
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("get resource bytes of class '" + any_class_in_jar + "' at '" + path + "' failed");
+		}
 	}
 
-	public static byte[] resource_bytes(String path) {
+	public static final byte[] resource_bytes(String path)
+	{
 		Class<?> caller = reflection.caller_class();
 		return resource_bytes(caller, path);// 获取调用该方法的类
 	}
 
-	public static InputStream resource_stream(Class<?> any_class_in_jar, String path) {
-		try {
+	public static final InputStream resource_stream(Class<?> any_class_in_jar, String path)
+	{
+		try
+		{
 			return any_class_in_jar.getResource(path).openStream();
-		} catch (IOException ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("get resource bytes of class '" + any_class_in_jar + "' at '" + path + "' failed", ex);
+		}
 	}
 
-	public static InputStream resource_stream(String path) {
+	public static final InputStream resource_stream(String path)
+	{
 		Class<?> caller = reflection.caller_class();
 		return resource_stream(caller, path);// 获取调用该方法的类
 	}
@@ -474,20 +541,24 @@ public class file_system {
 	 * @param path
 	 * @return
 	 */
-	public static byte[] resource_bytes(JarFile jar, String path) {
-		byte[] bytes = null;
-		try (jar) {
+	public static final byte[] resource_bytes(JarFile jar, String path)
+	{
+		try (jar)
+		{
 			JarEntry entry = jar.getJarEntry(path);
-			if (entry != null) {
+			if (entry != null)
+			{
 				InputStream input_stream = jar.getInputStream(entry);
-				bytes = input_stream.readAllBytes();
+				byte[] bytes = input_stream.readAllBytes();
 				input_stream.close();
+				return bytes;
 			}
-		} catch (IOException ex) {
-			System.err.println("Cannt read the jar file in path " + path);
-			ex.printStackTrace();
+			return null;
 		}
-		return bytes;
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("get jar file resource bytes at '" + path + "' failed", ex);
+		}
 	}
 
 	/**
@@ -497,26 +568,34 @@ public class file_system {
 	 * @param path
 	 * @return
 	 */
-	public static byte[] resource_bytes(String jar_path, String path) {
-		try {
+	public static final byte[] resource_bytes(String jar_path, String path)
+	{
+		try
+		{
 			return resource_bytes(new JarFile(jar_path), path);
-		} catch (IOException ex) {
-			ex.printStackTrace();
 		}
-		return null;
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("get jar file '" + jar_path + "' resource bytes at '" + path + "' failed", ex);
+		}
 	}
 
-	public static byte[] resource_bytes(InputStream jar_bytes, String path) {
+	public static final byte[] resource_bytes(InputStream jar_bytes, String path)
+	{
 		byte[] bytes = null;
-		try {
+		try
+		{
 			bytes = read_jar_entry(jar_bytes, path).data;
-		} catch (IOException ex) {
-			ex.printStackTrace();
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("get resource bytes in jar at '" + path + "' failed", ex);
 		}
 		return bytes;
 	}
 
-	public static byte[] resource_bytes(byte[] jar_bytes, String path) {
+	public static final byte[] resource_bytes(byte[] jar_bytes, String path)
+	{
 		return resource_bytes(new ByteArrayInputStream(jar_bytes), path);
 	}
 
@@ -528,15 +607,18 @@ public class file_system {
 	 * @return
 	 * @throws FileNotFoundException
 	 */
-	public static InputStream jar_stream(Class<?> any_class_in_jar, uri.resolver resolver) throws FileNotFoundException {
+	public static final InputStream jar_stream(Class<?> any_class_in_jar, uri.resolver resolver) throws FileNotFoundException
+	{
 		return new FileInputStream(classpath(any_class_in_jar, resolver));
 	}
 
-	public static InputStream jar_stream(Class<?> any_class_in_jar) throws FileNotFoundException {
+	public static final InputStream jar_stream(Class<?> any_class_in_jar) throws FileNotFoundException
+	{
 		return jar_stream(any_class_in_jar, uri.resolver.DEFAULT);
 	}
 
-	public static InputStream jar_stream(byte[] bytes) {
+	public static final InputStream jar_stream(byte[] bytes)
+	{
 		return new ByteArrayInputStream(bytes);
 	}
 
@@ -548,33 +630,41 @@ public class file_system {
 	 * @return
 	 * @throws FileNotFoundException
 	 */
-	public static InputStream[] jar_streams(uri.resolver resolver, Class<?>... any_class_in_jars) throws FileNotFoundException {
+	public static final InputStream[] jar_streams(uri.resolver resolver, Class<?>... any_class_in_jars) throws FileNotFoundException
+	{
 		InputStream[] streams = new InputStream[any_class_in_jars.length];
-		for (int idx = 0; idx < any_class_in_jars.length; ++idx) {
+		for (int idx = 0; idx < any_class_in_jars.length; ++idx)
+		{
 			streams[idx] = new FileInputStream(classpath(any_class_in_jars[idx], resolver));
 		}
 		return streams;
 	}
 
-	public static InputStream[] jar_streams(Class<?>... any_class_in_jars) throws FileNotFoundException {
+	public static final InputStream[] jar_streams(Class<?>... any_class_in_jars) throws FileNotFoundException
+	{
 		InputStream[] streams = new InputStream[any_class_in_jars.length];
-		for (int idx = 0; idx < any_class_in_jars.length; ++idx) {
+		for (int idx = 0; idx < any_class_in_jars.length; ++idx)
+		{
 			streams[idx] = jar_stream(any_class_in_jars[idx], uri.resolver.DEFAULT);
 		}
 		return streams;
 	}
 
-	public static InputStream[] jar_streams(byte[]... multi_bytes) {
+	public static final InputStream[] jar_streams(byte[]... multi_bytes)
+	{
 		InputStream[] streams = new InputStream[multi_bytes.length];
-		for (int idx = 0; idx < multi_bytes.length; ++idx) {
+		for (int idx = 0; idx < multi_bytes.length; ++idx)
+		{
 			streams[idx] = new ByteArrayInputStream(multi_bytes[idx]);
 		}
 		return streams;
 	}
 
-	public static InputStream[] jar_streams(Class<?> any_class_in_jar, String... entry_paths) {
+	public static final InputStream[] jar_streams(Class<?> any_class_in_jar, String... entry_paths)
+	{
 		InputStream[] streams = new InputStream[entry_paths.length];
-		for (int idx = 0; idx < entry_paths.length; ++idx) {
+		for (int idx = 0; idx < entry_paths.length; ++idx)
+		{
 			streams[idx] = jar_stream(resource_bytes(any_class_in_jar, entry_paths[idx]));
 		}
 		return streams;
@@ -589,33 +679,43 @@ public class file_system {
 	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
 	 * @return 类名数组
 	 */
-	public static List<String> class_names_in_jar(Class<?> any_class_in_package, uri.resolver resolver, String package_name, boolean include_subpackage) {
-		List<String> class_names = new ArrayList<>();
-		try {
-			file_system.filter_class(jar_stream(any_class_in_package, resolver), package_name.replace('.', '/'), include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final List<String> class_names_in_jar(Class<?> any_class_in_package, uri.resolver resolver, String package_name, boolean include_subpackage)
+	{
+
+		try
+		{
+			List<String> class_names = new ArrayList<>();
+			file_system.filter_class(jar_stream(any_class_in_package, resolver), package_name.replace('.', '/'), include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+			{
 				class_names.add(class_full_name);
 				return true;
 			});
-		} catch (FileNotFoundException ex) {
-			ex.printStackTrace();
+			return class_names;
 		}
-		return class_names;
+		catch (FileNotFoundException ex)
+		{
+			throw new java.lang.InternalError("get class names in jar of '" + any_class_in_package + "' with package '" + package_name + "' failed", ex);
+		}
 	}
 
-	public static List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	{
 		return class_names_in_jar(any_class_in_package, uri.resolver.DEFAULT, package_name, include_subpackage);
 	}
 
-	public static List<String> class_names_in_jar(String package_name, boolean include_subpackage) {
+	public static final List<String> class_names_in_jar(String package_name, boolean include_subpackage)
+	{
 		Class<?> caller = reflection.caller_class();
 		return class_names_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name) {
+	public static final List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name)
+	{
 		return class_names_in_jar(any_class_in_package, package_name, false);
 	}
 
-	public static List<String> class_names_in_jar(String package_name) {
+	public static final List<String> class_names_in_jar(String package_name)
+	{
 		Class<?> caller = reflection.caller_class();
 		return class_names_in_jar(caller, package_name);// 获取调用该方法的类
 	}
@@ -628,30 +728,36 @@ public class file_system {
 	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
 	 * @return 包名数组
 	 */
-	public static List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage) {
+	public static final List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	{
 		List<Class<?>> class_list = new ArrayList<>();
 		List<String> class_names = class_names_in_jar(any_class_in_package, package_name, include_subpackage);
 		ClassLoader class_loader = any_class_in_package.getClassLoader();
 		for (String class_name : class_names)
-			try {
+			try
+			{
 				class_list.add(class_loader.loadClass(class_name));
-			} catch (ClassNotFoundException ex) {
-				System.err.println("Cannt find class " + class_name + " the jar file of package " + package_name);
-				ex.printStackTrace();
+			}
+			catch (ClassNotFoundException ex)
+			{
+				throw new java.lang.InternalError("get classes in jar of '" + any_class_in_package + "' with package '" + package_name + "' failed", ex);
 			}
 		return class_list;
 	}
 
-	public static List<Class<?>> classes_in_jar(String package_name, boolean include_subpackage) {
+	public static final List<Class<?>> classes_in_jar(String package_name, boolean include_subpackage)
+	{
 		Class<?> caller = reflection.caller_class();
 		return classes_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name) {
+	public static final List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name)
+	{
 		return classes_in_jar(any_class_in_package, package_name, false);
 	}
 
-	public static List<Class<?>> classes_in_jar(String package_name) {
+	public static final List<Class<?>> classes_in_jar(String package_name)
+	{
 		Class<?> caller = reflection.caller_class();
 		return classes_in_jar(caller, package_name);// 获取调用该方法的类
 	}
@@ -664,7 +770,8 @@ public class file_system {
 	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
 	 * @return 包名数组
 	 */
-	public static List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class, boolean include_subpackage) {
+	public static final List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class, boolean include_subpackage)
+	{
 		List<Class<?>> specified_class_list = new ArrayList<>();
 		List<Class<?>> class_list = classes_in_jar(any_class_in_package, package_name, include_subpackage);
 		for (Class<?> clazz : class_list)
@@ -673,16 +780,19 @@ public class file_system {
 		return specified_class_list;
 	}
 
-	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class, boolean include_subpackage) {
+	public static final List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class, boolean include_subpackage)
+	{
 		Class<?> caller = reflection.caller_class();
 		return subclasses_in_jar(caller, package_name, super_class, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class) {
+	public static final List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class)
+	{
 		return subclasses_in_jar(any_class_in_package, package_name, super_class, false);
 	}
 
-	public static List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class) {
+	public static final List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class)
+	{
 		return subclasses_in_jar(reflection.caller_class(), package_name, super_class);// 获取调用该方法的类
 	}
 
@@ -695,14 +805,19 @@ public class file_system {
 	 * @param jar
 	 * @param op
 	 */
-	public static void foreach(InputStream jar, jar_entry_operation op) {
-		try (JarInputStream jar_stream = new JarInputStream(jar)) {
+	public static final void foreach(InputStream jar, jar_entry_operation op)
+	{
+		try (JarInputStream jar_stream = new JarInputStream(jar))
+		{
 			JarEntry entry = null;
-			while ((entry = jar_stream.getNextJarEntry()) != null) {
+			while ((entry = jar_stream.getNextJarEntry()) != null)
+			{
 				op.operate(entry, get_jar_entry_bytes(jar_stream, DEFAULT_BUFFER_SIZE));
 			}
-		} catch (IOException ex) {
-			ex.printStackTrace();
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("foreach operation in jar failed", ex);
 		}
 	}
 
@@ -712,14 +827,19 @@ public class file_system {
 	 * @param start_path
 	 * @param op
 	 */
-	public static void foreach(String start_path, file_entry_operation op) {
+	public static final void foreach(String start_path, file_entry_operation op)
+	{
 		Path root = Paths.get(start_path);
-		try (Stream<Path> paths = Files.walk(root)) {
-			paths.forEach(file -> {
+		try (Stream<Path> paths = Files.walk(root))
+		{
+			paths.forEach(file ->
+			{
 				op.operate(start_path, file);
 			});
-		} catch (IOException ex) {
-			ex.printStackTrace();
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("foreach operation in local file system failed", ex);
 		}
 	}
 
@@ -729,11 +849,15 @@ public class file_system {
 	 * @param jar
 	 * @param op
 	 */
-	public static void foreach(InputStream jar, jar_entry_operation.file op) {
-		foreach(jar, new jar_entry_operation() {
+	public static final void foreach(InputStream jar, jar_entry_operation.file op)
+	{
+		foreach(jar, new jar_entry_operation()
+		{
 			@Override
-			public boolean operate(JarEntry entry, ByteArrayOutputStream bytes) {
-				if (!entry.isDirectory()) {
+			public boolean operate(JarEntry entry, ByteArrayOutputStream bytes)
+			{
+				if (!entry.isDirectory())
+				{
 					String path = entry.getName();
 					int sep = path.lastIndexOf('/');
 					op.operate(sep == -1 ? "/" : path.substring(0, sep), path.substring(sep + 1), entry, bytes);
@@ -743,7 +867,8 @@ public class file_system {
 		});
 	}
 
-	public static void foreach(String start_path, file_entry_operation.file op) {
+	public static final void foreach(String start_path, file_entry_operation.file op)
+	{
 		foreach(start_path, true, op);
 	}
 
@@ -755,14 +880,20 @@ public class file_system {
 	 * @param include_subpackage 是否遍历子目录
 	 * @param op
 	 */
-	public static void foreach(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file op) {
-		foreach(jar, new jar_entry_operation.file() {
+	public static final void foreach(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file op)
+	{
+		foreach(jar, new jar_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) {
-				if (is_root(start_path)) {
+			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes)
+			{
+				if (is_root(start_path))
+				{
 					if (is_root(file_dir))
 						op.operate(file_dir, file_name, entry, bytes);
-				} else {
+				}
+				else
+				{
 					if (!is_root(file_dir) && file_dir.startsWith(start_path))
 						op.operate(file_dir, file_name, entry, bytes);
 				}
@@ -771,16 +902,21 @@ public class file_system {
 		});
 	}
 
-	public static void foreach(String start_path, boolean include_subpackage, file_entry_operation.file op) {
+	public static final void foreach(String start_path, boolean include_subpackage, file_entry_operation.file op)
+	{
 		String std_start_path = normalized_abs_path(start_path);
 		Path root = Paths.get(std_start_path);
-		try (Stream<Path> paths = Files.walk(root, include_subpackage ? Integer.MAX_VALUE : 1)) {
+		try (Stream<Path> paths = Files.walk(root, include_subpackage ? Integer.MAX_VALUE : 1))
+		{
 			paths.filter(Files::isRegularFile)
-					.forEach(file -> {
+					.forEach(file ->
+					{
 						op.operate(std_start_path, normalized_rlt_path(normalized_abs_path(file.getParent().toString()).replace(std_start_path, "")), file.getFileName().toString(), file);
 					});
-		} catch (IOException ex) {
-			ex.printStackTrace();
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("foreach operation in jar failed", ex);
 		}
 	}
 
@@ -793,11 +929,14 @@ public class file_system {
 	 * @param condition 条件，返回true则代表收集，false代表不收集
 	 * @return
 	 */
-	public static List<jar_entry_data> collect(InputStream jar, jar_entry_operation.file condition) {
+	public static final List<jar_entry_data> collect(InputStream jar, jar_entry_operation.file condition)
+	{
 		List<jar_entry_data> entries = new ArrayList<>();
-		foreach(jar, new jar_entry_operation.file() {
+		foreach(jar, new jar_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) {
+			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes)
+			{
 				boolean reserved = condition.operate(file_dir, file_name, entry, bytes);
 				if (reserved)
 					entries.add(jar_entry_data.from(file_dir, file_name, entry, bytes.toByteArray()));
@@ -807,7 +946,8 @@ public class file_system {
 		return entries;
 	}
 
-	public static List<Path> collect(String start_path, file_entry_operation.file condition) {
+	public static final List<Path> collect(String start_path, file_entry_operation.file condition)
+	{
 		return collect(start_path, true, condition);
 	}
 
@@ -820,11 +960,14 @@ public class file_system {
 	 * @param condition
 	 * @return
 	 */
-	public static List<jar_entry_data> collect(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file condition) {
+	public static final List<jar_entry_data> collect(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file condition)
+	{
 		List<jar_entry_data> entries = new ArrayList<>();
-		foreach(jar, start_path, include_subpackage, new jar_entry_operation.file() {
+		foreach(jar, start_path, include_subpackage, new jar_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) {
+			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes)
+			{
 				boolean reserved = condition.operate(file_dir, file_name, entry, bytes);
 				if (reserved)
 					entries.add(jar_entry_data.from(file_dir, file_name, entry, bytes.toByteArray()));
@@ -834,11 +977,14 @@ public class file_system {
 		return entries;
 	}
 
-	public static List<Path> collect(String start_path, boolean include_subpackage, file_entry_operation.file condition) {
+	public static final List<Path> collect(String start_path, boolean include_subpackage, file_entry_operation.file condition)
+	{
 		List<Path> entries = new ArrayList<>();
-		foreach(start_path, include_subpackage, new file_entry_operation.file() {
+		foreach(start_path, include_subpackage, new file_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String start_root_path, String relative_file_dir, String file_name, Path entry) {
+			public boolean operate(String start_root_path, String relative_file_dir, String file_name, Path entry)
+			{
 				boolean reserved = condition.operate(start_root_path, relative_file_dir, file_name, entry);
 				if (reserved)
 					entries.add(entry);
@@ -856,50 +1002,66 @@ public class file_system {
 	 * @param regex
 	 * @return
 	 */
-	public static List<jar_entry_data> collect(InputStream jar, String regex) {
-		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final List<jar_entry_data> collect(InputStream jar, String regex)
+	{
+		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.matches(regex);
 		});
 	}
 
-	public static List<Path> collect(String start_path, String regex) {
-		return collect(start_path, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final List<Path> collect(String start_path, String regex)
+	{
+		return collect(start_path, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.matches(regex);
 		});
 	}
 
-	public static List<jar_entry_data> collect(InputStream jar, String start_path, boolean include_subpackage, String regex) {
-		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final List<jar_entry_data> collect(InputStream jar, String start_path, boolean include_subpackage, String regex)
+	{
+		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.matches(regex);
 		});
 	}
 
-	public static List<Path> collect(String start_path, boolean include_subpackage, String regex) {
-		return collect(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final List<Path> collect(String start_path, boolean include_subpackage, String regex)
+	{
+		return collect(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.matches(regex);
 		});
 	}
 
-	public static List<jar_entry_data> collect_type(InputStream jar, String type) {
-		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final List<jar_entry_data> collect_type(InputStream jar, String type)
+	{
+		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.endsWith(type);
 		});
 	}
 
-	public static List<Path> collect_type(String start_path, String type) {
-		return collect(start_path, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final List<Path> collect_type(String start_path, String type)
+	{
+		return collect(start_path, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.endsWith(type);
 		});
 	}
 
-	public static List<jar_entry_data> collect_type(InputStream jar, String start_path, boolean include_subpackage, String file_type) {
-		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final List<jar_entry_data> collect_type(InputStream jar, String start_path, boolean include_subpackage, String file_type)
+	{
+		return collect(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.endsWith(file_type);
 		});
 	}
 
-	public static List<Path> collect_type(String start_path, boolean include_subpackage, String file_type) {
-		return collect(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final List<Path> collect_type(String start_path, boolean include_subpackage, String file_type)
+	{
+		return collect(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.endsWith(file_type);
 		});
 	}
@@ -912,10 +1074,13 @@ public class file_system {
 	 * @param condition
 	 * @param op
 	 */
-	public static void filter(InputStream jar, jar_entry_operation.file condition, jar_entry_operation.file op) {
-		foreach(jar, new jar_entry_operation.file() {
+	public static final void filter(InputStream jar, jar_entry_operation.file condition, jar_entry_operation.file op)
+	{
+		foreach(jar, new jar_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) {
+			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes)
+			{
 				if (condition.operate(file_dir, file_name, entry, bytes))
 					op.operate(file_dir, file_name, entry, bytes);
 				return true;
@@ -923,15 +1088,19 @@ public class file_system {
 		});
 	}
 
-	public static void filter(String start_path, file_entry_operation.file condition, file_entry_operation.file op) {
+	public static final void filter(String start_path, file_entry_operation.file condition, file_entry_operation.file op)
+	{
 		filter(start_path, true, condition, op);
 	}
 
 	// ---------
-	public static void filter(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file condition, jar_entry_operation.file op) {
-		foreach(jar, start_path, include_subpackage, new jar_entry_operation.file() {
+	public static final void filter(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation.file condition, jar_entry_operation.file op)
+	{
+		foreach(jar, start_path, include_subpackage, new jar_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) {
+			public boolean operate(String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes)
+			{
 				if (condition.operate(file_dir, file_name, entry, bytes))
 					op.operate(file_dir, file_name, entry, bytes);
 				return true;
@@ -939,10 +1108,13 @@ public class file_system {
 		});
 	}
 
-	public static void filter(String start_path, boolean include_subpackage, file_entry_operation.file condition, file_entry_operation.file op) {
-		foreach(start_path, include_subpackage, new file_entry_operation.file() {
+	public static final void filter(String start_path, boolean include_subpackage, file_entry_operation.file condition, file_entry_operation.file op)
+	{
+		foreach(start_path, include_subpackage, new file_entry_operation.file()
+		{
 			@Override
-			public boolean operate(String start_root_path, String relative_file_dir, String file_name, Path entry) {
+			public boolean operate(String start_root_path, String relative_file_dir, String file_name, Path entry)
+			{
 				if (condition.operate(start_root_path, relative_file_dir, file_name, entry))
 					op.operate(start_root_path, relative_file_dir, file_name, entry);
 				return true;
@@ -951,77 +1123,99 @@ public class file_system {
 	}
 
 	// -----------
-	public static void filter(InputStream jar, String regex, jar_entry_operation.file op) {
-		filter(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final void filter(InputStream jar, String regex, jar_entry_operation.file op)
+	{
+		filter(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.matches(regex);
 		}, op);
 	}
 
-	public static void filter(String start_path, String regex, file_entry_operation.file op) {
+	public static final void filter(String start_path, String regex, file_entry_operation.file op)
+	{
 		filter(start_path, true, regex, op);
 	}
 
 	// ------------
-	public static void filter(InputStream jar, String start_path, boolean include_subpackage, String regex, jar_entry_operation.file op) {
-		filter(jar, start_path, include_subpackage, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final void filter(InputStream jar, String start_path, boolean include_subpackage, String regex, jar_entry_operation.file op)
+	{
+		filter(jar, start_path, include_subpackage, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.matches(regex);
 		}, op);
 	}
 
-	public static void filter(String start_path, boolean include_subpackage, String regex, file_entry_operation.file op) {
-		filter(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final void filter(String start_path, boolean include_subpackage, String regex, file_entry_operation.file op)
+	{
+		filter(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.matches(regex);
 		}, op);
 	}
 
 	// ------------
-	public static void filter_type(InputStream jar, String file_type, jar_entry_operation.file op) {
-		filter(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final void filter_type(InputStream jar, String file_type, jar_entry_operation.file op)
+	{
+		filter(jar, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.endsWith(file_type);
 		}, op);
 	}
 
-	public static void filter_type(String start_path, String file_type, file_entry_operation.file op) {
+	public static final void filter_type(String start_path, String file_type, file_entry_operation.file op)
+	{
 		filter_type(start_path, true, file_type, op);
 	}
 
 	// ------------
-	public static void filter_type(InputStream jar, String start_path, boolean include_subpackage, String file_type, jar_entry_operation.file op) {
-		filter(jar, start_path, include_subpackage, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final void filter_type(InputStream jar, String start_path, boolean include_subpackage, String file_type, jar_entry_operation.file op)
+	{
+		filter(jar, start_path, include_subpackage, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			return file_name.endsWith(file_type);
 		}, op);
 	}
 
-	public static void filter_type(String start_path, boolean include_subpackage, String file_type, file_entry_operation.file op) {
-		filter(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final void filter_type(String start_path, boolean include_subpackage, String file_type, file_entry_operation.file op)
+	{
+		filter(start_path, include_subpackage, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			return file_name.endsWith(file_type);
 		}, op);
 	}
 
-	// ----------------------------------------------------------------- Class --------------------------------------------------------------------------
-	public static void filter_class(InputStream jar, jar_entry_operation._class op) {
-		filter_type(jar, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	// ----------------------------------------------------------------- Class
+	// --------------------------------------------------------------------------
+	public static final void filter_class(InputStream jar, jar_entry_operation._class op)
+	{
+		filter_type(jar, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			String full_path = entry.getName();
 			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
 
-	public static void filter_class(String start_path, file_entry_operation._class op) {
+	public static final void filter_class(String start_path, file_entry_operation._class op)
+	{
 		filter_class(start_path, true, op);
 	}
 
 	// ------------
-	public static void filter_class(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation._class op) {
-		filter_type(jar, start_path, include_subpackage, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+	public static final void filter_class(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation._class op)
+	{
+		filter_type(jar, start_path, include_subpackage, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		{
 			String full_path = entry.getName();
 			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
 
-	public static void filter_class(String start_path, boolean include_subpackage, file_entry_operation._class op) {
-		filter_type(start_path, include_subpackage, CLASS_EXTENSION_NAME, (String start_root_path, String relative_file_dir, String file_name, Path entry) -> {
+	public static final void filter_class(String start_path, boolean include_subpackage, file_entry_operation._class op)
+	{
+		filter_type(start_path, include_subpackage, CLASS_EXTENSION_NAME, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		{
 			String relative_bin_path = relative_file_dir.replace(File.separatorChar, '.') + '.' + file_name;// 例如pkg.example.A.class
 			op.operate(relative_bin_path.substring(0, relative_bin_path.length() - CLASS_EXTENSION_NAME.length()), entry);
 			return true;
@@ -1029,20 +1223,24 @@ public class file_system {
 	}
 
 	// ------------
-	public static HashMap<String, byte[]> collect_class(InputStream... jars) {
+	public static final HashMap<String, byte[]> collect_class(InputStream... jars)
+	{
 		HashMap<String, byte[]> classDefs = new HashMap<>();
 		for (InputStream jar : jars)
-			filter_class(jar, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+			filter_class(jar, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+			{
 				classDefs.put(class_full_name, bytes.toByteArray());
 				return true;
 			});
 		return classDefs;
 	}
 
-	public static HashMap<String, byte[]> collect_class(String... start_paths) {
+	public static final HashMap<String, byte[]> collect_class(String... start_paths)
+	{
 		HashMap<String, byte[]> classDefs = new HashMap<>();
 		for (String start_path : start_paths)
-			filter_class(start_path, (String class_full_name, Path entry) -> {
+			filter_class(start_path, (String class_full_name, Path entry) ->
+			{
 				classDefs.put(class_full_name, read(entry));
 				return true;
 			});
@@ -1050,20 +1248,24 @@ public class file_system {
 	}
 
 	// ------------
-	public static HashMap<String, byte[]> collect_class(String start_path, boolean include_subpackage, InputStream... jars) {
+	public static final HashMap<String, byte[]> collect_class(String start_path, boolean include_subpackage, InputStream... jars)
+	{
 		HashMap<String, byte[]> classDefs = new HashMap<>();
 		for (InputStream jar : jars)
-			filter_class(jar, start_path, include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) -> {
+			filter_class(jar, start_path, include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+			{
 				classDefs.put(class_full_name, bytes.toByteArray());
 				return true;
 			});
 		return classDefs;
 	}
 
-	public static HashMap<String, byte[]> collect_class(boolean include_subpackage, String... start_paths) {
+	public static final HashMap<String, byte[]> collect_class(boolean include_subpackage, String... start_paths)
+	{
 		HashMap<String, byte[]> classDefs = new HashMap<>();
 		for (String start_path : start_paths)
-			filter_class(start_path, include_subpackage, (String class_full_name, Path entry) -> {
+			filter_class(start_path, include_subpackage, (String class_full_name, Path entry) ->
+			{
 				classDefs.put(class_full_name, read(entry));
 				return true;
 			});

@@ -9,7 +9,8 @@ import java.util.Objects;
  * 不要用于取对象地址，短时间内可能不会出问题，但对象会随着GC过程移动，原先的地址会失效。<br>
  * 主要配合memory使用，对分配的固定地址内存进行操作。
  */
-public class pointer {
+public class pointer
+{
 	/**
 	 * C++层的指针转换为(void*)(uint64_t)addr
 	 */
@@ -45,7 +46,8 @@ public class pointer {
 	 * @param stride
 	 * @param ptr_type_klass_word
 	 */
-	private pointer(long addr, Class<?> type, long stride, long ptr_type_klass_word) {
+	private pointer(long addr, Class<?> type, long stride, long ptr_type_klass_word)
+	{
 		this.addr = addr;
 		this.ptr_jtype = type;
 		this.stride = stride;
@@ -58,7 +60,8 @@ public class pointer {
 	 * @param addr
 	 * @param type
 	 */
-	private pointer(long addr, cxx_type type) {
+	private pointer(long addr, cxx_type type)
+	{
 		this.addr = addr;
 		this.ptr_cxx_type = type;
 	}
@@ -71,7 +74,8 @@ public class pointer {
 	 * @param stride
 	 * @param ptr_type_klass_word
 	 */
-	private pointer(pointer ptr) {
+	private pointer(pointer ptr)
+	{
 		this.addr = ptr.addr;
 		this.ptr_jtype = ptr.ptr_jtype;
 		this.ptr_cxx_type = ptr.ptr_cxx_type;
@@ -79,39 +83,47 @@ public class pointer {
 		this.ptr_type_klass_word = ptr.ptr_type_klass_word;
 	}
 
-	private pointer(long addr, Class<?> type) {
+	private pointer(long addr, Class<?> type)
+	{
 		this.addr = addr;
 		cast(type);
 	}
 
-	private pointer(long addr) {
+	private pointer(long addr)
+	{
 		this(addr, void_ptr_type);
 	}
 
-	private pointer(String hex, Class<?> type) {
+	private pointer(String hex, Class<?> type)
+	{
 		this.addr = Long.decode(hex.strip().toLowerCase());
 		cast(type);
 	}
 
-	private pointer(String hex) {
+	private pointer(String hex)
+	{
 		this(hex, void_ptr_type);
 	}
 
 	public static final pointer nullptr;
 
-	public long address() {
+	public long address()
+	{
 		return addr;
 	}
 
-	public Class<?> type() {
+	public Class<?> type()
+	{
 		return ptr_jtype;
 	}
 
-	public boolean is_nullptr() {
+	public boolean is_nullptr()
+	{
 		return addr == 0;
 	}
 
-	public boolean is_void_ptr_type() {
+	public boolean is_void_ptr_type()
+	{
 		return ptr_jtype == void_ptr_type || ptr_cxx_type.equals(cxx_type.pointer);
 	}
 
@@ -119,7 +131,8 @@ public class pointer {
 	 * 十六进制地址
 	 */
 	@Override
-	public String toString() {
+	public String toString()
+	{
 		return "0x" + ((addr >> 32 == 0) ? String.format("%08x", addr) : String.format("%016x", addr));
 	}
 
@@ -127,14 +140,16 @@ public class pointer {
 	 * 判断两个指针是否相同，只比较地址不比较类型。
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(Object obj)
+	{
 		if (obj == this)
 			return true;
 		return (obj instanceof pointer ptr) && this.addr == ptr.addr;
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode()
+	{
 		return Objects.hashCode(addr) ^ Objects.hashCode(ptr_jtype) ^ Objects.hashCode(ptr_jtype);
 	}
 
@@ -145,19 +160,23 @@ public class pointer {
 	 * @param type
 	 * @return
 	 */
-	public static final pointer at(long addr, Class<?> type) {
+	public static final pointer at(long addr, Class<?> type)
+	{
 		return new pointer(addr, type);
 	}
 
-	public static final pointer at(long addr, cxx_type type) {
+	public static final pointer at(long addr, cxx_type type)
+	{
 		return new pointer(addr, type);
 	}
 
-	public static final pointer at(long addr) {
+	public static final pointer at(long addr)
+	{
 		return new pointer(addr);
 	}
 
-	public static final pointer at(int _32bit_addr) {
+	public static final pointer at(int _32bit_addr)
+	{
 		return new pointer(cxx_type.uint_ptr(_32bit_addr));
 	}
 
@@ -168,15 +187,18 @@ public class pointer {
 	 * @param type
 	 * @return
 	 */
-	public static final pointer at(String hex, Class<?> type) {
+	public static final pointer at(String hex, Class<?> type)
+	{
 		return new pointer(hex, type);
 	}
 
-	public static final pointer at(String hex) {
+	public static final pointer at(String hex)
+	{
 		return pointer.at(0);
 	}
 
-	public pointer copy() {
+	public pointer copy()
+	{
 		return new pointer(this);
 	}
 
@@ -186,18 +208,21 @@ public class pointer {
 	 * @param dest_type
 	 * @return
 	 */
-	public pointer cast(Class<?> dest_type) {
+	public pointer cast(Class<?> dest_type)
+	{
 		this.ptr_jtype = dest_type;
 		this.ptr_cxx_type = null;
 		this.stride = java_type.sizeof(dest_type);
-		if (!java_type.is_primitive(dest_type)) {
+		if (!java_type.is_primitive(dest_type))
+		{
 			// 每次cast()的时候更新目标对象的类型
 			ptr_type_klass_word = java_type.get_klass_word(dest_type);
 		}
 		return this;
 	}
 
-	public pointer cast(cxx_type dest_type) {
+	public pointer cast(cxx_type dest_type)
+	{
 		this.ptr_jtype = null;
 		this.ptr_cxx_type = dest_type;
 		return null;
@@ -206,17 +231,20 @@ public class pointer {
 	/**
 	 * 指针赋值，只赋地址不赋类型。类型依然是原指针的类型
 	 */
-	public pointer assign(pointer ptr) {
+	public pointer assign(pointer ptr)
+	{
 		this.addr = ptr.addr;
 		return this;
 	}
 
-	public pointer assign(long addr) {
+	public pointer assign(long addr)
+	{
 		this.addr = addr;
 		return this;
 	}
 
-	public pointer assign(String hex) {
+	public pointer assign(String hex)
+	{
 		this.addr = Long.decode(hex.strip().toLowerCase());
 		return this;
 	}
@@ -227,7 +255,8 @@ public class pointer {
 	 * @param step
 	 * @return
 	 */
-	public pointer add(long step) {
+	public pointer add(long step)
+	{
 		return new pointer(addr + stride * step, ptr_jtype, stride, ptr_type_klass_word);
 	}
 
@@ -237,31 +266,37 @@ public class pointer {
 	 * @param step
 	 * @return
 	 */
-	public pointer inc(long step) {
+	public pointer inc(long step)
+	{
 		this.addr += stride * step;
 		return this;
 	}
 
-	public pointer inc() {
+	public pointer inc()
+	{
 		this.addr += stride;
 		return this;
 	}
 
-	public pointer sub(long step) {
+	public pointer sub(long step)
+	{
 		return new pointer(addr - stride * step, ptr_jtype, stride, ptr_type_klass_word);
 	}
 
-	public pointer dec(long step) {
+	public pointer dec(long step)
+	{
 		this.addr -= stride * step;
 		return this;
 	}
 
-	public pointer dec() {
+	public pointer dec()
+	{
 		this.addr -= stride;
 		return this;
 	}
 
-	static {
+	static
+	{
 		nullptr = pointer.at(address_of_object(null), void_ptr_type);
 	}
 
@@ -274,8 +309,10 @@ public class pointer {
 	 * @param jobject
 	 * @return
 	 */
-	static final long address_of_object(Object jobject) {
-		return unsafe.native_address_of(new Object[] { jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
+	static final long address_of_object(Object jobject)
+	{
+		return unsafe.native_address_of(new Object[]
+		{ jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
 	}
 
 	/**
@@ -285,7 +322,8 @@ public class pointer {
 	 * @param jobject
 	 * @return
 	 */
-	public static final pointer address_of(Object jobject) {
+	public static final pointer address_of(Object jobject)
+	{
 		return pointer.at(address_of_object(jobject), jobject == null ? void_ptr_type : jobject.getClass());
 	}
 
@@ -295,11 +333,13 @@ public class pointer {
 	 * @param ref
 	 * @return
 	 */
-	public static final pointer address_of(reference ref) {
+	public static final pointer address_of(reference ref)
+	{
 		return pointer.at(ref.address_of_reference(), ref.ref_type);
 	}
 
-	public static final pointer address_of(cxx_type.object cxx_obj) {
+	public static final pointer address_of(cxx_type.object cxx_obj)
+	{
 		return cxx_obj.ptr.copy();
 	}
 
@@ -310,14 +350,16 @@ public class pointer {
 	 * @param field
 	 * @return
 	 */
-	public static final pointer address_of(Object jobject, Field field) {
+	public static final pointer address_of(Object jobject, Field field)
+	{
 		if (Modifier.isStatic(field.getModifiers()))// 静态字段
 			return pointer.at(address_of_object(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), field.getType());
 		else
 			return pointer.at(address_of_object(jobject) + unsafe.object_field_offset(field), field.getType());
 	}
 
-	public static final pointer address_of(Object jobject, String field) {
+	public static final pointer address_of(Object jobject, String field)
+	{
 		return address_of(jobject, reflection.find_field(jobject, field));
 	}
 
@@ -327,7 +369,8 @@ public class pointer {
 	 * @param addr
 	 * @return
 	 */
-	static final Object dereference_object(long addr) {
+	static final Object dereference_object(long addr)
+	{
 		Object[] __ref_fetch = new Object[1];
 		unsafe.store_native_address(__ref_fetch, unsafe.ARRAY_OBJECT_BASE_OFFSET, addr);
 		return __ref_fetch[0];
@@ -338,7 +381,8 @@ public class pointer {
 	 * 
 	 * @return
 	 */
-	public Object dereference() {
+	public Object dereference()
+	{
 		// 不可对void*类型的指针取值
 		if (is_void_ptr_type())
 			throw new RuntimeException("Cannot dereference a void* pointer at " + this.toString());
@@ -360,7 +404,8 @@ public class pointer {
 			return unsafe.read_long(null, addr);
 		else if (ptr_jtype == double.class)
 			return unsafe.read_double(null, addr);
-		else {
+		else
+		{
 			Object deref_obj = dereference_object(addr);
 			java_type.set_klass_word(deref_obj, ptr_type_klass_word);
 			return deref_obj;
@@ -373,7 +418,8 @@ public class pointer {
 	 * @param v
 	 * @return 返回指针本身
 	 */
-	public pointer dereference_assign(Object v) {
+	public pointer dereference_assign(Object v)
+	{
 		// 不可对void*类型的指针取值
 		if (is_void_ptr_type())
 			throw new RuntimeException("Cannot dereference a void* pointer at " + this.toString());
@@ -399,10 +445,12 @@ public class pointer {
 		return this;
 	}
 
-	public final void print_memory(long size) {
+	public final void print_memory(long size)
+	{
 		pointer indicator = this.copy().cast(byte.class);
-		for (int i = 0; i < size; ++i, indicator.inc()) {
-			System.err.print(String.format("%02x", cxx_type.uint_ptr((byte) indicator.dereference())) + " ");
+		for (int i = 0; i < size; ++i, indicator.inc())
+		{
+			System.out.print(String.format("%02x", cxx_type.uint_ptr((byte) indicator.dereference())) + " ");
 		}
 	}
 }

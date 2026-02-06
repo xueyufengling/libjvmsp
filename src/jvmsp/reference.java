@@ -7,24 +7,28 @@ import java.util.Objects;
 /**
  * C++风格的引用，无需担心GC移动对象导致指针失效。
  */
-public class reference {
+public class reference
+{
 	Object ref_base;
 	long offset;
 
 	Class<?> ref_type;// 可以是基本类型
 	long ref_type_klass_word;
 
-	private reference(Object jobject, long offset, Class<?> ref_type) {
+	private reference(Object jobject, long offset, Class<?> ref_type)
+	{
 		this.ref_base = jobject;
 		this.offset = offset;
 		this.ref_type = ref_type;
 	}
 
-	long address_of_reference() {
+	long address_of_reference()
+	{
 		return pointer.address_of_object(ref_base) + offset;
 	}
 
-	public Object value() {
+	public Object value()
+	{
 		if (ref_type == byte.class)
 			return unsafe.read_byte(null, offset);
 		else if (ref_type == char.class)
@@ -41,26 +45,30 @@ public class reference {
 			return unsafe.read_long(null, offset);
 		else if (ref_type == double.class)
 			return unsafe.read_double(null, offset);
-		else {
+		else
+		{
 			Object deref_obj = pointer.dereference_object(address_of_reference());
 			java_type.set_klass_word(deref_obj, ref_type_klass_word);
 			return deref_obj;
 		}
 	}
 
-	public Class<?> type() {
+	public Class<?> type()
+	{
 		return ref_type;
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(Object obj)
+	{
 		if (obj == this)
 			return true;
 		return (obj instanceof reference ref) && (this.ref_base == ref.ref_base) && (this.offset == ref.offset);
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode()
+	{
 		return Objects.hashCode(ref_base) ^ Objects.hashCode(offset) ^ Objects.hashCode(ref_type);
 	}
 
@@ -70,9 +78,11 @@ public class reference {
 	 * @param destType
 	 * @return
 	 */
-	public reference cast(Class<?> destType) {
+	public reference cast(Class<?> destType)
+	{
 		this.ref_type = destType;
-		if (!java_type.is_primitive(destType)) {
+		if (!java_type.is_primitive(destType))
+		{
 			// 每次cast()的时候更新目标对象的类型
 			ref_type_klass_word = java_type.get_klass_word(destType);
 		}
@@ -85,7 +95,8 @@ public class reference {
 	 * @param jobject
 	 * @return
 	 */
-	public static final reference reference_of(Object jobject) {
+	public static final reference reference_of(Object jobject)
+	{
 		return new reference(jobject, 0, jobject.getClass());
 	}
 
@@ -96,14 +107,16 @@ public class reference {
 	 * @param field
 	 * @return
 	 */
-	public static final reference reference_of(Object jobject, Field field) {
+	public static final reference reference_of(Object jobject, Field field)
+	{
 		if (Modifier.isStatic(field.getModifiers()))
 			return new reference(unsafe.static_field_base(field), unsafe.static_field_offset(field), field.getType());
 		else
 			return new reference(jobject, unsafe.object_field_offset(field), field.getType());
 	}
 
-	public static final reference reference_of(Object jobject, String field) {
+	public static final reference reference_of(Object jobject, String field)
+	{
 		return reference_of(jobject, reflection.find_field(jobject, field));
 	}
 
@@ -113,7 +126,8 @@ public class reference {
 	 * @param v
 	 * @return
 	 */
-	public reference assign(Object v) {
+	public reference assign(Object v)
+	{
 		if (ref_type == byte.class)
 			unsafe.write(ref_base, offset, java_type.byte_value(v));
 		else if (ref_type == char.class)

@@ -5,10 +5,12 @@ import java.lang.reflect.InvocationTargetException;
 
 import sun.reflect.ReflectionFactory;
 
-public class reflection_factory {
+public class reflection_factory
+{
 	public static final ReflectionFactory instance_ReflectionFactory;
 
-	static {
+	static
+	{
 		instance_ReflectionFactory = ReflectionFactory.getReflectionFactory();
 	}
 
@@ -21,11 +23,15 @@ public class reflection_factory {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static final <_T> _T construct(Class<_T> target, Constructor<?> target_constructor, Object... args) {
-		try {
+	public static final <_T> _T construct(Class<_T> target, Constructor<?> target_constructor, Object... args)
+	{
+		try
+		{
 			Constructor<?> ctor = (Constructor<?>) instance_ReflectionFactory.newConstructorForSerialization(target, target_constructor);
 			return (_T) ctor.newInstance(args);// 通过该方法拿到的构造函数默认可以直接调用，如果再手动setAccessible(true)则会报错无权限，需要开放模块。
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException ex) {
+		}
+		catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException ex)
+		{
 			ex.printStackTrace();
 		}
 		return null;
@@ -37,10 +43,14 @@ public class reflection_factory {
 	 * @param target
 	 * @return
 	 */
-	public static final <T> T allocate(Class<T> target) {
-		try {
+	public static final <T> T allocate(Class<T> target)
+	{
+		try
+		{
 			return construct(target, Object.class.getConstructor());
-		} catch (IllegalArgumentException | SecurityException | NoSuchMethodException ex) {
+		}
+		catch (IllegalArgumentException | SecurityException | NoSuchMethodException ex)
+		{
 			ex.printStackTrace();
 		}
 		return null;

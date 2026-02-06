@@ -4,7 +4,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
@@ -16,7 +15,8 @@ import jvmsp.internal.reflection_factory;
  * 
  * @implNote 该类未引用任何本库的类，需要最先初始化
  */
-public class symbols {
+public class symbols
+{
 	public static final int PUBLIC = Modifier.PUBLIC;
 	public static final int PRIVATE = Modifier.PRIVATE;
 	public static final int PROTECTED = Modifier.PROTECTED;
@@ -32,22 +32,10 @@ public class symbols {
 
 	static final MethodHandles.Lookup TRUSTED_LOOKUP;
 
-	static {
+	static
+	{
 		TRUSTED_LOOKUP = allocate_trusted_lookup();
 	}
-
-	/**
-	 * Handle调用时try-catch外返回值，这些值永远不会被返回，但出于语法需要必须有一个返回值。
-	 */
-	public static final byte UNREACHABLE_BYTE = -1;
-	public static final char UNREACHABLE_CHAR = 0;
-	public static final short UNREACHABLE_SHORT = -1;
-	public static final long UNREACHABLE_LONG = -1;
-	public static final Object UNREACHABLE_REFERENCE = null;
-	public static final boolean UNREACHABLE_BOOLEAN = false;
-	public static final int UNREACHABLE_INT = -1;
-	public static final double UNREACHABLE_DOUBLE = -1;
-	public static final float UNREACHABLE_FLOAT = -1;
 
 	/**
 	 * 使用ReflectionFactory的反序列化调用Lookup的构造函数新构建一个Lookup对象。<br>
@@ -57,14 +45,16 @@ public class symbols {
 	 * @param allowed_modes
 	 * @return
 	 */
-	public static final MethodHandles.Lookup allocate_lookup(Class<?> lookup_class, Class<?> prev_lookup_class, int allowed_modes) {
-		MethodHandles.Lookup lookup = null;
-		try {
-			lookup = reflection_factory.construct(MethodHandles.Lookup.class, MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, Class.class, int.class), lookup_class, prev_lookup_class, allowed_modes);
-		} catch (IllegalArgumentException | NoSuchMethodException | SecurityException ex) {
-			ex.printStackTrace();
+	public static final MethodHandles.Lookup allocate_lookup(Class<?> lookup_class, Class<?> prev_lookup_class, int allowed_modes)
+	{
+		try
+		{
+			return reflection_factory.construct(MethodHandles.Lookup.class, MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, Class.class, int.class), lookup_class, prev_lookup_class, allowed_modes);
 		}
-		return lookup;
+		catch (IllegalArgumentException | NoSuchMethodException | SecurityException ex)
+		{
+			throw new java.lang.InternalError("allocate lookup of '" + lookup_class + "' failed", ex);
+		}
 	}
 
 	/**
@@ -72,7 +62,8 @@ public class symbols {
 	 * 
 	 * @return
 	 */
-	public static final MethodHandles.Lookup allocate_trusted_lookup() {
+	public static final MethodHandles.Lookup allocate_trusted_lookup()
+	{
 		return allocate_lookup(Object.class, null, TRUSTED);
 	}
 
@@ -81,17 +72,20 @@ public class symbols {
 	 * 
 	 * @return
 	 */
-	public static final MethodHandles.Lookup allocate_lookup(Class<?> lookup_class) {
-		MethodHandles.Lookup lookup = null;
-		try {
-			lookup = reflection_factory.construct(MethodHandles.Lookup.class, MethodHandles.Lookup.class.getDeclaredConstructor(Class.class), lookup_class);
-		} catch (IllegalArgumentException | NoSuchMethodException | SecurityException ex) {
-			ex.printStackTrace();
+	public static final MethodHandles.Lookup allocate_lookup(Class<?> lookup_class)
+	{
+		try
+		{
+			return reflection_factory.construct(MethodHandles.Lookup.class, MethodHandles.Lookup.class.getDeclaredConstructor(Class.class), lookup_class);
 		}
-		return lookup;
+		catch (IllegalArgumentException | NoSuchMethodException | SecurityException ex)
+		{
+			throw new java.lang.InternalError("allocate lookup of '" + lookup_class + "' failed", ex);
+		}
 	}
 
-	public static final MethodHandles.Lookup allocate_lookup() {
+	public static final MethodHandles.Lookup allocate_lookup()
+	{
 		return allocate_lookup(Object.class);
 	}
 
@@ -103,24 +97,28 @@ public class symbols {
 	 * @param type
 	 * @return
 	 */
-	public static VarHandle find_var(Class<?> clazz, String field_name, Class<?> type) {
-		VarHandle v = null;
-		try {
-			v = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVarHandle(clazz, field_name, type);
-		} catch (IllegalAccessException | NoSuchFieldException ex) {
-			ex.printStackTrace();
+	public static final VarHandle find_var(Class<?> clazz, String field_name, Class<?> type)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVarHandle(clazz, field_name, type);
 		}
-		return v;
+		catch (IllegalAccessException | NoSuchFieldException ex)
+		{
+			throw new java.lang.InternalError("find var handle '" + field_name + "' in '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static VarHandle find_static_var(Class<?> clazz, String field_name, Class<?> type) {
-		VarHandle v = null;
-		try {
-			v = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStaticVarHandle(clazz, field_name, type);
-		} catch (IllegalAccessException | NoSuchFieldException ex) {
-			ex.printStackTrace();
+	public static final VarHandle find_static_var(Class<?> clazz, String field_name, Class<?> type)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStaticVarHandle(clazz, field_name, type);
 		}
-		return v;
+		catch (IllegalAccessException | NoSuchFieldException ex)
+		{
+			throw new java.lang.InternalError("find static var handle '" + field_name + "' in '" + clazz + "' failed", ex);
+		}
 	}
 
 	/**
@@ -131,68 +129,79 @@ public class symbols {
 	 * @param jtype
 	 * @return
 	 */
-	public static MethodHandle find_constructor(Class<?> clazz, Class<?>... arg_types) {
-		MethodHandle m = null;
-		try {
-			m = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findConstructor(clazz, MethodType.methodType(void.class, arg_types));
-		} catch (IllegalAccessException | NoSuchMethodException ex) {
-			ex.printStackTrace();
+	public static final MethodHandle find_constructor(Class<?> clazz, Class<?>... arg_types)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findConstructor(clazz, MethodType.methodType(void.class, arg_types));
 		}
-		return m;
+		catch (IllegalAccessException | NoSuchMethodException ex)
+		{
+			throw new java.lang.InternalError("find constructor handle of '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static MethodHandle find_initializer(Class<?> clazz) {
-		MethodHandle m = null;
-		try {
-			m = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, INITIALIZER_NAME, MethodType.methodType(void.class, new Class<?>[0]));
-		} catch (IllegalAccessException | NoSuchMethodException ex) {
-			ex.printStackTrace();
+	public static final MethodHandle find_initializer(Class<?> clazz)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, INITIALIZER_NAME, MethodType.methodType(void.class, new Class<?>[0]));
 		}
-		return m;
+		catch (IllegalAccessException | NoSuchMethodException ex)
+		{
+			throw new java.lang.InternalError("find initializer handle of '" + clazz + "' failed", ex);
+		}
 	}
 
 	/**
-	 * 查找任意字节码行为的方法句柄(包括native)，从search_chain_start_subclazz开始查找，如果该类不存在方法则一直向上查找方法，直到在指定的超类search_chain_end_superclazz中也找不到方法时终止并抛出错误
-	 * 句柄等价于Unsafe查找到的offset与base的组合，明确指定了一个内存中的方法地址
+	 * 查找任意字节码行为的方法句柄(包括native)，从search_chain_start_subclazz开始查找，如果该类不存在方法则一直向上查找方法，直到在指定的超类search_chain_end_superclazz中也找不到方法时终止并抛出错误 句柄等价于Unsafe查找到的offset与base的组合，明确指定了一个内存中的方法地址
 	 * 
 	 * @param search_chain_start_subclazz 查找链起始类，也是要查找的对象，必须是search_chain_end_superclazz的子类
 	 * @param search_chain_end_superclazz 查找链终止类
 	 * @param type                        方法类型，包含返回值和参数类型
 	 * @return 查找到的方法句柄
 	 */
-	public static MethodHandle find_special_method(Class<?> search_chain_start_subclazz, Class<?> search_chain_end_superclazz, String method_name, MethodType type) {
-		MethodHandle m = null;
-		try {
-			m = MethodHandles.privateLookupIn(search_chain_start_subclazz, TRUSTED_LOOKUP).findSpecial(search_chain_end_superclazz, method_name, type, search_chain_start_subclazz);
-		} catch (IllegalAccessException | NoSuchMethodException ex) {
-			ex.printStackTrace();
+	public static final MethodHandle find_special_method(Class<?> search_chain_start_subclazz, Class<?> search_chain_end_superclazz, String method_name, MethodType type)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(search_chain_start_subclazz, TRUSTED_LOOKUP).findSpecial(search_chain_end_superclazz, method_name, type, search_chain_start_subclazz);
 		}
-		return m;
+		catch (IllegalAccessException | NoSuchMethodException ex)
+		{
+			throw new java.lang.InternalError("find special method handle '" + method_name + "' in '" + search_chain_start_subclazz + "' failed", ex);
+		}
 	}
 
-	public static MethodHandle find_special_method(Class<?> search_clazz, String method_name, MethodType type) {
+	public static final MethodHandle find_special_method(Class<?> search_clazz, String method_name, MethodType type)
+	{
 		return find_special_method(search_clazz, search_clazz, method_name, type);
 	}
 
-	public static MethodHandle find_special_method(Class<?> search_chain_start_subclazz, Class<?> search_chain_end_superclazz, String method_name, Class<?> return_type, Class<?>... arg_types) {
+	public static final MethodHandle find_special_method(Class<?> search_chain_start_subclazz, Class<?> search_chain_end_superclazz, String method_name, Class<?> return_type, Class<?>... arg_types)
+	{
 		return find_special_method(search_chain_start_subclazz, search_chain_end_superclazz, method_name, MethodType.methodType(return_type, arg_types));
 	}
 
-	public static MethodHandle find_special_method(Class<?> search_clazz, String method_name, Class<?> return_type, Class<?>... arg_types) {
+	public static final MethodHandle find_special_method(Class<?> search_clazz, String method_name, Class<?> return_type, Class<?>... arg_types)
+	{
 		return find_special_method(search_clazz, search_clazz, method_name, return_type, arg_types);
 	}
 
-	public static MethodHandle find_virtual_method(Class<?> clazz, String method_name, MethodType type) {
-		MethodHandle m = null;
-		try {
-			m = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVirtual(clazz, method_name, type);
-		} catch (IllegalAccessException | NoSuchMethodException ex) {
-			ex.printStackTrace();
+	public static final MethodHandle find_virtual_method(Class<?> clazz, String method_name, MethodType type)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVirtual(clazz, method_name, type);
 		}
-		return m;
+		catch (IllegalAccessException | NoSuchMethodException ex)
+		{
+			throw new java.lang.InternalError("find virtual method handle '" + method_name + "' in '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static MethodHandle find_virtual_method(Class<?> clazz, String method_name, Class<?> return_type, Class<?>... arg_types) {
+	public static final MethodHandle find_virtual_method(Class<?> clazz, String method_name, Class<?> return_type, Class<?>... arg_types)
+	{
 		return find_virtual_method(clazz, method_name, MethodType.methodType(return_type, arg_types));
 	}
 
@@ -204,17 +213,20 @@ public class symbols {
 	 * @param type
 	 * @return
 	 */
-	public static MethodHandle find_static_method(Class<?> clazz, String method_name, MethodType type) {
-		MethodHandle m = null;
-		try {
-			m = MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, method_name, type);
-		} catch (IllegalAccessException | NoSuchMethodException ex) {
-			ex.printStackTrace();
+	public static final MethodHandle find_static_method(Class<?> clazz, String method_name, MethodType type)
+	{
+		try
+		{
+			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, method_name, type);
 		}
-		return m;
+		catch (IllegalAccessException | NoSuchMethodException ex)
+		{
+			throw new java.lang.InternalError("find static method handle '" + method_name + "' in '" + clazz + "' failed", ex);
+		}
 	}
 
-	public static MethodHandle find_static_method(Class<?> clazz, String method_name, Class<?> return_type, Class<?>... arg_types) {
+	public static final MethodHandle find_static_method(Class<?> clazz, String method_name, Class<?> return_type, Class<?>... arg_types)
+	{
 		return find_static_method(clazz, method_name, MethodType.methodType(return_type, arg_types));
 	}
 
@@ -227,12 +239,14 @@ public class symbols {
 	 * @param arg_types
 	 * @return
 	 */
-	public static MethodHandle find_method(Class<?> clazz, String method_name, Class<?>... arg_types) {
+	public static final MethodHandle find_method(Class<?> clazz, String method_name, Class<?>... arg_types)
+	{
 		MethodHandle m = null;
 		if (method_name.equals(CONSTRUCTOR_NAME))
 			m = find_constructor(clazz, arg_types);
-		else {
-			Method rm = reflection.get_declared_method(clazz, method_name, arg_types);
+		else
+		{
+			Method rm = reflection.find_declared_method(clazz, method_name, arg_types);
 			if (Modifier.isStatic(rm.getModifiers()))
 				m = symbols.find_static_method(clazz, method_name, rm.getReturnType(), arg_types);
 			else
@@ -249,44 +263,55 @@ public class symbols {
 	 * @param args
 	 * @return
 	 */
-	public static Object call(MethodHandle method, Object obj, Object... args) {
+	public static final Object call(MethodHandle method, Object obj, Object... args)
+	{
 		Object[] wrapped_args = new Object[args.length + 1];
 		wrapped_args[0] = obj;
 		System.arraycopy(args, 0, wrapped_args, 1, args.length);
-		try {
+		try
+		{
 			return method.invokeWithArguments(wrapped_args);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_REFERENCE;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call '" + method.toString() + "' failed");
+		}
 	}
 
-	public static Object read(Object obj, String field_name, Class<?> type) {
+	public static final Object read(Object obj, String field_name, Class<?> type)
+	{
 		return find_var(obj.getClass(), field_name, type).get(obj);
 	}
 
-	public static Object read_static(Class<?> cls, String field_name, Class<?> type) {
-		return find_static_var(cls, field_name, type).get();
+	public static final Object read_static(Class<?> clazz, String field_name, Class<?> type)
+	{
+		return find_static_var(clazz, field_name, type).get();
 	}
 
-	public static void write(Object obj, String field_name, Class<?> type, Object value) {
+	public static final void write(Object obj, String field_name, Class<?> type, Object value)
+	{
 		find_var(obj.getClass(), field_name, type).set(obj, value);
 	}
 
-	public static void write_static(Class<?> cls, String field_name, Class<?> type, Object value) {
-		find_static_var(cls, field_name, type).set(value);
+	public static final void write_static(Class<?> clazz, String field_name, Class<?> type, Object value)
+	{
+		find_static_var(clazz, field_name, type).set(value);
 	}
 
 	/**
 	 * VM底层相关信息
 	 */
 
-	static Class<?> class_java_lang_invoke_MethodHandleNatives;
+	static Class<?> java_lang_invoke_MethodHandleNatives;
 
-	static {
-		try {
-			class_java_lang_invoke_MethodHandleNatives = Class.forName("java.lang.invoke.MethodHandleNatives");
-		} catch (ClassNotFoundException ex) {
+	static
+	{
+		try
+		{
+			java_lang_invoke_MethodHandleNatives = Class.forName("java.lang.invoke.MethodHandleNatives");
+		}
+		catch (ClassNotFoundException ex)
+		{
 			ex.printStackTrace();
 		}
 	}
@@ -295,9 +320,10 @@ public class symbols {
 	 * java.lang.invoke.MethodHandleNatives.Constants定义的常数<br>
 	 * 主要用于MemberName
 	 */
-	public static final class constants {
+	public static final class constants
+	{
 
-		static Class<?> class_java_lang_invoke_MethodHandleNatives_Constants;
+		static Class<?> java_lang_invoke_MethodHandleNatives_Constants;
 
 		public static final int MN_IS_METHOD, // method (not constructor)
 				MN_IS_CONSTRUCTOR, // constructor
@@ -338,60 +364,57 @@ public class symbols {
 				LM_UNCONDITIONAL,
 				LM_TRUSTED;
 
-		static {
-			try {
-				class_java_lang_invoke_MethodHandleNatives_Constants = Class.forName("java.lang.invoke.MethodHandleNatives$Constants");
-			} catch (ClassNotFoundException ex) {
+		static
+		{
+			try
+			{
+				java_lang_invoke_MethodHandleNatives_Constants = Class.forName("java.lang.invoke.MethodHandleNatives$Constants");
+			}
+			catch (ClassNotFoundException ex)
+			{
 				ex.printStackTrace();
 			}
-			MN_IS_METHOD = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_METHOD", int.class);
-			MN_IS_CONSTRUCTOR = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_CONSTRUCTOR", int.class);
-			MN_IS_FIELD = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_FIELD", int.class);
-			MN_IS_TYPE = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_TYPE", int.class);
-			MN_CALLER_SENSITIVE = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_CALLER_SENSITIVE", int.class);
-			MN_TRUSTED_FINAL = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_TRUSTED_FINAL", int.class);
-			MN_REFERENCE_KIND_SHIFT = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_REFERENCE_KIND_SHIFT", int.class);
-			MN_REFERENCE_KIND_MASK = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "MN_REFERENCE_KIND_MASK", int.class);
+			MN_IS_METHOD = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_METHOD", int.class);
+			MN_IS_CONSTRUCTOR = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_CONSTRUCTOR", int.class);
+			MN_IS_FIELD = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_FIELD", int.class);
+			MN_IS_TYPE = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_IS_TYPE", int.class);
+			MN_CALLER_SENSITIVE = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_CALLER_SENSITIVE", int.class);
+			MN_TRUSTED_FINAL = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_TRUSTED_FINAL", int.class);
+			MN_REFERENCE_KIND_SHIFT = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_REFERENCE_KIND_SHIFT", int.class);
+			MN_REFERENCE_KIND_MASK = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "MN_REFERENCE_KIND_MASK", int.class);
 
-			REF_NONE = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_NONE", byte.class);
-			REF_getField = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_getField", byte.class);
-			REF_getStatic = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_getStatic", byte.class);
-			REF_putField = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_putField", byte.class);
-			REF_putStatic = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_putStatic", byte.class);
-			REF_invokeVirtual = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeVirtual", byte.class);
-			REF_invokeStatic = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeStatic", byte.class);
-			REF_invokeSpecial = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeSpecial", byte.class);
-			REF_newInvokeSpecial = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_newInvokeSpecial", byte.class);
-			REF_invokeInterface = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeInterface", byte.class);
-			REF_LIMIT = (byte) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "REF_LIMIT", byte.class);
+			REF_NONE = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_NONE", byte.class);
+			REF_getField = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_getField", byte.class);
+			REF_getStatic = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_getStatic", byte.class);
+			REF_putField = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_putField", byte.class);
+			REF_putStatic = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_putStatic", byte.class);
+			REF_invokeVirtual = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeVirtual", byte.class);
+			REF_invokeStatic = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeStatic", byte.class);
+			REF_invokeSpecial = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeSpecial", byte.class);
+			REF_newInvokeSpecial = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_newInvokeSpecial", byte.class);
+			REF_invokeInterface = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_invokeInterface", byte.class);
+			REF_LIMIT = (byte) read_static(java_lang_invoke_MethodHandleNatives_Constants, "REF_LIMIT", byte.class);
 
-			NESTMATE_CLASS = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "NESTMATE_CLASS", int.class);
-			HIDDEN_CLASS = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "HIDDEN_CLASS", int.class);
-			STRONG_LOADER_LINK = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "STRONG_LOADER_LINK", int.class);
-			ACCESS_VM_ANNOTATIONS = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "ACCESS_VM_ANNOTATIONS", int.class);
+			NESTMATE_CLASS = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "NESTMATE_CLASS", int.class);
+			HIDDEN_CLASS = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "HIDDEN_CLASS", int.class);
+			STRONG_LOADER_LINK = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "STRONG_LOADER_LINK", int.class);
+			ACCESS_VM_ANNOTATIONS = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "ACCESS_VM_ANNOTATIONS", int.class);
 
-			LM_MODULE = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "LM_MODULE", int.class);
-			LM_UNCONDITIONAL = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "LM_UNCONDITIONAL", int.class);
-			LM_TRUSTED = (int) read_static(class_java_lang_invoke_MethodHandleNatives_Constants, "LM_TRUSTED", int.class);
+			LM_MODULE = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "LM_MODULE", int.class);
+			LM_UNCONDITIONAL = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "LM_UNCONDITIONAL", int.class);
+			LM_TRUSTED = (int) read_static(java_lang_invoke_MethodHandleNatives_Constants, "LM_TRUSTED", int.class);
 		}
 	}
 
-	private static Class<?> class_java_lang_invoke_MemberName;
-	private static MethodHandle getMemberVMInfo;
-
-	static {
-		try {
-			class_java_lang_invoke_MemberName = Class.forName("java.lang.invoke.MemberName");
-		} catch (ClassNotFoundException ex) {
-			ex.printStackTrace();
-		}
-		getMemberVMInfo = symbols.find_static_method(class_java_lang_invoke_MethodHandleNatives, "getMemberVMInfo", Object.class, class_java_lang_invoke_MemberName);
-	}
+	/**
+	 * 
+	 */
 
 	/**
 	 * 目标成员字段或方法的信息。<br>
 	 */
-	public static final class vm_info {
+	public static final class vm_info
+	{
 		/**
 		 * 成员的偏移量，相对于class或interface起始。<br>
 		 * {@link https://github.com/openjdk/jdk/blob/3ff83ec49e561c44dd99508364b8ba068274b63a/src/hotspot/share/classfile/javaClasses.hpp#L1310}
@@ -405,7 +428,8 @@ public class symbols {
 		 */
 		public final Object target_ptr;
 
-		private vm_info(long vmindex, Object vmtarget) {
+		private vm_info(long vmindex, Object vmtarget)
+		{
 			this.offset = vmindex;
 			this.target_ptr = vmtarget;
 		}
@@ -416,12 +440,74 @@ public class symbols {
 		 * 
 		 * @return
 		 */
-		public final pointer instance_mirror_klass() {
+		public final pointer instance_mirror_klass()
+		{
 			return pointer.address_of(target_ptr).cast(Class.class);
 		}
 
-		public final pointer method() {
+		public final pointer method()
+		{
 			return pointer.address_of(target_ptr).cast(byte.class);
+		}
+	}
+
+	// JVM底层的符号信息
+	private static Class<?> java_lang_invoke_MemberName;
+
+	private static MethodHandle objectFieldOffset;
+	private static MethodHandle staticFieldOffset;
+	private static MethodHandle staticFieldBase;
+	private static MethodHandle getMemberVMInfo;
+
+	static
+	{
+		try
+		{
+			java_lang_invoke_MemberName = Class.forName("java.lang.invoke.MemberName");
+		}
+		catch (ClassNotFoundException ex)
+		{
+			ex.printStackTrace();
+		}
+		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "objectFieldOffset", long.class, java_lang_invoke_MemberName);
+		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldOffset", long.class, java_lang_invoke_MemberName);
+		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldBase", Object.class, java_lang_invoke_MemberName);
+		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "getMemberVMInfo", Object.class, java_lang_invoke_MemberName);
+	}
+
+	public static final long object_field_offset(Object member_name)
+	{
+		try
+		{
+			return (long) objectFieldOffset.invoke(member_name);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get object field offset of '" + member_name.toString() + "' failed", ex);
+		}
+	}
+
+	public static final long static_field_offset(Object member_name)
+	{
+		try
+		{
+			return (long) staticFieldOffset.invoke(member_name);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get static field offset of '" + member_name.toString() + "' failed", ex);
+		}
+	}
+
+	public static final Object static_field_base(Object member_name)
+	{
+		try
+		{
+			return (Object) staticFieldBase.invoke(member_name);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get static field base of '" + member_name.toString() + "' failed", ex);
 		}
 	}
 
@@ -431,17 +517,21 @@ public class symbols {
 	 * @param member_name
 	 * @return
 	 */
-	public static vm_info get_vm_info(Object member_name) {
-		Object[] vminfo = null;
-		try {
-			vminfo = (Object[]) getMemberVMInfo.invoke(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	public static final vm_info get_vm_info(Object member_name)
+	{
+		try
+		{
+			Object[] vminfo = (Object[]) getMemberVMInfo.invoke(member_name);
+			return new vm_info((Long) vminfo[0], vminfo[1]);
 		}
-		return new vm_info((Long) vminfo[0], vminfo[1]);
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get vm info of '" + member_name.toString() + "' failed", ex);
+		}
 	}
 
-	public static vm_info get_vm_info(Class<?> target, String method_name, Class<?>... arg_types) {
+	public static final vm_info get_vm_info(Class<?> target, String method_name, Class<?>... arg_types)
+	{
 		Object memberName = member_name(symbols.find_method(target, method_name, arg_types));
 		return get_vm_info(memberName);
 	}
@@ -484,6 +574,9 @@ public class symbols {
 	public static final int ALL_KINDS;
 	public static final int IS_INVOCABLE;
 
+	private static Class<?> java_lang_invoke_DirectMethodHandle;
+	private static Class<?> java_lang_invoke_DirectMethodHandle$Constructor;
+
 	private static MethodHandle isInvocable;
 	private static MethodHandle isMethod;
 	private static MethodHandle isConstructor;
@@ -493,25 +586,25 @@ public class symbols {
 	private static MethodHandle isCallerSensitive;
 	private static MethodHandle isTrustedFinalField;
 
-	private static Class<?> class_java_lang_invoke_DirectMethodHandle;
-	private static Class<?> class_java_lang_invoke_DirectMethodHandle$Constructor;
-
-	static {
-		try {
-			class_java_lang_invoke_DirectMethodHandle = Class.forName("java.lang.invoke.DirectMethodHandle");
-			class_java_lang_invoke_DirectMethodHandle$Constructor = Class.forName("java.lang.invoke.DirectMethodHandle$Constructor");
-
-		} catch (ClassNotFoundException ex) {
+	static
+	{
+		try
+		{
+			java_lang_invoke_DirectMethodHandle = Class.forName("java.lang.invoke.DirectMethodHandle");
+			java_lang_invoke_DirectMethodHandle$Constructor = Class.forName("java.lang.invoke.DirectMethodHandle$Constructor");
+		}
+		catch (ClassNotFoundException ex)
+		{
 			ex.printStackTrace();
 		}
-		BRIDGE = (int) read_static(class_java_lang_invoke_MemberName, "BRIDGE", int.class);
-		VARARGS = (int) read_static(class_java_lang_invoke_MemberName, "VARARGS", int.class);
-		SYNTHETIC = (int) read_static(class_java_lang_invoke_MemberName, "SYNTHETIC", int.class);
-		ANNOTATION = (int) read_static(class_java_lang_invoke_MemberName, "ANNOTATION", int.class);
-		ENUM = (int) read_static(class_java_lang_invoke_MemberName, "ENUM", int.class);
+		BRIDGE = (int) read_static(java_lang_invoke_MemberName, "BRIDGE", int.class);
+		VARARGS = (int) read_static(java_lang_invoke_MemberName, "VARARGS", int.class);
+		SYNTHETIC = (int) read_static(java_lang_invoke_MemberName, "SYNTHETIC", int.class);
+		ANNOTATION = (int) read_static(java_lang_invoke_MemberName, "ANNOTATION", int.class);
+		ENUM = (int) read_static(java_lang_invoke_MemberName, "ENUM", int.class);
 
-		CONSTRUCTOR_NAME = (String) read_static(class_java_lang_invoke_MemberName, "CONSTRUCTOR_NAME", String.class);
-		RECOGNIZED_MODIFIERS = (int) read_static(class_java_lang_invoke_MemberName, "RECOGNIZED_MODIFIERS", int.class);
+		CONSTRUCTOR_NAME = (String) read_static(java_lang_invoke_MemberName, "CONSTRUCTOR_NAME", String.class);
+		RECOGNIZED_MODIFIERS = (int) read_static(java_lang_invoke_MemberName, "RECOGNIZED_MODIFIERS", int.class);
 
 		IS_METHOD = constants.MN_IS_METHOD; // method (not constructor)
 		IS_CONSTRUCTOR = constants.MN_IS_CONSTRUCTOR; // constructor
@@ -520,152 +613,194 @@ public class symbols {
 		CALLER_SENSITIVE = constants.MN_CALLER_SENSITIVE; // @CallerSensitive annotation detected
 		TRUSTED_FINAL = constants.MN_TRUSTED_FINAL; // trusted final field
 
-		ALL_ACCESS = (int) read_static(class_java_lang_invoke_MemberName, "ALL_ACCESS", int.class);
-		ALL_KINDS = (int) read_static(class_java_lang_invoke_MemberName, "ALL_KINDS", int.class);
-		IS_INVOCABLE = (int) read_static(class_java_lang_invoke_MemberName, "IS_INVOCABLE", int.class);
+		ALL_ACCESS = (int) read_static(java_lang_invoke_MemberName, "ALL_ACCESS", int.class);
+		ALL_KINDS = (int) read_static(java_lang_invoke_MemberName, "ALL_KINDS", int.class);
+		IS_INVOCABLE = (int) read_static(java_lang_invoke_MemberName, "IS_INVOCABLE", int.class);
 
-		matchingFlagsSet = find_special_method(class_java_lang_invoke_MemberName, "matchingFlagsSet", boolean.class, int.class, int.class);
-		allFlagsSet = find_special_method(class_java_lang_invoke_MemberName, "allFlagsSet", boolean.class, int.class);
-		anyFlagSet = find_special_method(class_java_lang_invoke_MemberName, "anyFlagSet", boolean.class, int.class);
+		matchingFlagsSet = find_special_method(java_lang_invoke_MemberName, "matchingFlagsSet", boolean.class, int.class, int.class);
+		allFlagsSet = find_special_method(java_lang_invoke_MemberName, "allFlagsSet", boolean.class, int.class);
+		anyFlagSet = find_special_method(java_lang_invoke_MemberName, "anyFlagSet", boolean.class, int.class);
 
-		isBridge = find_special_method(class_java_lang_invoke_MemberName, "isBridge", boolean.class);
-		isVarargs = find_special_method(class_java_lang_invoke_MemberName, "isVarargs", boolean.class);
-		isSynthetic = find_special_method(class_java_lang_invoke_MemberName, "isSynthetic", boolean.class);
+		isBridge = find_special_method(java_lang_invoke_MemberName, "isBridge", boolean.class);
+		isVarargs = find_special_method(java_lang_invoke_MemberName, "isVarargs", boolean.class);
+		isSynthetic = find_special_method(java_lang_invoke_MemberName, "isSynthetic", boolean.class);
 
-		isInvocable = find_special_method(class_java_lang_invoke_MemberName, "isInvocable", boolean.class);
-		isMethod = find_special_method(class_java_lang_invoke_MemberName, "isMethod", boolean.class);
-		isConstructor = find_special_method(class_java_lang_invoke_MemberName, "isConstructor", boolean.class);
-		isField = find_special_method(class_java_lang_invoke_MemberName, "isField", boolean.class);
-		isType = find_special_method(class_java_lang_invoke_MemberName, "isType", boolean.class);
-		isPackage = find_special_method(class_java_lang_invoke_MemberName, "isPackage", boolean.class);
-		isCallerSensitive = find_special_method(class_java_lang_invoke_MemberName, "isCallerSensitive", boolean.class);
-		isTrustedFinalField = find_special_method(class_java_lang_invoke_MemberName, "isTrustedFinalField", boolean.class);
+		isInvocable = find_special_method(java_lang_invoke_MemberName, "isInvocable", boolean.class);
+		isMethod = find_special_method(java_lang_invoke_MemberName, "isMethod", boolean.class);
+		isConstructor = find_special_method(java_lang_invoke_MemberName, "isConstructor", boolean.class);
+		isField = find_special_method(java_lang_invoke_MemberName, "isField", boolean.class);
+		isType = find_special_method(java_lang_invoke_MemberName, "isType", boolean.class);
+		isPackage = find_special_method(java_lang_invoke_MemberName, "isPackage", boolean.class);
+		isCallerSensitive = find_special_method(java_lang_invoke_MemberName, "isCallerSensitive", boolean.class);
+		isTrustedFinalField = find_special_method(java_lang_invoke_MemberName, "isTrustedFinalField", boolean.class);
 	}
 
-	public static boolean match_flags_set(Object member_name, int mask, int flags) {
-		try {
+	public static final boolean match_flags_set(Object member_name, int mask, int flags)
+	{
+		try
+		{
 			return (boolean) matchingFlagsSet.invokeExact(member_name, mask, flags);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' matching flags set failed", ex);
+		}
 	}
 
-	public static boolean all_flags_set(Object member_name, int flags) {
-		try {
+	public static final boolean all_flags_set(Object member_name, int flags)
+	{
+		try
+		{
 			return (boolean) allFlagsSet.invokeExact(member_name, flags);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check all flags set failed", ex);
+		}
 	}
 
-	public static boolean any_flag_set(Object member_name, int flags) {
-		try {
+	public static final boolean any_flag_set(Object member_name, int flags)
+	{
+		try
+		{
 			return (boolean) anyFlagSet.invokeExact(member_name, flags);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check any flags set failed", ex);
+		}
 	}
 
-	public static boolean is_bridge(Object member_name) {
-		try {
+	public static final boolean is_bridge(Object member_name)
+	{
+		try
+		{
 			return (boolean) isBridge.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is bridge failed", ex);
+		}
 	}
 
-	public static boolean is_varargs(Object member_name) {
-		try {
+	public static final boolean is_varargs(Object member_name)
+	{
+		try
+		{
 			return (boolean) isVarargs.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is varargs failed", ex);
+		}
 	}
 
-	public static boolean is_synthetic(Object member_name) {
-		try {
+	public static final boolean is_synthetic(Object member_name)
+	{
+		try
+		{
 			return (boolean) isSynthetic.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is synthetic failed", ex);
+		}
 	}
 
-	public static boolean is_invocable(Object member_name) {
-		try {
+	public static final boolean is_invocable(Object member_name)
+	{
+		try
+		{
 			return (boolean) isInvocable.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is invocable failed", ex);
+		}
 	}
 
-	public static boolean is_method(Object member_name) {
-		try {
+	public static final boolean is_method(Object member_name)
+	{
+		try
+		{
 			return (boolean) isMethod.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is method failed", ex);
+		}
 	}
 
-	public static boolean is_constructor(Object member_name) {
-		try {
+	public static final boolean is_constructor(Object member_name)
+	{
+		try
+		{
 			return (boolean) isConstructor.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is constructor failed", ex);
+		}
 	}
 
-	public static boolean is_field(Object member_name) {
-		try {
+	public static final boolean is_field(Object member_name)
+	{
+		try
+		{
 			return (boolean) isField.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is field failed", ex);
+		}
 	}
 
-	public static boolean is_type(Object member_name) {
-		try {
+	public static final boolean is_type(Object member_name)
+	{
+		try
+		{
 			return (boolean) isType.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is type failed", ex);
+		}
 	}
 
-	public static boolean is_package(Object member_name) {
-		try {
+	public static final boolean is_package(Object member_name)
+	{
+		try
+		{
 			return (boolean) isPackage.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is package failed", ex);
+		}
 	}
 
-	public static boolean is_caller_sensitive(Object member_name) {
-		try {
+	public static final boolean is_caller_sensitive(Object member_name)
+	{
+		try
+		{
 			return (boolean) isCallerSensitive.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is caller sensitive failed", ex);
+		}
 	}
 
-	public static boolean is_trusted_final_field(Object member_name) {
-		try {
+	public static final boolean is_trusted_final_field(Object member_name)
+	{
+		try
+		{
 			return (boolean) isTrustedFinalField.invokeExact(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BOOLEAN;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check is trusted final field failed", ex);
+		}
 	}
 
 	/**
@@ -674,9 +809,10 @@ public class symbols {
 	private static VarHandle java_lang_invoke_DirectMethodHandle$Constructor_initMethod;
 	private static VarHandle java_lang_invoke_DirectMethodHandle_member;
 
-	static {
-		java_lang_invoke_DirectMethodHandle$Constructor_initMethod = find_var(class_java_lang_invoke_DirectMethodHandle$Constructor, "initMethod", class_java_lang_invoke_MemberName);
-		java_lang_invoke_DirectMethodHandle_member = find_var(class_java_lang_invoke_DirectMethodHandle, "member", class_java_lang_invoke_MemberName);
+	static
+	{
+		java_lang_invoke_DirectMethodHandle$Constructor_initMethod = find_var(java_lang_invoke_DirectMethodHandle$Constructor, "initMethod", java_lang_invoke_MemberName);
+		java_lang_invoke_DirectMethodHandle_member = find_var(java_lang_invoke_DirectMethodHandle, "member", java_lang_invoke_MemberName);
 	}
 
 	/**
@@ -685,18 +821,20 @@ public class symbols {
 	 * @param m
 	 * @return
 	 */
-	public static final Object member_name(MethodHandle m) {
-		if (class_java_lang_invoke_DirectMethodHandle$Constructor.isInstance(m))
+	public static final Object member_name(MethodHandle m)
+	{
+		if (java_lang_invoke_DirectMethodHandle$Constructor.isInstance(m))
 			return java_lang_invoke_DirectMethodHandle$Constructor_initMethod.get(m);
-		else if (class_java_lang_invoke_DirectMethodHandle.isInstance(m))
+		else if (java_lang_invoke_DirectMethodHandle.isInstance(m))
 			return java_lang_invoke_DirectMethodHandle_member.get(m);
 		return null;
 	}
 
 	private static VarHandle java_lang_invoke_MemberName_flags;
 
-	static {
-		java_lang_invoke_MemberName_flags = find_var(class_java_lang_invoke_MemberName, "flags", int.class);
+	static
+	{
+		java_lang_invoke_MemberName_flags = find_var(java_lang_invoke_MemberName, "flags", int.class);
 	}
 
 	/**
@@ -705,7 +843,8 @@ public class symbols {
 	 * @param member_name
 	 * @return
 	 */
-	public static int member_name_flags(Object member_name) {
+	public static final int member_name_flags(Object member_name)
+	{
 		return (int) java_lang_invoke_MemberName_flags.get(member_name);
 	}
 
@@ -716,7 +855,8 @@ public class symbols {
 	 * @param flags
 	 * @return
 	 */
-	public static void set_member_name_flags(Object member_name, int flags) {
+	public static final void set_member_name_flags(Object member_name, int flags)
+	{
 		java_lang_invoke_MemberName_flags.set(member_name, flags);
 	}
 
@@ -728,42 +868,53 @@ public class symbols {
 	 * @param mark
 	 * @return
 	 */
-	public static int set_flag(int flags, int flag, boolean mark) {
+	public static final int set_flag(int flags, int flag, boolean mark)
+	{
 		return mark ? flags | flag : flags & (~flag);
 	}
 
-	private static MethodHandle getDirectMethod;
+	private static MethodHandle getDirectMethodCommon;
 
-	static {
-		getDirectMethod = find_special_method(MethodHandles.Lookup.class, "getDirectMethod", MethodHandle.class, byte.class, Class.class, class_java_lang_invoke_MemberName, MethodHandles.Lookup.class);
+	static
+	{
+		getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, boolean.class, MethodHandles.Lookup.class);
+	}
+
+	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object member_name, boolean check_security, boolean do_restrict, MethodHandles.Lookup bound_caller)
+	{
+		try
+		{
+			return (MethodHandle) getDirectMethodCommon.invoke(TRUSTED_LOOKUP, ref_kind, refc, member_name, check_security, do_restrict, bound_caller);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' wrap direct method handle failed", ex);
+		}
 	}
 
 	/**
-	 * 将MemberName包装为MethodHandle
+	 * 将MemberName包装为MethodHandle，无安全检查
 	 * 
-	 * @param ref_kind     调用类型，实际上是字节码，从MethodHandleNativesConstants中查看，例如类的非静态成员方法是invokeVirtual。
-	 * @param refc         调用者的所属类，即这个方法属于哪个类
+	 * @param ref_kind 调用类型，实际上是字节码，从MethodHandleNativesConstants中查看，例如类的非静态成员方法是invokeVirtual。
+	 * @param refc     调用者的所属类，即这个方法属于哪个类
 	 * @param method
-	 * @param callerLookup
 	 * @return
 	 */
-	public static MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method, Lookup callerLookup) {
-		try {
-			return (MethodHandle) getDirectMethod.invoke(TRUSTED_LOOKUP, ref_kind, refc, method, callerLookup);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
-		}
-		return (MethodHandle) UNREACHABLE_REFERENCE;
+	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method)
+	{
+		return direct_method(ref_kind, refc, method, false, true, TRUSTED_LOOKUP);
 	}
 
-	public static MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method) {
-		return direct_method(ref_kind, refc, method, TRUSTED_LOOKUP);
+	public static final MethodHandle direct_method(Class<?> refc, Object method)
+	{
+		return direct_method(constants.REF_invokeSpecial, refc, method, false, false, TRUSTED_LOOKUP);
 	}
 
 	private static MethodHandle getReferenceKind;
 
-	static {
-		getReferenceKind = find_virtual_method(class_java_lang_invoke_MemberName, "getReferenceKind", byte.class);
+	static
+	{
+		getReferenceKind = find_virtual_method(java_lang_invoke_MemberName, "getReferenceKind", byte.class);
 	}
 
 	/**
@@ -772,19 +923,23 @@ public class symbols {
 	 * @param member_name
 	 * @return
 	 */
-	public static byte reference_kind(Object member_name) {
-		try {
+	public static final byte reference_kind(Object member_name)
+	{
+		try
+		{
 			return (byte) getReferenceKind.invoke(member_name);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
 		}
-		return UNREACHABLE_BYTE;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' get reference kind failed", ex);
+		}
 	}
 
-	private static MethodHandle init;
+	private static MethodHandle MemberName_init;
 
-	static {
-		init = find_virtual_method(class_java_lang_invoke_MemberName, "init", void.class, Class.class, String.class, Object.class, int.class);
+	static
+	{
+		MemberName_init = find_virtual_method(java_lang_invoke_MemberName, "init", void.class, Class.class, String.class, Object.class, int.class);
 	}
 
 	/**
@@ -797,13 +952,16 @@ public class symbols {
 	 * @param flags
 	 * @return
 	 */
-	public static final Object init(Object member_name, Class<?> def_class, String name, Object type, int flags) {
-		try {
-			return (Object) init.invoke(member_name, def_class, name, flags);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	public static final Object __init(Object member_name, Class<?> def_class, String name, Object type, int flags)
+	{
+		try
+		{
+			return (Object) MemberName_init.invoke(member_name, def_class, name, flags);
 		}
-		return UNREACHABLE_REFERENCE;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("member name '" + member_name.toString() + "' init failed", ex);
+		}
 	}
 
 	/**
@@ -815,8 +973,9 @@ public class symbols {
 	 * @param flags
 	 * @return
 	 */
-	public static final Object allocate(Class<?> def_class, String name, Object type, int flags) {
-		return init(unsafe.allocate(class_java_lang_invoke_MemberName), def_class, name, type, flags);
+	public static final Object allocate(Class<?> def_class, String name, Object type, int flags)
+	{
+		return __init(unsafe.allocate(java_lang_invoke_MemberName), def_class, name, type, flags);
 	}
 
 	/**
@@ -826,10 +985,12 @@ public class symbols {
 	 * @param arg_types
 	 * @return
 	 */
-	public static String constructor_description(Class<?> target_class, Class<?>[] arg_types) {
+	public static final String constructor_description(Class<?> target_class, Class<?>[] arg_types)
+	{
 		StringBuilder result = new StringBuilder();
 		result.append(target_class.getName()).append("(");
-		for (int i = 0; i < arg_types.length; ++i) {
+		for (int i = 0; i < arg_types.length; ++i)
+		{
 			result.append(arg_types[i].getName());
 			if (i != arg_types.length)
 				result.append(", ");
@@ -839,16 +1000,146 @@ public class symbols {
 	}
 
 	/**
+	 * native调用相关
+	 */
+
+	private static Class<?> jdk_internal_foreign_abi_NativeEntryPoint;
+	private static Class<?> java_lang_invoke_NativeMethodHandle;
+
+	private static Class<?> jdk_internal_foreign_abi_ABIDescriptor;
+	private static Class<?> jdk_internal_foreign_abi_VMStorage;
+
+	private static MethodHandle NativeEntryPoint_makeDowncallStub;
+	private static MethodHandle NativeEntryPoint_make;
+	private static MethodHandle NativeMethodHandle_make;
+
+	static
+	{
+		try
+		{
+			jdk_internal_foreign_abi_NativeEntryPoint = Class.forName("jdk.internal.foreign.abi.NativeEntryPoint");
+			java_lang_invoke_NativeMethodHandle = Class.forName("java.lang.invoke.NativeMethodHandle");
+			jdk_internal_foreign_abi_ABIDescriptor = Class.forName("jdk.internal.foreign.abi.ABIDescriptor");
+			jdk_internal_foreign_abi_VMStorage = Class.forName("jdk.internal.foreign.abi.VMStorage");
+		}
+		catch (ClassNotFoundException ex)
+		{
+			ex.printStackTrace();
+		}
+		NativeEntryPoint_makeDowncallStub = find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "makeDowncallStub", long.class,
+				MethodType.class, jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), boolean.class, int.class, boolean.class);
+		NativeEntryPoint_make = find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
+				jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class);
+		NativeMethodHandle_make = find_static_method(java_lang_invoke_NativeMethodHandle, "make", MethodHandle.class, jdk_internal_foreign_abi_NativeEntryPoint);
+	}
+
+	public static final long downcall_stub(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves_enc_arg_moves, Object[] vm_storage_enc_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)
+	{
+		try
+		{
+			return (long) NativeEntryPoint_makeDowncallStub.invoke(method_type, abi_descriptor, vm_storage_arg_moves_enc_arg_moves, vm_storage_enc_return_moves, needs_return_buffer, captured_state_mask, needs_transition);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get downcall stub of type '" + method_type.toString() + "' failed", ex);
+		}
+	}
+
+	public static final Object native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)
+	{
+		try
+		{
+			return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("wrap native entry point of type '" + method_type.toString() + "' failed", ex);
+		}
+	}
+
+	/**
+	 * JVM内部使用的ABIDescriptor对象，不同架构和平台ABI描述对象不同。 https://github.com/openjdk/jdk/blob/a69409b0b7bcb4eb9a66327e1c6c53b3361ea1e9/src/hotspot/cpu/x86/foreignGlobals_x86_64.cpp#L46
+	 */
+	public static enum abi_descriptor
+	{
+		x86_64_CSysV("x64.sysv", "CSysV"),
+		x86_64_CWindows("x64.windows", "CWindows"),
+		aarch64_C("aarch64", "C"),
+		aarch64_WindowsAArch64AbiDescriptor("aarch64.windows", "WindowsAArch64CallArranger", "WindowsAArch64AbiDescriptor"),
+		power_pc_64_C("ppc64", "C"),
+		riscv64_CLinux("riscv64.linux", "LinuxRISCV64CallArranger", "CLinux"),
+		s390_CLinux("s390.linux", "LinuxS390CallArranger", "CLinux");
+
+		private final String abi_pkg_name;
+		private final String abi_instance_name;
+		private final String call_arranger_name;
+		private Object descriptor = null;
+
+		private static final void init_abi_descriptors()
+		{
+			abi_descriptor[] descriptors = java_type.get_enum_values(abi_descriptor.class);
+			for (abi_descriptor descriptor_enum_object : descriptors)
+			{
+				try
+				{
+					VarHandle descriptor_instance = find_static_var(Class.forName("jdk.internal.foreign.abi." + descriptor_enum_object.abi_pkg_name + "." + descriptor_enum_object.call_arranger_name), descriptor_enum_object.abi_instance_name, jdk_internal_foreign_abi_ABIDescriptor);
+					descriptor_enum_object.descriptor = descriptor_instance.get(null);
+				}
+				catch (ClassNotFoundException ex)
+				{
+					throw new java.lang.InternalError("find abi descriptor of '" + descriptor_enum_object + "' failed", ex);
+				}
+			}
+		}
+
+		static
+		{
+			init_abi_descriptors();
+		}
+
+		private abi_descriptor(String abi_pkg_name, String call_arranger_name, String abi_instance_name)
+		{
+			this.abi_pkg_name = abi_pkg_name;
+			this.abi_instance_name = abi_instance_name;
+			this.call_arranger_name = call_arranger_name;
+		}
+
+		private abi_descriptor(String abi_pkg_name, String abi_instance_name)
+		{
+			this(abi_pkg_name, "CallArranger", abi_instance_name);
+		}
+
+		public final Object descriptor()
+		{
+			return descriptor;
+		}
+	}
+
+	public static final MethodHandle native_function(Object downcall_entry)
+	{
+		try
+		{
+			return (MethodHandle) NativeMethodHandle_make.invoke(downcall_entry);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("wrap native method handle of '" + downcall_entry.toString() + "' failed", ex);
+		}
+	}
+
+	/**
 	 * 方法包装对象，可以修改方法调用相关参数和标志。
 	 */
-	public static class callable {
+	public static final class callable
+	{
 		private int flags;
 		private Class<?> target_class;
 		private MethodHandle warpped_method;
 		private Object member_name;
 		private byte invoke_bytecode;
 
-		private callable(Class<?> target_class, String target_method_name, Class<?>... arg_types) {
+		private callable(Class<?> target_class, String target_method_name, Class<?>... arg_types)
+		{
 			this.target_class = target_class;
 			MethodHandle m = null;
 			if (target_method_name.equals(symbols.CONSTRUCTOR_NAME))
@@ -867,7 +1158,8 @@ public class symbols {
 		 * @param arg_types
 		 * @return
 		 */
-		public static MethodHandle constructor(Class<?> target_class, Class<?>... arg_types) {
+		public static final MethodHandle constructor(Class<?> target_class, Class<?>... arg_types)
+		{
 			Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
 			int flags = symbols.member_name_flags(member_name);
 			flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
@@ -879,13 +1171,14 @@ public class symbols {
 		/**
 		 * 从一个可调用对象绑定字节码。
 		 * 
-		 * @param cls
+		 * @param clazz
 		 * @param target_method_name
 		 * @param arg_types
 		 * @return
 		 */
-		public static final callable bind(Class<?> cls, String target_method_name, Class<?>... arg_types) {
-			return new callable(cls, target_method_name, arg_types);
+		public static final callable bind(Class<?> clazz, String target_method_name, Class<?>... arg_types)
+		{
+			return new callable(clazz, target_method_name, arg_types);
 		}
 
 		/**
@@ -895,7 +1188,8 @@ public class symbols {
 		 * @param mark
 		 * @return
 		 */
-		public callable set_flag(int flag, boolean mark) {
+		public callable set_flag(int flag, boolean mark)
+		{
 			this.flags = symbols.set_flag(this.flags, flag, mark);
 			return this;
 		}
@@ -906,14 +1200,16 @@ public class symbols {
 		 * @param mark
 		 * @return
 		 */
-		public boolean is_caller_sensitive(boolean mark) {
+		public boolean is_caller_sensitive(boolean mark)
+		{
 			return symbols.is_caller_sensitive(member_name);
 		}
 
 		/**
 		 * 设置标志并包装symbols为MethodHandle
 		 */
-		public callable warp() {
+		public callable warp()
+		{
 			symbols.set_member_name_flags(member_name, flags);
 			warpped_method = symbols.direct_method(invoke_bytecode, target_class, member_name);
 			return this;
@@ -924,7 +1220,8 @@ public class symbols {
 		 * 
 		 * @return
 		 */
-		public MethodHandle unwarp() {
+		public MethodHandle unwarp()
+		{
 			return warpped_method;
 		}
 
@@ -934,13 +1231,16 @@ public class symbols {
 		 * @param args
 		 * @return
 		 */
-		public Object call(Object... args) {
-			try {
+		public Object call(Object... args)
+		{
+			try
+			{
 				return warpped_method.invokeWithArguments(args);
-			} catch (Throwable ex) {
-				ex.printStackTrace();
 			}
-			return symbols.UNREACHABLE_REFERENCE;
+			catch (Throwable ex)
+			{
+				throw new java.lang.InternalError("call callable '" + member_name.toString() + "' failed", ex);
+			}
 		}
 	}
 }

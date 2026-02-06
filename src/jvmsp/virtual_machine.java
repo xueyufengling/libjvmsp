@@ -18,7 +18,8 @@ import com.sun.tools.attach.VirtualMachine;
 /**
  * 管理JVM的相关功能
  */
-public class virtual_machine {
+public class virtual_machine
+{
 	/**
 	 * 是否开启oop压缩，默认顺带开启对象头的klass word压缩（UseCompressedClassPointers）。
 	 */
@@ -79,11 +80,13 @@ public class virtual_machine {
 	 */
 	private static final HotSpotDiagnosticMXBean instance_HotSpotDiagnosticMXBean;
 
-	static {
+	static
+	{
 		String bit_version = System.getProperty("sun.arch.data.model");
 		if (bit_version != null && bit_version.contains("64"))
 			NATIVE_JVM_BIT_VERSION = 64;
-		else {
+		else
+		{
 			String arch = System.getProperty("os.arch");
 			if (arch != null && arch.contains("64"))
 				NATIVE_JVM_BIT_VERSION = 64;
@@ -100,7 +103,8 @@ public class virtual_machine {
 		long align_bytes = 8;
 		long heap_base_min_addr = 0;
 		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
-		if (instance_HotSpotDiagnosticMXBean != null) {
+		if (instance_HotSpotDiagnosticMXBean != null)
+		{
 			hotspot = true;// 获取HotSpotDiagnosticMXBean的getVMOption()方法
 			if (NATIVE_JVM_BIT_VERSION == 64) // 64位JVM需要检查是否启用了指针压缩
 				compressed_oops = get_bool_option("UseCompressedOops");
@@ -125,12 +129,14 @@ public class virtual_machine {
 	 * @param num
 	 * @return -1为无效结果
 	 */
-	public static int uint64_log2(long uint64) {
+	public static final int uint64_log2(long uint64)
+	{
 		if (uint64 == 0)// 非法值
 			return -1;
 		int power = 0;
 		long i = 0x01;
-		while (i != uint64) {
+		while (i != uint64)
+		{
 			++power;
 			if (i == 0)// 溢出
 				return -1;
@@ -139,7 +145,8 @@ public class virtual_machine {
 		return power;
 	}
 
-	public static VMOption get_option(String name) {
+	public static final VMOption get_option(String name)
+	{
 		return instance_HotSpotDiagnosticMXBean.getVMOption(name);
 	}
 
@@ -149,23 +156,30 @@ public class virtual_machine {
 	 * @param option_name 参数名称，例如UseCompressedOops
 	 * @return
 	 */
-	public static boolean get_bool_option(String option_name) {
+	public static final boolean get_bool_option(String option_name)
+	{
 		return Boolean.parseBoolean(get_option(option_name).getValue().toString());
 	}
 
-	public static int get_int_option(String option_name) {
+	public static final int get_int_option(String option_name)
+	{
 		return Integer.parseInt(get_option(option_name).getValue().toString());
 	}
 
-	public static long get_long_option(String option_name) {
+	public static final long get_long_option(String option_name)
+	{
 		return Long.parseLong(get_option(option_name).getValue().toString());
 	}
 
-	public static void dump_heap(String fileName, boolean live) {
-		try {
-			instance_HotSpotDiagnosticMXBean.dumpHeap(fileName, live);
-		} catch (IOException ex) {
-			ex.printStackTrace();
+	public static final void dump_heap(String file_name, boolean live)
+	{
+		try
+		{
+			instance_HotSpotDiagnosticMXBean.dumpHeap(file_name, live);
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("dump heap to '" + file_name + "' faield", ex);
 		}
 	}
 
@@ -174,7 +188,8 @@ public class virtual_machine {
 	 * 
 	 * @return
 	 */
-	public static long max_heap_size() {
+	public static final long max_heap_size()
+	{
 		return Runtime.getRuntime().maxMemory();
 	}
 
@@ -183,7 +198,8 @@ public class virtual_machine {
 	 * 
 	 * @return
 	 */
-	public static long current_heap_size() {
+	public static final long current_heap_size()
+	{
 		return Runtime.getRuntime().totalMemory();
 	}
 
@@ -192,19 +208,24 @@ public class virtual_machine {
 	 * 
 	 * @return
 	 */
-	public static long free_heap_size() {
+	public static final long free_heap_size()
+	{
 		return Runtime.getRuntime().freeMemory();
 	}
 
 	/**
 	 * 实际类型为sun.management.RuntimeImpl
 	 */
-	private static Object instance_RuntimeMXBean = null;
+	private static Object instance_java_lang_management_RuntimeMXBean = null;
+
+	/**
+	 * 在HotSpot虚拟机中VMManagement是sun.management.VMManagementImpl
+	 */
+	private static Class<?> sun_management_VMManagementImpl = null;
 	/**
 	 * JVM的管理类，实现是sun.management.VMManagementImpl，是sun.management.RuntimeImpl的成员jvm
 	 */
-	private static Object instance_VMManagement = null;
-	private static Class<?> class_VMManagement = null;// 在HotSpot虚拟机中是sun.management.VMManagementImpl
+	private static Object instance_sun_management_VMManagementImpl = null;
 
 	private static MethodHandle VMManagementImpl_getProcessId;
 
@@ -213,7 +234,7 @@ public class virtual_machine {
 	 */
 	private static Properties instance_Properties = null;
 
-	private static Class<?> class_ClassLoaders = null;
+	private static Class<?> jdk_internal_loader_ClassLoaders = null;
 
 	/**
 	 * JVM参数 com.sun.management.internal.Flag
@@ -226,16 +247,18 @@ public class virtual_machine {
 	private static MethodHandle Flag_setBooleanValue;
 	private static MethodHandle Flag_setStringValue;
 
-	static {
-		instance_RuntimeMXBean = ManagementFactory.getRuntimeMXBean();
-		try {
-			instance_VMManagement = reflection.read(instance_RuntimeMXBean, "jvm");// 获取JVM管理类
-			class_VMManagement = instance_VMManagement.getClass();
-			VMManagementImpl_getProcessId = symbols.find_special_method(class_VMManagement, class_VMManagement, "getProcessId", int.class);// 获取进程ID的native方法
+	static
+	{
+		instance_java_lang_management_RuntimeMXBean = ManagementFactory.getRuntimeMXBean();
+		try
+		{
+			instance_sun_management_VMManagementImpl = reflection.read(instance_java_lang_management_RuntimeMXBean, "jvm");// 获取JVM管理类
+			sun_management_VMManagementImpl = instance_sun_management_VMManagementImpl.getClass();
+			VMManagementImpl_getProcessId = symbols.find_special_method(sun_management_VMManagementImpl, sun_management_VMManagementImpl, "getProcessId", int.class);// 获取进程ID的native方法
 			// 获取系统属性引用
 			instance_Properties = (Properties) reflection.read(System.class, "props");
 			// 获取所有系统ClassLoaders
-			class_ClassLoaders = Class.forName("jdk.internal.loader.ClassLoaders");
+			jdk_internal_loader_ClassLoaders = Class.forName("jdk.internal.loader.ClassLoaders");
 			// 虚拟机参数Flag类及其成员方法
 			class_Flag = Class.forName("com.sun.management.internal.Flag");
 			Flag_getFlag = symbols.find_static_method(class_Flag, "getFlag", class_Flag, String.class);
@@ -244,7 +267,9 @@ public class virtual_machine {
 			Flag_setBooleanValue = symbols.find_static_method(class_Flag, "setBooleanValue", void.class, String.class, boolean.class);
 			Flag_setStringValue = symbols.find_static_method(class_Flag, "setStringValue", void.class, String.class, String.class);
 			Flag_getValue = symbols.find_special_method(class_Flag, class_Flag, "getValue", Object.class);
-		} catch (ClassNotFoundException ex) {
+		}
+		catch (ClassNotFoundException ex)
+		{
 			ex.printStackTrace();
 		}
 	}
@@ -255,26 +280,34 @@ public class virtual_machine {
 	 * @param class_loader_name
 	 * @return
 	 */
-	public static Object builtin_class_loaders(String class_loader_name) {
-		try {
-			return reflection.read(class_ClassLoaders, class_loader_name);
-		} catch (SecurityException | IllegalArgumentException ex) {
-			System.err.println("Class loader name can only be BOOT_LOADER | PLATFORM_LOADER | APP_LOADER");
+	public static final Object builtin_class_loaders(String class_loader_name)
+	{
+		try
+		{
+			return reflection.read(jdk_internal_loader_ClassLoaders, class_loader_name);
 		}
-		return null;
+		catch (SecurityException | IllegalArgumentException ex)
+		{
+			throw new java.lang.InternalError("class loader name can only be BOOT_LOADER | PLATFORM_LOADER | APP_LOADER", ex);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
-	public static ArrayList<URL> builtin_class_loader_classpath(String class_loader_name) {
-		try {
+	public static final ArrayList<URL> builtin_class_loader_classpath(String class_loader_name)
+	{
+		try
+		{
 			Object class_loader = builtin_class_loaders(class_loader_name);
 			Object url_classpath = reflection.read(class_loader, "ucp");// jdk.internal.loader.URLClassPath
-			if (url_classpath != null)// BOOT_LOADER的ucp为null
+			if (url_classpath != null)
 				return (ArrayList<URL>) reflection.read(url_classpath, "path");
-		} catch (SecurityException | IllegalArgumentException ex) {
-			System.err.println("Cannot get class loader classpath");
+			else
+				return null;// BOOT_LOADER的ucp为null
 		}
-		return null;
+		catch (SecurityException | IllegalArgumentException ex)
+		{
+			throw new java.lang.InternalError("get class loader '" + class_loader_name + "' classpath failed", ex);
+		}
 	}
 
 	/**
@@ -283,7 +316,8 @@ public class virtual_machine {
 	 * @param key
 	 * @return
 	 */
-	public static String get_property(String key) {
+	public static final String get_property(String key)
+	{
 		return instance_Properties.getProperty(key);
 	}
 
@@ -292,7 +326,8 @@ public class virtual_machine {
 	 * 
 	 * @return
 	 */
-	public static String java_version() {
+	public static final String java_version()
+	{
 		return get_property("java.runtime.version");
 	}
 
@@ -302,7 +337,8 @@ public class virtual_machine {
 	 * @param key
 	 * @param value
 	 */
-	public static void set_property(String key, String value) {
+	public static final void set_property(String key, String value)
+	{
 		instance_Properties.setProperty(key, value);
 	}
 
@@ -312,8 +348,10 @@ public class virtual_machine {
 	 * @param name
 	 * @param value
 	 */
-	public static void set_option(String name, Object value) {
-		try {
+	public static final void set_option(String name, Object value)
+	{
+		try
+		{
 			Object flag = Flag_getFlag.invoke(name);
 			Object v = Flag_getValue.invoke(class_Flag.cast(flag));
 			VarHandle writeable = symbols.find_var(class_Flag, "writeable", boolean.class);
@@ -326,8 +364,10 @@ public class virtual_machine {
 				Flag_setBooleanValue.invokeExact(name, bv.booleanValue());
 			if (v instanceof String sv)
 				Flag_setStringValue.invokeExact(name, (String) sv);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("set option '" + name + "' to '" + value + "' failed", ex);
 		}
 	}
 
@@ -336,29 +376,49 @@ public class virtual_machine {
 	 * 
 	 * @return
 	 */
-	public static int process_id() {
-		try {
-			return (int) VMManagementImpl_getProcessId.invoke(instance_VMManagement);
-		} catch (Throwable ex) {
-			ex.printStackTrace();
+	public static final long process_id()
+	{
+		try
+		{
+			return (long) VMManagementImpl_getProcessId.invoke(instance_sun_management_VMManagementImpl);
 		}
-		return -1;
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get process id failed", ex);
+		}
+	}
+
+	public static final long load_jvm()
+	{
+		return shared_object.dlopen("jvm");
+	}
+
+	/**
+	 * 获取进程句柄
+	 * 
+	 * @return
+	 */
+	public static final long[] process_jvm_handles(long process_id)
+	{
+		return null;
 	}
 
 	/**
 	 * Java Agent相关功能
 	 */
-	public static final Class<?> class_HotSpotVirtualMachine;// sun.tools.attach.HotSpotVirtualMachine
-	static {
+	private static Class<?> sun_tools_attach_HotSpotVirtualMachine;// sun.tools.attach.HotSpotVirtualMachine
+	static
+	{
 		virtual_machine.set_property("jdk.attach.allowAttachSelf", "true");// 并非实际允许调用，只是记录在系统中
-		Class<?> cls = null;
-		try {
-			cls = Class.forName("sun.tools.attach.HotSpotVirtualMachine");
-		} catch (ClassNotFoundException ex) {
+		try
+		{
+			sun_tools_attach_HotSpotVirtualMachine = Class.forName("sun.tools.attach.HotSpotVirtualMachine");
+			unsafe.write(sun_tools_attach_HotSpotVirtualMachine, "ALLOW_ATTACH_SELF", true);// 设置instrument可以从程序attach，不需要在启动JVM时传入参数jdk.attach.allowAttachSelf=true
+		}
+		catch (ClassNotFoundException ex)
+		{
 			ex.printStackTrace();
 		}
-		class_HotSpotVirtualMachine = cls;
-		unsafe.write(class_HotSpotVirtualMachine, "ALLOW_ATTACH_SELF", true);// 设置instrument可以从程序attach，不需要在启动JVM时传入参数jdk.attach.allowAttachSelf=true
 	}
 
 	/**
@@ -368,18 +428,23 @@ public class virtual_machine {
 	 * @param agent_path Agent的jar文件绝对路径
 	 * @param args       传递给Agent的参数
 	 */
-	public static void attach(int PID, String agent_path, String args) {
-		try {
-			VirtualMachine jvm = VirtualMachine.attach(String.valueOf(PID));
+	public static final void attach(long pid, String agent_path, String args)
+	{
+		try
+		{
+			VirtualMachine jvm = VirtualMachine.attach(String.valueOf(pid));
 			jvm.loadAgent(agent_path, args);
 			jvm.detach();
-		} catch (AttachNotSupportedException | IOException | AgentLoadException | AgentInitializationException ex) {
-			ex.printStackTrace();
+		}
+		catch (AttachNotSupportedException | IOException | AgentLoadException | AgentInitializationException ex)
+		{
+			throw new java.lang.InternalError("attach agent '" + agent_path + "' to process '" + pid + "' failed", ex);
 		}
 	}
 
-	public static void attach(int PID, String agent_path) {
-		attach(PID, agent_path, null);
+	public static final void attach(long pid, String agent_path)
+	{
+		attach(pid, agent_path, null);
 	}
 
 	/**
@@ -388,18 +453,21 @@ public class virtual_machine {
 	 * @param agent_path Agent的jar文件绝对路径
 	 * @param args       传递给Agent的参数
 	 */
-	public static void attach(String agent_path, String args) {
+	public static final void attach(String agent_path, String args)
+	{
 		attach(virtual_machine.process_id(), agent_path, args);
 	}
 
-	public static void attach(String agent_path) {
+	public static final void attach(String agent_path)
+	{
 		attach(agent_path, null);
 	}
 
 	/**
 	 * 对象layout类型
 	 */
-	public static enum object_layout {
+	public static enum object_layout
+	{
 		/**
 		 * JDK 24+<br>
 		 * 开启对象头压缩，包含压缩klass pointer，即+UseCompressedClassPointers<br>
@@ -426,20 +494,30 @@ public class virtual_machine {
 	public static final long _oop_base_offset_in_bytes;
 	public static final boolean _oop_has_klass_gap;
 
-	static {
+	static
+	{
 		boolean UseCompactObjectHeaders = false;
-		try {
+		try
+		{
 			UseCompactObjectHeaders = get_bool_option("UseCompactObjectHeaders");
-		} catch (Exception ex) {
 		}
-		if (UseCompactObjectHeaders) {
+		catch (Exception ex)
+		{
+		}
+		if (UseCompactObjectHeaders)
+		{
 			_klass_mode = object_layout.Compact;
 			_oop_has_klass_gap = false;
-		} else {
-			if (get_bool_option("UseCompressedClassPointers")) {
+		}
+		else
+		{
+			if (get_bool_option("UseCompressedClassPointers"))
+			{
 				_klass_mode = object_layout.Compressed;
 				_oop_has_klass_gap = true;
-			} else {
+			}
+			else
+			{
 				_klass_mode = object_layout.Uncompressed;
 				_oop_has_klass_gap = false;
 			}

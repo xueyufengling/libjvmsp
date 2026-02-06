@@ -12,8 +12,10 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-public class bytecode {
-	public interface method_operator {
+public class bytecode
+{
+	public interface method_operator
+	{
 		public void modify(MethodInfo method_info, MethodVisitor method_visitor);
 	}
 
@@ -26,53 +28,65 @@ public class bytecode {
 	protected ArrayList<MethodInfo> methods_to_be_removed;
 	protected HashMap<MethodInfo, method_operator> methods_to_be_modified;
 
-	protected bytecode(byte[] bytecode) {
+	protected bytecode(byte[] bytecode)
+	{
 		original_bytecode = bytecode;
 		class_reader = new ClassReader(bytecode);
 		class_writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 	}
 
-	public static bytecode load(byte[] bytecode) {
+	public static final bytecode load(byte[] bytecode)
+	{
 		return new bytecode(bytecode);
 	}
 
-	public bytecode removeFields(String... field_names) {
+	public bytecode removeFields(String... field_names)
+	{
 		fileds_to_be_removed.addAll(Arrays.asList(field_names));
 		return this;
 	}
 
-	public bytecode addFields(String... field_declaration) {
+	public bytecode addFields(String... field_declaration)
+	{
 		for (String decl : field_declaration)
 			fileds_to_be_added.add(FieldInfo.from(decl));
 		return this;
 	}
 
-	public bytecode removeMethods(String... method_declarations) {
+	public bytecode removeMethods(String... method_declarations)
+	{
 		for (String decl : method_declarations)
 			methods_to_be_removed.add(MethodInfo.from(decl));
 		return this;
 	}
 
-	public bytecode modifyMethod(String method_declaration, method_operator modifier) {
+	public bytecode modifyMethod(String method_declaration, method_operator modifier)
+	{
 		methods_to_be_modified.put(MethodInfo.from(method_declaration), modifier);
 		return this;
 	}
 
-	public byte[] toByteCode() {
-		class_reader.accept(new ClassVisitor(Opcodes.ASM5, class_writer) {
+	public byte[] toByteCode()
+	{
+		class_reader.accept(new ClassVisitor(Opcodes.ASM5, class_writer)
+		{
 			@Override
-			public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+			public FieldVisitor visitField(int access, String name, String desc, String signature, Object value)
+			{
 				if (fileds_to_be_removed.contains(name))
 					return null;
 				return cv.visitField(access, name, desc, signature, value);
 			}
 
 			@Override
-			public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+			public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions)
+			{
 				MethodVisitor mv = null;
-				for (Entry<MethodInfo, method_operator> entry : methods_to_be_modified.entrySet()) {
+				for (Entry<MethodInfo, method_operator> entry : methods_to_be_modified.entrySet())
+				{
 					MethodInfo info = entry.getKey();
-					if (info.getMethodName() == name && info.getMethodDescriptor() == desc) {
+					if (info.getMethodName() == name && info.getMethodDescriptor() == desc)
+					{
 						mv = cv.visitMethod(access, name, desc, signature, exceptions);
 						mv.visitCode();
 						entry.getValue().modify(info, mv);
@@ -89,11 +103,14 @@ public class bytecode {
 			}
 
 			@Override
-			public void visitEnd() {
-				for (int idx = 0; idx < fileds_to_be_added.size(); ++idx) {
+			public void visitEnd()
+			{
+				for (int idx = 0; idx < fileds_to_be_added.size(); ++idx)
+				{
 					FieldInfo field_info = fileds_to_be_added.get(idx);
 					FieldVisitor fv = cv.visitField(field_info.getAcc(), field_info.getFieldName(), field_info.getTypeDescriptor(), null, null);
-					if (fv != null) {
+					if (fv != null)
+					{
 						fv.visitEnd();
 					}
 				}
@@ -110,7 +127,8 @@ public class bytecode {
 	 * @param type_name
 	 * @return
 	 */
-	public static String typeToTypeDescriptor(String type_name) {
+	public static final String typeToTypeDescriptor(String type_name)
+	{
 		return FieldInfo.from(type_name).type_descriptor;
 	}
 
@@ -120,11 +138,13 @@ public class bytecode {
 	 * @param type_name 类型名称
 	 * @return 内部名称
 	 */
-	protected static String nonarrTypeToTypeDescriptor(String type_name) {
+	protected static String nonarrTypeToTypeDescriptor(String type_name)
+	{
 		if (type_name == null || type_name.equals(""))
 			return "";
 		type_name = type_name.trim();
-		switch (type_name) {
+		switch (type_name)
+		{
 		case "boolean":
 			return "Z";
 		case "char":
@@ -148,46 +168,57 @@ public class bytecode {
 		}
 	}
 
-	public static String methodToMethodDescriptor(String method_signature) {
+	public static final String methodToMethodDescriptor(String method_signature)
+	{
 		return MethodInfo.from(method_signature).method_descriptor;
 	}
 
-	public static class FieldInfo {
+	public static final class FieldInfo
+	{
 		int acc;
 		String type_descriptor;
 		String field_name;
 
-		private FieldInfo(int acc, String type_descriptor, String field_name) {
+		private FieldInfo(int acc, String type_descriptor, String field_name)
+		{
 			this.acc = acc;
 			this.type_descriptor = type_descriptor;
 			this.field_name = field_name;
 		}
 
-		public int getAcc() {
+		public int getAcc()
+		{
 			return acc;
 		}
 
-		public String getTypeDescriptor() {
+		public String getTypeDescriptor()
+		{
 			return type_descriptor;
 		}
 
-		public String getFieldName() {
+		public String getFieldName()
+		{
 			return field_name;
 		}
 
-		public static FieldInfo from(String declaration) {
+		public static final FieldInfo from(String declaration)
+		{
 			int acc = 0;
 			String[] info = declaration.trim().split("\s+");
 			int arr_dim = 0;
 			StringBuilder type_name = new StringBuilder();
 			boolean type_name_resolved = false;
-			for (int info_idx = 0; info_idx < info.length; ++info_idx) {
+			for (int info_idx = 0; info_idx < info.length; ++info_idx)
+			{
 				int this_acc = toAcc(info[info_idx]);
 				acc += this_acc;
-				if (this_acc == 0) {
+				if (this_acc == 0)
+				{
 					char[] chars = info[info_idx].toCharArray();
-					for (char ch : chars) {
-						if (ch == '[') {
+					for (char ch : chars)
+					{
+						if (ch == '[')
+						{
 							type_name_resolved = true;
 							++arr_dim;
 						}
@@ -208,43 +239,51 @@ public class bytecode {
 		}
 
 		@Override
-		public String toString() {
+		public String toString()
+		{
 			return "" + acc + ' ' + type_descriptor + ' ' + field_name;
 		}
 	}
 
-	public static class MethodInfo {
+	public static final class MethodInfo
+	{
 		String clazz;
 		int acc = 0;
 		String method_descriptor;
 		String method_name;
 
-		private MethodInfo(int acc, String method_descriptor, String method_name) {
+		private MethodInfo(int acc, String method_descriptor, String method_name)
+		{
 			this.acc = acc;
 			this.method_descriptor = method_descriptor;
 			this.method_name = method_name;
 		}
 
-		private MethodInfo(int acc, String method_descriptor, String method_name, String clazz) {
+		private MethodInfo(int acc, String method_descriptor, String method_name, String clazz)
+		{
 			this.acc = acc;
 			this.method_descriptor = method_descriptor;
 			this.method_name = method_name;
 			this.clazz = clazz;
 		}
 
-		public int getAcc() {
+		public int getAcc()
+		{
 			return acc;
 		}
 
-		public String getMethodDescriptor() {
+		public String getMethodDescriptor()
+		{
 			return method_descriptor;
 		}
 
-		public String getMethodName() {
+		public String getMethodName()
+		{
 			return method_name;
 		}
 
-		public static MethodInfo from(String declaration) {
+		public static final MethodInfo from(String declaration)
+		{
 			int paren_start_idx = declaration.indexOf('(');
 			String info_no_args_str = declaration.substring(0, paren_start_idx).trim();
 			FieldInfo info_no_args = FieldInfo.from(info_no_args_str);
@@ -258,13 +297,16 @@ public class bytecode {
 		}
 
 		@Override
-		public String toString() {
+		public String toString()
+		{
 			return "" + acc + ' ' + method_name + ' ' + method_descriptor;
 		}
 	}
 
-	public static int toAcc(String acc_str) {
-		switch (acc_str) {
+	public static final int toAcc(String acc_str)
+	{
+		switch (acc_str)
+		{
 		case "public":
 			return Opcodes.ACC_PUBLIC;
 		case "protecetd":
