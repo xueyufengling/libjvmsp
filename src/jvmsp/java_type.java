@@ -13,6 +13,8 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import jvmsp.cxx_type.pointer;
+
 /**
  * Java类型所占字节数
  */
@@ -36,7 +38,7 @@ public abstract class java_type
 	 */
 	public static final boolean is_primitive(Class<?> type)
 	{
-		return type == void.class || type == byte.class || type == char.class || type == boolean.class || type == short.class || type == int.class || type == float.class || type == long.class || type == double.class;
+		return type.isPrimitive();
 	}
 
 	/**
@@ -47,7 +49,7 @@ public abstract class java_type
 	 */
 	public static final boolean is_primitive_boxing(Class<?> type)
 	{
-		return type == Integer.class || type == Long.class || type == Boolean.class || type == Double.class || type == Float.class || type == Byte.class || type == Short.class || type == Character.class;
+		return type == Integer.class || type == Long.class || type == Boolean.class || type == Double.class || type == Float.class || type == Byte.class || type == Short.class || type == Character.class || type == Void.class;
 	}
 
 	public static final boolean is_primitive_boxing(Object obj)
@@ -585,10 +587,7 @@ public abstract class java_type
 		}
 		else
 		{
-			MARKWORD_LENGTH = INVALID_LENGTH;
-			KLASS_WORD_OFFSET = INVALID_OFFSET;
-			KLASS_WORD_LENGTH = INVALID_LENGTH;
-			HEADER_LENGTH = INVALID_LENGTH;
+			throw new java.lang.InternalError("unknown native jvm bit-version '" + virtual_machine.NATIVE_JVM_BIT_VERSION + "'");
 		}
 		MARKWORD_BYTE_LENGTH = MARKWORD_LENGTH / 8;
 		KLASS_WORD_BYTE_OFFSET = KLASS_WORD_OFFSET / 8;
@@ -614,7 +613,7 @@ public abstract class java_type
 		else if (KLASS_WORD_LENGTH == 64)
 			return unsafe.read_long(obj, KLASS_WORD_BYTE_OFFSET);
 		else
-			throw new IllegalStateException("unknown klass word length");
+			throw new java.lang.InternalError("get klass word of '" + obj + "' failed");
 	}
 
 	/**
@@ -634,7 +633,8 @@ public abstract class java_type
 		{
 			unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, klass_word);
 		}
-		throw new IllegalStateException("unknown klass word length");
+		else
+			throw new java.lang.InternalError("set klass word of '" + obj + "' failed");
 	}
 
 	public static final void set_klass_word(long obj_base, long klass_word)
@@ -647,7 +647,8 @@ public abstract class java_type
 		{
 			unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, klass_word);
 		}
-		throw new IllegalStateException("unknown klass word length");
+		else
+			throw new java.lang.InternalError("set klass word of '" + obj_base + "' to '" + klass_word + "' failed");
 	}
 
 	public static final Object cast(Object obj, long cast_type_klass_word)
@@ -772,25 +773,25 @@ public abstract class java_type
 	 * 
 	 * @param <T>
 	 */
-	public static final class type_wrapper<T>
+	public static final class wrapper<T>
 	{
 		public T value;
 
-		public type_wrapper(T value)
+		public wrapper(T value)
 		{
 			this.value = value;
 		}
 
-		public static final <T> type_wrapper<T> wrap(T value)
+		public static final <T> wrapper<T> wrap(T value)
 		{
-			return new type_wrapper<T>(value);
+			return new wrapper<T>(value);
 		}
 
 		@SuppressWarnings(
 		{ "rawtypes", "unchecked" })
-		public static final type_wrapper wrap()
+		public static final wrapper wrap()
 		{
-			return new type_wrapper(null);
+			return new wrapper(null);
 		}
 	}
 

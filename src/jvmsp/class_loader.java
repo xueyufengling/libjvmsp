@@ -14,6 +14,7 @@ import jvmsp.internal.iterate_on_write_list;
 
 public class class_loader
 {
+	private static MethodHandle ClassLoader_defineClass0;
 	private static MethodHandle ClassLoader_defineClass1;
 	private static MethodHandle ClassLoader_defineClass;
 	private static MethodHandle ClassLoader_findClass;
@@ -22,6 +23,7 @@ public class class_loader
 
 	static
 	{
+		ClassLoader_defineClass0 = symbols.find_static_method(ClassLoader.class, "defineClass0", Class.class, ClassLoader.class, Class.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, boolean.class, int.class, Object.class);
 		ClassLoader_defineClass1 = symbols.find_static_method(ClassLoader.class, "defineClass1", Class.class, ClassLoader.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class, String.class);
 		ClassLoader_defineClass = symbols.find_special_method(ClassLoader.class, "defineClass", Class.class, String.class, byte[].class, int.class, int.class, ProtectionDomain.class);
 		ClassLoader_findClass = symbols.find_special_method(ClassLoader.class, "findClass", Class.class, String.class);
@@ -349,7 +351,7 @@ public class class_loader
 		return set_parent(target, ClassLoader.class, DEFAULT_PARENT_CLASS_LOADER_NAME, parent);
 	}
 
-	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, String source) throws ClassFormatError
+	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, String source)
 	{
 		try
 		{
@@ -364,6 +366,31 @@ public class class_loader
 	public static final Class<?> define(class_definition def) throws ClassFormatError
 	{
 		return define(def.loader, def.name, def.b, def.off, def.len, def.pd, def.source);
+	}
+
+	/**
+	 * 以指定的lookup类作为上下文定义类
+	 * 
+	 * @param name
+	 * @param b
+	 * @param off
+	 * @param len
+	 * @param protection_domain
+	 * @return
+	 * @throws ClassFormatError
+	 */
+	public static final Class<?> define(Class<?> lookup, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, boolean initialize, int flags, Object class_data)
+	{
+		try
+		{
+			// defineClass0()的ClassLoader loader参数在JVM的C++实现中实际上并未使用，因此传入任意引用即可。
+			// 在底层实现中实际定义类b的ClassLoader始终固定为lookup所属的ClassLoader
+			return (Class<?>) ClassLoader_defineClass0.invokeExact((ClassLoader) null, lookup, name, b, off, len, protection_domain, initialize, flags, class_data);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("define class '" + name + "' in context '" + lookup + "' failed", ex);
+		}
 	}
 
 	/**
@@ -388,23 +415,6 @@ public class class_loader
 		{
 			throw new java.lang.InternalError("define class '" + name + "' failed", ex);
 		}
-	}
-
-	/**
-	 * 从指定stack_skip对应的类的ClassLoader加载class
-	 * 
-	 * @param stack_skip
-	 * @param name
-	 * @param b
-	 * @param off
-	 * @param len
-	 * @param protection_domain
-	 * @return
-	 * @throws ClassFormatError
-	 */
-	public static final Class<?> define(int stack_skip, String name, byte[] b, int off, int len, ProtectionDomain protection_domain) throws ClassFormatError
-	{
-		return define(reflection.unwind_class(stack_skip).getClassLoader(), name, b, off, len, protection_domain);
 	}
 
 	/**
