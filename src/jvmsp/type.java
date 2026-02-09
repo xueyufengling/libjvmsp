@@ -1830,10 +1830,10 @@ public abstract class type
 		public static final <T> T placement_new(T jobject, Class<?>[] arg_types, Object... args)
 		{
 			Class<?> target_type = jobject.getClass();
-			MethodHandle constructor = symbols.callable.constructor(target_type, arg_types);
+			MethodHandle constructor = symbols.constructor_method(target_type, arg_types);
 			try
 			{
-				symbols.call(constructor, jobject, args);
+				constructor.invoke(memory.cat(jobject, args));
 			}
 			catch (Throwable ex)
 			{

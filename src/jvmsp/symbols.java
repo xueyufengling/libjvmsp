@@ -331,29 +331,6 @@ public class symbols
 		}
 	}
 
-	/**
-	 * 调用method方法，自动打包对象和参数
-	 * 
-	 * @param method
-	 * @param obj
-	 * @param args
-	 * @return
-	 */
-	public static final Object call(MethodHandle method, Object obj, Object... args)
-	{
-		Object[] wrapped_args = new Object[args.length + 1];
-		wrapped_args[0] = obj;
-		System.arraycopy(args, 0, wrapped_args, 1, args.length);
-		try
-		{
-			return method.invokeWithArguments(wrapped_args);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("call '" + method.toString() + "' failed");
-		}
-	}
-
 	public static final Object read(Object obj, String field_name, Class<?> type)
 	{
 		return find_var(obj.getClass(), field_name, type).get(obj);
@@ -1058,125 +1035,30 @@ public class symbols
 	}
 
 	/**
-	 * 方法包装对象，可以修改方法调用相关参数和标志。
+	 * 获取一个可以被当作实例方法调用的构造函数。
+	 * 
+	 * @param target_class
+	 * @param arg_types
+	 * @return
 	 */
-	public static final class callable
+	public static final MethodHandle constructor_method(Class<?> target_class, Class<?>... arg_types)
 	{
-		private int flags;
-		private Class<?> target_class;
-		private MethodHandle warpped_method;
-		private Object member_name;
-		private byte invoke_bytecode;
-
-		private callable(Class<?> target_class, String target_method_name, Class<?>... arg_types)
-		{
-			this.target_class = target_class;
-			MethodHandle m = null;
-			if (target_method_name.equals(symbols.CONSTRUCTOR_NAME))
-				m = constructor(target_class, arg_types);// 目标函数是构造函数则将构造函数转换为可当作方法调用的构造函数
-			else
-				m = symbols.find_method(target_class, target_method_name, arg_types);
-			this.member_name = symbols.member_name(m);
-			this.flags = symbols.member_name_flags(member_name);
-			this.invoke_bytecode = symbols.reference_kind(member_name);
-		}
-
-		/**
-		 * 获取一个可以被当作实例方法调用的构造函数。
-		 * 
-		 * @param target_class
-		 * @param arg_types
-		 * @return
-		 */
-		public static final MethodHandle constructor(Class<?> target_class, Class<?>... arg_types)
-		{
-			Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
-			int flags = symbols.member_name_flags(member_name);
-			flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
-			flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
-			symbols.set_member_name_flags(member_name, flags);
-			return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
-		}
-
-		/**
-		 * 从一个可调用对象绑定字节码。
-		 * 
-		 * @param clazz
-		 * @param target_method_name
-		 * @param arg_types
-		 * @return
-		 */
-		public static final callable bind(Class<?> clazz, String target_method_name, Class<?>... arg_types)
-		{
-			return new callable(clazz, target_method_name, arg_types);
-		}
-
-		/**
-		 * 设置标志
-		 * 
-		 * @param flag
-		 * @param mark
-		 * @return
-		 */
-		public callable set_flag(int flag, boolean mark)
-		{
-			this.flags = symbols.set_flag(this.flags, flag, mark);
-			return this;
-		}
-
-		/**
-		 * 目标方法是否是CallerSensitive的，由于检查是在C++层的constMethod，因此为MethodHandle设置该标志无效。
-		 * 
-		 * @param mark
-		 * @return
-		 */
-		public boolean is_caller_sensitive(boolean mark)
-		{
-			return symbols.is_caller_sensitive(member_name);
-		}
-
-		/**
-		 * 设置标志并包装symbols为MethodHandle
-		 */
-		public callable warp()
-		{
-			symbols.set_member_name_flags(member_name, flags);
-			warpped_method = symbols.direct_method(invoke_bytecode, target_class, member_name);
-			return this;
-		}
-
-		/**
-		 * 返回包装好的可调用对象的MethodHandle
-		 * 
-		 * @return
-		 */
-		public MethodHandle unwarp()
-		{
-			return warpped_method;
-		}
-
-		/**
-		 * 调用该可调用对象
-		 * 
-		 * @param args
-		 * @return
-		 */
-		public Object call(Object... args)
-		{
-			try
-			{
-				return warpped_method.invokeWithArguments(args);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("call callable '" + member_name.toString() + "' failed", ex);
-			}
-		}
+		Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
+		int flags = symbols.member_name_flags(member_name);
+		flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
+		flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
+		symbols.set_member_name_flags(member_name, flags);
+		return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
 	}
 
 	private static Class<?> java_lang_invoke_BoundMethodHandle;
 
 	private static MethodHandle MethodHandle_rebind;
+	private static MethodHandle BoundMethodHandle_bindArgumentL;
+	private static MethodHandle BoundMethodHandle_bindArgumentI;
+	private static MethodHandle BoundMethodHandle_bindArgumentJ;
+	private static MethodHandle BoundMethodHandle_bindArgumentF;
+	private static MethodHandle BoundMethodHandle_bindArgumentD;
 
 	static
 	{
@@ -1184,6 +1066,11 @@ public class symbols
 		{
 			java_lang_invoke_BoundMethodHandle = Class.forName("java.lang.invoke.BoundMethodHandle");
 			MethodHandle_rebind = find_virtual_method(MethodHandle.class, "rebind", java_lang_invoke_BoundMethodHandle);
+			BoundMethodHandle_bindArgumentL = find_virtual_method(java_lang_invoke_BoundMethodHandle, "bindArgumentL", java_lang_invoke_BoundMethodHandle, int.class, Object.class);
+			BoundMethodHandle_bindArgumentI = find_virtual_method(java_lang_invoke_BoundMethodHandle, "bindArgumentI", java_lang_invoke_BoundMethodHandle, int.class, int.class);
+			BoundMethodHandle_bindArgumentJ = find_virtual_method(java_lang_invoke_BoundMethodHandle, "bindArgumentJ", java_lang_invoke_BoundMethodHandle, int.class, long.class);
+			BoundMethodHandle_bindArgumentF = find_virtual_method(java_lang_invoke_BoundMethodHandle, "bindArgumentF", java_lang_invoke_BoundMethodHandle, int.class, float.class);
+			BoundMethodHandle_bindArgumentD = find_virtual_method(java_lang_invoke_BoundMethodHandle, "bindArgumentD", java_lang_invoke_BoundMethodHandle, int.class, double.class);
 		}
 		catch (ClassNotFoundException ex)
 		{
@@ -1192,7 +1079,7 @@ public class symbols
 	}
 
 	/**
-	 * 重新绑定参数
+	 * 重新绑定参数，返回BoundMethodHandle对象
 	 * 
 	 * @param target
 	 * @return
@@ -1208,4 +1095,65 @@ public class symbols
 			throw new java.lang.InternalError("rebind '" + target + "' failed", ex);
 		}
 	}
+
+	public static final MethodHandle bind(MethodHandle target, int pos, Object arg)
+	{
+		try
+		{
+			return (MethodHandle) BoundMethodHandle_bindArgumentL.invoke(__rebind(target), pos, arg);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("bind '" + arg + "' to '" + target + "' at '" + pos + "'  failed", ex);
+		}
+	}
+
+	public static final MethodHandle bind(MethodHandle target, int pos, int arg)
+	{
+		try
+		{
+			return (MethodHandle) BoundMethodHandle_bindArgumentI.invoke(__rebind(target), pos, arg);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("bind '" + arg + "' to '" + target + "' at '" + pos + "'  failed", ex);
+		}
+	}
+
+	public static final MethodHandle bind(MethodHandle target, int pos, long arg)
+	{
+		try
+		{
+			return (MethodHandle) BoundMethodHandle_bindArgumentJ.invoke(__rebind(target), pos, arg);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("bind '" + arg + "' to '" + target + "' at '" + pos + "'  failed", ex);
+		}
+	}
+
+	public static final MethodHandle bind(MethodHandle target, int pos, float arg)
+	{
+		try
+		{
+			return (MethodHandle) BoundMethodHandle_bindArgumentF.invoke(__rebind(target), pos, arg);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("bind '" + arg + "' to '" + target + "' at '" + pos + "'  failed", ex);
+		}
+	}
+
+	public static final MethodHandle bind(MethodHandle target, int pos, double arg)
+	{
+		try
+		{
+			return (MethodHandle) BoundMethodHandle_bindArgumentD.invoke(__rebind(target), pos, arg);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("bind '" + arg + "' to '" + target + "' at '" + pos + "'  failed", ex);
+		}
+	}
+
 }

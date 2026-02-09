@@ -1136,7 +1136,7 @@ public class shared_object
 		 */
 		public final MethodHandle resolve_stub()
 		{
-			return native_function(abi.host.native_entry(abi.host.resolve_constraints(this.to_function_descriptor())));
+			return stub_function(abi.host.native_entry(abi.host.resolve_constraints(this.to_function_descriptor())));
 		}
 
 		public final long resolve_addr(long handle)
@@ -1145,7 +1145,7 @@ public class shared_object
 		}
 	}
 
-	public static final MethodHandle native_function(Object downcall_entry)
+	public static final MethodHandle stub_function(Object downcall_entry)
 	{
 		try
 		{
@@ -1157,9 +1157,8 @@ public class shared_object
 		}
 	}
 
-	public static final MethodHandle native_function(Object downcall_entry, long func_ptr)
+	public static final MethodHandle find_native_function(long handle, function_signature signature)
 	{
-		return null;
-		// return native_function(downcall_entry).(func_ptr);
+		return symbols.bind(signature.resolve_stub(), 0, signature.resolve_addr(handle));
 	}
 }
