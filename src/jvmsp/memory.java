@@ -7,7 +7,9 @@ import java.lang.reflect.Type;
 import java.nio.ByteOrder;
 import java.util.List;
 
-import jvmsp.cxx_type.pointer;
+import jvmsp.type.cxx_type;
+import jvmsp.type.cxx_type.pointer;
+import jvmsp.type.java_type;
 
 public abstract class memory
 {
@@ -34,12 +36,17 @@ public abstract class memory
 
 	public static final pointer malloc(long num, Class<?> type_clazz)
 	{
-		return pointer.at(unsafe.allocate(num * java_type.sizeof(type_clazz)), type_clazz);
+		return pointer.at(unsafe.allocate(num * java_type.sizeof(type_clazz)), cxx_type.of(type_clazz));
 	}
 
 	public static final pointer malloc(long num, cxx_type type)
 	{
 		return pointer.at(unsafe.allocate(num * cxx_type.sizeof(type)), type);
+	}
+
+	public static final pointer malloc(cxx_type type)
+	{
+		return pointer.at(unsafe.allocate(cxx_type.sizeof(type)), type);
 	}
 
 	public static final pointer malloc(cxx_type... types)

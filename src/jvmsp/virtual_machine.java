@@ -10,7 +10,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.function.IntFunction;
-import java.util.stream.Stream;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.management.VMOption;
@@ -18,6 +17,9 @@ import com.sun.tools.attach.AgentInitializationException;
 import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
+
+import jvmsp.type.cxx_type;
+import jvmsp.type.java_type;
 
 /**
  * 管理JVM的相关功能
@@ -547,7 +549,7 @@ public class virtual_machine
 
 		private static final architecture get_host_architecture()
 		{
-			switch (symbols.abi.host_cabi())
+			switch (shared_object.abi.host_cabi())
 			{
 			case "SYS_V":
 			case "WIN_64":

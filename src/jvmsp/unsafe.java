@@ -5,6 +5,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
+import jvmsp.type.cxx_type;
+import jvmsp.type.java_type;
+
 /**
  * jdk.internal.misc.Unsafe的相关操作。 无空指针及参数检查，需要自行确保参数正确性确保不会引发JVM崩溃 注：对于final修饰的变量，基本类型和String会内联，因此修改变量内存无效
  */
@@ -571,6 +574,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, Object x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final Object read_reference(Object base, long offset)
 	{
 		try
@@ -581,6 +589,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get reference at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final Object read_reference(long native_addr)
+	{
+		return read_reference(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, byte x)
@@ -595,6 +608,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, byte x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final byte read_byte(Object base, long offset)
 	{
 		try
@@ -605,6 +623,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get byte at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final byte read_byte(long native_addr)
+	{
+		return read_byte(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, char x)
@@ -619,6 +642,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, char x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final char read_char(Object base, long offset)
 	{
 		try
@@ -629,6 +657,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get char at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final char read_char(long native_addr)
+	{
+		return read_char(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, boolean x)
@@ -643,6 +676,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, boolean x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final boolean read_bool(Object base, long offset)
 	{
 		try
@@ -653,6 +691,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get bool at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final boolean read_bool(long native_addr)
+	{
+		return read_bool(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, short x)
@@ -667,6 +710,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, short x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final short read_short(Object base, long offset)
 	{
 		try
@@ -677,6 +725,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get short at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final short read_short(long native_addr)
+	{
+		return read_short(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, int x)
@@ -691,6 +744,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, int x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final int read_int(Object base, long offset)
 	{
 		try
@@ -701,6 +759,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get int at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final int read_int(long native_addr)
+	{
+		return read_int(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, long x)
@@ -715,6 +778,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, long x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final long read_long(Object base, long offset)
 	{
 		try
@@ -725,6 +793,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get long at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final long read_long(long native_addr)
+	{
+		return read_long(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, double x)
@@ -739,6 +812,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, double x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final double read_double(Object base, long offset)
 	{
 		try
@@ -749,6 +827,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get double at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final double read_double(long native_addr)
+	{
+		return read_double(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, float x)
@@ -763,6 +846,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void write(long native_addr, float x)
+	{
+		write(null, native_addr, x);
+	}
+
 	public static final float read_float(Object base, long offset)
 	{
 		try
@@ -773,6 +861,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get float at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final float read_float(long native_addr)
+	{
+		return read_float(null, native_addr);
 	}
 
 	// cmpxchg & cas
@@ -788,6 +881,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, Object expected, Object x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final Object cmpxchg(Object base, long offset, Object expected, Object x)
 	{
 		try
@@ -798,6 +896,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange reference '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final Object cmpxchg(long native_addr, Object expected, Object x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, byte expected, byte x)
@@ -812,6 +915,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, byte expected, byte x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final byte cmpxchg(Object base, long offset, byte expected, byte x)
 	{
 		try
@@ -822,6 +930,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange byte '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final byte cmpxchg(long native_addr, byte expected, byte x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, char expected, char x)
@@ -836,6 +949,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, char expected, char x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final char cmpxchg(Object base, long offset, char expected, char x)
 	{
 		try
@@ -846,6 +964,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange char '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final char cmpxchg(long native_addr, char expected, char x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, short expected, short x)
@@ -860,6 +983,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, short expected, short x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final short cmpxchg(Object base, long offset, short expected, short x)
 	{
 		try
@@ -870,6 +998,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange short '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final short cmpxchg(long native_addr, short expected, short x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, int expected, int x)
@@ -884,6 +1017,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, int expected, int x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final int cmpxchg(Object base, long offset, int expected, int x)
 	{
 		try
@@ -894,6 +1032,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange int '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final int cmpxchg(long native_addr, int expected, int x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, long expected, long x)
@@ -908,6 +1051,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, long expected, long x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final long cmpxchg(Object base, long offset, long expected, long x)
 	{
 		try
@@ -918,6 +1066,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange long '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final long cmpxchg(long native_addr, long expected, long x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, boolean expected, boolean x)
@@ -932,6 +1085,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, boolean expected, boolean x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final boolean cmpxchg(Object base, long offset, boolean expected, boolean x)
 	{
 		try
@@ -942,6 +1100,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange bool '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final boolean cmpxchg(long native_addr, boolean expected, boolean x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, float expected, float x)
@@ -956,6 +1119,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, float expected, float x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final float cmpxchg(Object base, long offset, float expected, float x)
 	{
 		try
@@ -966,6 +1134,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange float '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final float cmpxchg(long native_addr, float expected, float x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	public static final boolean cas(Object base, long offset, double expected, double x)
@@ -980,6 +1153,11 @@ public final class unsafe
 		}
 	}
 
+	public static final boolean cas(long native_addr, double expected, double x)
+	{
+		return cas(null, native_addr, expected, x);
+	}
+
 	public static final double cmpxchg(Object base, long offset, double expected, double x)
 	{
 		try
@@ -990,6 +1168,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("compare and exchange double '" + x + "' with expected '" + expected + "' at '" + base + "' offset '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final double cmpxchg(long native_addr, double expected, double x)
+	{
+		return cmpxchg(null, native_addr, expected, x);
 	}
 
 	/**
