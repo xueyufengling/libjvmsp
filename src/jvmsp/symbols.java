@@ -126,8 +126,7 @@ public class symbols
 	 * 查找构造函数
 	 * 
 	 * @param clazz
-	 * @param field_name
-	 * @param jtype
+	 * @param arg_types
 	 * @return
 	 */
 	public static final MethodHandle find_constructor(Class<?> clazz, Class<?>... arg_types)

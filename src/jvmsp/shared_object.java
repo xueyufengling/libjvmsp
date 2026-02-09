@@ -2,6 +2,7 @@ package jvmsp;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
+import java.lang.foreign.MemoryLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
 
 /**
@@ -1084,13 +1086,62 @@ public class shared_object
 		}
 	}
 
+	/**
+	 * 函数签名
+	 */
 	public static class function_signature
 	{
-		private String function_name;
+		public String function_name;
+
+		public cxx_type return_type;
+		public cxx_type[] arg_types;
+
+		public function_signature(String function_name, cxx_type return_type, cxx_type... arg_types)
+		{
+			this.function_name = function_name;
+			this.return_type = return_type;
+			this.arg_types = arg_types;
+		}
+
+		public function_signature(cxx_type return_type, cxx_type[] arg_types)
+		{
+			this(null, return_type, arg_types);
+		}
+
+		public static final function_signature of(String function_name, cxx_type return_type, cxx_type... arg_types)
+		{
+			return new function_signature(function_name, return_type, arg_types);
+		}
+
+		public static final function_signature of(cxx_type return_type, cxx_type... arg_types)
+		{
+			return new function_signature(return_type, arg_types);
+		}
 
 		public final FunctionDescriptor to_function_descriptor()
 		{
-			return null;
+			MemoryLayout[] arg_layouts = new MemoryLayout[arg_types.length];
+			for (int idx = 0; idx < arg_types.length; ++idx)
+				arg_layouts[idx] = arg_types[idx].memory_layout();
+			if (return_type == cxx_type._void)
+				return FunctionDescriptor.ofVoid(arg_layouts);
+			else
+				return FunctionDescriptor.of(return_type.memory_layout(), arg_layouts);
+		}
+
+		/**
+		 * 获取本函数签名类型的stub函数的MethodHandle
+		 * 
+		 * @return
+		 */
+		public final MethodHandle resolve_stub()
+		{
+			return native_function(abi.host.native_entry(abi.host.resolve_constraints(this.to_function_descriptor())));
+		}
+
+		public final long resolve_addr(long handle)
+		{
+			return dlsym(handle, function_name);
 		}
 	}
 

@@ -1,10 +1,13 @@
 package jvmsp;
 
 import java.lang.annotation.Annotation;
+import java.lang.foreign.MemoryLayout;
+import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -48,9 +51,37 @@ public abstract class type
 	protected long size;
 
 	/**
-	 * 更新size的标记
+	 * 更新本类型的标记
 	 */
-	protected boolean size_dirty;
+	private boolean dirty = false;
+
+	/**
+	 * 设置类型需要更新
+	 */
+	protected void mark_dirty()
+	{
+		dirty = true;
+	}
+
+	protected void resolve_type_info()
+	{
+
+	}
+
+	/**
+	 * 对本类型的成员信息进行更新，如果是primitive类型则不更新
+	 * 
+	 * @return
+	 */
+	public final type resolve()
+	{
+		if (!is_primitive && dirty)
+		{
+			dirty = false;
+			resolve_type_info();
+		}
+		return this;
+	}
 
 	/**
 	 * 该类型的完整大小，不含padding
@@ -59,22 +90,7 @@ public abstract class type
 	 */
 	public final long size()
 	{
-		if (!is_primitive && size_dirty)
-		{
-			size_dirty = false;
-			return (size = resolve_size());
-		}
-		else
-			return size;
-	}
-
-	/**
-	 * 计算更新后的类型大小
-	 * 
-	 * @return
-	 */
-	protected long resolve_size()
-	{
+		resolve();
 		return size;
 	}
 
@@ -143,17 +159,56 @@ public abstract class type
 		return is_primitive;
 	}
 
-	protected type(String name, boolean is_primitive, boolean is_signed, long size)
+	protected MemoryLayout memory_layout;
+
+	public final MemoryLayout memory_layout()
+	{
+		resolve();
+		return memory_layout;
+	}
+
+	public static enum memory_layout_type
+	{
+		PRIMITIVE_INT, PRIMITIVE_FLOAT, STRUCT;
+
+		public static final MemoryLayout of(long size, memory_layout_type layout_type)
+		{
+			switch (layout_type)
+			{
+			case PRIMITIVE_INT:
+				switch ((int) size)
+				{
+				case 1:
+					return ValueLayout.JAVA_BYTE;
+				case 2:
+					return ValueLayout.JAVA_SHORT_UNALIGNED;
+				case 4:
+					return ValueLayout.JAVA_INT_UNALIGNED;
+				case 8:
+					return ValueLayout.JAVA_LONG_UNALIGNED;
+				}
+			case PRIMITIVE_FLOAT:
+				switch ((int) size)
+				{
+				case 4:
+					return ValueLayout.JAVA_FLOAT_UNALIGNED;
+				case 8:
+					return ValueLayout.JAVA_DOUBLE_UNALIGNED;
+				}
+			case STRUCT:
+				return MemoryLayout.structLayout(MemoryLayout.sequenceLayout(size, ValueLayout.JAVA_BYTE)).withByteAlignment(1);
+			}
+			throw new java.lang.InternalError("memory layout type '" + layout_type + "' size cannot be " + size);
+		}
+	}
+
+	protected type(String name, boolean is_primitive, boolean is_signed, long size, MemoryLayout memory_layout)
 	{
 		this.name = name;
 		this.is_primitive = is_primitive;
+		this.memory_layout = memory_layout;
 		this.is_signed = is_signed;
 		this.size = size;
-	}
-
-	protected type(String name, boolean is_primitive, boolean is_signed)
-	{
-		this(name, is_primitive, is_signed, 0);
 	}
 
 	/**
@@ -163,9 +218,14 @@ public abstract class type
 	 * @param is_signed 只有基本类型有is_signed
 	 * @param size
 	 */
-	protected type(String name, boolean is_signed, long size)
+	protected type(String name, boolean is_signed, long size, MemoryLayout memory_layout)
 	{
-		this(name, true, is_signed, size);
+		this(name, true, is_signed, size, memory_layout);
+	}
+
+	protected type(String name, boolean is_signed, long size, memory_layout_type layout_type)
+	{
+		this(name, is_signed, size, memory_layout_type.of(size, layout_type));
 	}
 
 	/**
@@ -176,7 +236,7 @@ public abstract class type
 	 */
 	protected type(String name, long size)
 	{
-		this(name, false, false, size);
+		this(name, false, false, size, null);
 	}
 
 	/**
@@ -337,6 +397,12 @@ public abstract class type
 			return defined_types.get(type_name);
 		}
 
+		public static cxx_type typedef(cxx_type type_alias, String type_name)
+		{
+			defined_types.put(type_name, type_alias);
+			return type_alias;
+		}
+
 		@Override
 		public cxx_type clone()
 		{
@@ -373,7 +439,7 @@ public abstract class type
 
 		public long default_align_size()
 		{
-			size();// 如果size有脏标记，则更新，否则不操作
+			resolve();
 			return default_align_size;
 		}
 
@@ -384,7 +450,7 @@ public abstract class type
 
 		public long pragma_pack()
 		{
-			size();
+			resolve();
 			return pragma_pack;
 		}
 
@@ -395,7 +461,7 @@ public abstract class type
 
 		public long align_size()
 		{
-			size();
+			resolve();
 			return align_size;
 		}
 
@@ -464,39 +530,56 @@ public abstract class type
 		 * @param name
 		 * @param size
 		 */
-		private cxx_type(String name, boolean is_signed, long size)
+		private cxx_type(String name, boolean is_signed, long size, MemoryLayout memory_layout)
 		{
-			super(name, is_signed, size);
+			super(name, is_signed, size, memory_layout);
 			this.align_size = size;
 			this.default_align_size = size;
 			this.pragma_pack = size;
-			this.size_dirty = false;
 			defined_types.computeIfAbsent(name, (String t) -> this);
+		}
+
+		private cxx_type(String name, boolean is_signed, long size, memory_layout_type layout_type)
+		{
+			this(name, is_signed, size, memory_layout_type.of(size, layout_type));
 		}
 
 		private cxx_type(String name, long pragma_pack, cxx_type... base_types)
 		{
-			super(name, false, 0);
+			super(name, 0);
 			this.pragma_pack = pragma_pack;
 			this.fields = new ArrayList<>();
 			this.base_types = base_types;
 			this.base_fields = new ArrayList<>();
 			this.derived_top = resolve_base_fields(base_fields, 0);
-			this.size_dirty = true;
+			mark_dirty();
 			defined_types.computeIfAbsent(name, (String t) -> this);
 		}
 
 		/**
-		 * 定义一个原生类型的长度，原生类型没有字段
+		 * 定义一个Java原生类型的长度，原生类型没有字段
 		 * 
 		 * @param type_name
 		 * @param is_signed
 		 * @param size
 		 * @return
 		 */
-		private static final cxx_type define_primitive(String type_name, boolean is_signed, long size)
+		private static final cxx_type define_primitive(String type_name, boolean is_signed, long size, MemoryLayout memory_layout)
 		{
-			return new cxx_type(type_name, is_signed, size);
+			return new cxx_type(type_name, is_signed, size, memory_layout);
+		}
+
+		/**
+		 * 定义一个C/C++原生类型的长度，原生类型没有字段
+		 * 
+		 * @param type_name
+		 * @param is_signed
+		 * @param size
+		 * @return
+		 */
+		private static final cxx_type define_primitive(String type_name, boolean is_signed, long size, memory_layout_type layout_type)
+		{
+			return new cxx_type(type_name, is_signed, size, layout_type);
 		}
 
 		/**
@@ -506,9 +589,9 @@ public abstract class type
 		 * @param size
 		 * @return
 		 */
-		private static final cxx_type define_primitive(String type_name, long size)
+		private static final cxx_type define_primitive(String type_name, long size, MemoryLayout memory_layout)
 		{
-			return define_primitive(type_name, false, size);
+			return define_primitive(type_name, false, size, memory_layout);
 		}
 
 		/**
@@ -523,7 +606,7 @@ public abstract class type
 				throw new java.lang.InternalError("cannot append field \"" + field + "\" to " + this + ". append fields to primitive types or append self as a field are not allowed.");
 			fields.add(field);
 			field.decl_type = this;
-			this.size_dirty = true;// 标记size更新
+			mark_dirty();// 标记size更新
 			return field;
 		}
 
@@ -537,7 +620,7 @@ public abstract class type
 		 * 
 		 * @return
 		 */
-		private long resolve_offset_and_size()
+		private void resolve_offset_and_size()
 		{
 			if (base_types.length == 0 && fields.isEmpty())
 			{
@@ -564,7 +647,11 @@ public abstract class type
 				}
 				size = current_offset;
 			}
-			return size;
+		}
+
+		private void resolve_memory_layout()
+		{
+			memory_layout = MemoryLayout.sequenceLayout(size(), ValueLayout.JAVA_BYTE);// 对于C++类型均使用以字节为单位的SequenceLayout
 		}
 
 		/**
@@ -573,9 +660,10 @@ public abstract class type
 		 * @return
 		 */
 		@Override
-		protected long resolve_size()
+		protected void resolve_type_info()
 		{
-			return this.resolve_offset_and_size();
+			resolve_offset_and_size();
+			resolve_memory_layout();// 生成Java FFI API使用的MemoryLayout
 		}
 
 		/**
@@ -808,18 +896,18 @@ public abstract class type
 			mem_layout_printer.print_mem_layout(this);
 		}
 
-		public static final cxx_type _char = cxx_type.define_primitive("char", true, 1);
-		public static final cxx_type unsigned_char = cxx_type.define_primitive("unsigned char", false, type.sizeof(_char));
-		public static final cxx_type _short = cxx_type.define_primitive("short", true, 2);
-		public static final cxx_type unsigned_short = cxx_type.define_primitive("unsigned short", false, type.sizeof(_short));
-		public static final cxx_type _int = cxx_type.define_primitive("int", true, 4);
-		public static final cxx_type unsigned_int = cxx_type.define_primitive("unsigned int", false, type.sizeof(_int));
-		public static final cxx_type bool = cxx_type.define_primitive("bool", false, type.sizeof(_int));
-		public static final cxx_type _long_long = cxx_type.define_primitive("long long", true, 8);
-		public static final cxx_type unsigned_long_long = cxx_type.define_primitive("unsigned long long", false, type.sizeof(_long_long));
-		public static final cxx_type _float = cxx_type.define_primitive("float", true, type.sizeof(_int));
-		public static final cxx_type _double = cxx_type.define_primitive("double", true, type.sizeof(_long_long));
-		public static final cxx_type _void = cxx_type.define_primitive("void", false, 0);
+		public static final cxx_type _char = cxx_type.define_primitive("char", true, 1, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type unsigned_char = cxx_type.define_primitive("unsigned char", false, type.sizeof(_char), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type _short = cxx_type.define_primitive("short", true, 2, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type unsigned_short = cxx_type.define_primitive("unsigned short", false, type.sizeof(_short), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type _int = cxx_type.define_primitive("int", true, 4, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type unsigned_int = cxx_type.define_primitive("unsigned int", false, type.sizeof(_int), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type bool = cxx_type.define_primitive("bool", false, type.sizeof(_int), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type _long_long = cxx_type.define_primitive("long long", true, 8, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type unsigned_long_long = cxx_type.define_primitive("unsigned long long", false, type.sizeof(_long_long), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type _float = cxx_type.define_primitive("float", true, type.sizeof(_int), memory_layout_type.PRIMITIVE_FLOAT);
+		public static final cxx_type _double = cxx_type.define_primitive("double", true, type.sizeof(_long_long), memory_layout_type.PRIMITIVE_FLOAT);
+		public static final cxx_type _void = cxx_type.define_primitive("void", false, 0, (MemoryLayout) null);
 
 		/**
 		 * 无符号机器数据字
@@ -829,20 +917,20 @@ public abstract class type
 		static
 		{
 			if (virtual_machine.ON_64_BIT_JVM)
-				WORD = cxx_type.define_primitive("WORD", false, 8);
+				WORD = cxx_type.define_primitive("WORD", false, 8, memory_layout_type.PRIMITIVE_INT);
 			else
-				WORD = cxx_type.define_primitive("WORD", false, 4);
+				WORD = cxx_type.define_primitive("WORD", false, 4, memory_layout_type.PRIMITIVE_INT);
 		}
 
-		public static final cxx_type int8_t = cxx_type.define_primitive("int8_t", true, 1);
-		public static final cxx_type uint8_t = cxx_type.define_primitive("uint8_t", false, type.sizeof(int8_t));
-		public static final cxx_type int16_t = cxx_type.define_primitive("int16_t", true, 2);
-		public static final cxx_type uint16_t = cxx_type.define_primitive("uint16_t", false, type.sizeof(int16_t));
-		public static final cxx_type int32_t = cxx_type.define_primitive("int32_t", true, 4);
-		public static final cxx_type uint32_t = cxx_type.define_primitive("uint32_t", false, type.sizeof(int32_t));
-		public static final cxx_type int64_t = cxx_type.define_primitive("int64_t", true, 8);
-		public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", false, type.sizeof(int64_t));
-		public static final cxx_type size_t = cxx_type.define_primitive("size_t", false, type.sizeof(uint64_t));
+		public static final cxx_type int8_t = cxx_type.define_primitive("int8_t", true, 1, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type uint8_t = cxx_type.define_primitive("uint8_t", false, type.sizeof(int8_t), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type int16_t = cxx_type.define_primitive("int16_t", true, 2, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type uint16_t = cxx_type.define_primitive("uint16_t", false, type.sizeof(int16_t), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type int32_t = cxx_type.define_primitive("int32_t", true, 4, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type uint32_t = cxx_type.define_primitive("uint32_t", false, type.sizeof(int32_t), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type int64_t = cxx_type.define_primitive("int64_t", true, 8, memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", false, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type size_t = cxx_type.define_primitive("size_t", false, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
 
 		public static class pointer_type extends cxx_type
 		{
@@ -853,7 +941,7 @@ public abstract class type
 
 			private pointer_type(cxx_type type)
 			{
-				super(type.name() + "*", false, WORD.size());
+				super(type.name() + "*", false, WORD.size(), ValueLayout.ADDRESS);
 				this.type = type;
 			}
 
@@ -880,7 +968,7 @@ public abstract class type
 
 		public static final pointer_type pvoid = pointer_type.of(_void);
 
-		public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", type.sizeof(pvoid));
+		public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", type.sizeof(pvoid), ValueLayout.ADDRESS);
 
 		/**
 		 * 用于将signed int类型储存的unsigned int值转换为unsigned long值。<br>
@@ -964,18 +1052,18 @@ public abstract class type
 			}
 		}
 
-		public static final cxx_type oop = define_primitive("oop", sizeof(unsigned_int));
-		public static final cxx_type jobject = define_primitive("jobject", sizeof(oop));
-		public static final cxx_type jclass = define_primitive("jclass", sizeof(oop));
-		public static final cxx_type jboolean = define_primitive("jboolean", false, sizeof(uint8_t));
-		public static final cxx_type jbyte = define_primitive("jbyte", true, sizeof(int8_t));
-		public static final cxx_type jchar = define_primitive("jchar", false, sizeof(uint16_t));
-		public static final cxx_type jshort = define_primitive("jshort", true, sizeof(int16_t));
-		public static final cxx_type jint = define_primitive("jint", true, sizeof(int32_t));
-		public static final cxx_type jsize = define_primitive("jsize", true, sizeof(jint));
-		public static final cxx_type jlong = define_primitive("jlong", true, sizeof(int64_t));
-		public static final cxx_type jfloat = define_primitive("jfloat", true, sizeof(_float));
-		public static final cxx_type jdouble = define_primitive("jdouble", true, sizeof(_double));
+		public static final cxx_type oop = define_primitive("oop", sizeof(unsigned_int), ValueLayout.ADDRESS);
+		public static final cxx_type jobject = define_primitive("jobject", sizeof(oop), ValueLayout.ADDRESS);
+		public static final cxx_type jclass = define_primitive("jclass", sizeof(oop), ValueLayout.ADDRESS);
+		public static final cxx_type jboolean = define_primitive("jboolean", false, sizeof(uint8_t), ValueLayout.JAVA_BOOLEAN);
+		public static final cxx_type jbyte = define_primitive("jbyte", true, sizeof(int8_t), ValueLayout.JAVA_BYTE);
+		public static final cxx_type jchar = define_primitive("jchar", false, sizeof(uint16_t), ValueLayout.JAVA_CHAR);
+		public static final cxx_type jshort = define_primitive("jshort", true, sizeof(int16_t), ValueLayout.JAVA_SHORT);
+		public static final cxx_type jint = define_primitive("jint", true, sizeof(int32_t), ValueLayout.JAVA_INT);
+		public static final cxx_type jsize = define_primitive("jsize", true, sizeof(jint), ValueLayout.JAVA_INT);
+		public static final cxx_type jlong = define_primitive("jlong", true, sizeof(int64_t), ValueLayout.JAVA_LONG);
+		public static final cxx_type jfloat = define_primitive("jfloat", true, sizeof(_float), ValueLayout.JAVA_FLOAT);
+		public static final cxx_type jdouble = define_primitive("jdouble", true, sizeof(_double), ValueLayout.JAVA_DOUBLE);
 
 		public static final cxx_type of(Class<?> jtype)
 		{
@@ -1107,6 +1195,93 @@ public abstract class type
 			public String toString()
 			{
 				return "0x" + ((addr >> 32 == 0) ? String.format("%08x", addr) : String.format("%016x", addr));
+			}
+
+			/**
+			 * 将C/C++数组转换为Java数组
+			 * 
+			 * @param num
+			 * @param clazz
+			 * @return
+			 */
+			public final Object to_jarray(int num, Class<?> clazz)
+			{
+				if (clazz == void.class)
+					throw new java.lang.InstantiationError("array type cannot be void");
+				Object arr = Array.newInstance(clazz, num);
+				if (clazz == byte.class)
+				{
+					byte[] a = ((byte[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (byte) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == boolean.class)
+				{
+					boolean[] a = ((boolean[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (boolean) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == short.class)
+				{
+					short[] a = ((short[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (short) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == char.class)
+				{
+					char[] a = ((char[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (char) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == int.class)
+				{
+					int[] a = ((int[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (int) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == float.class)
+				{
+					float[] a = ((float[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (float) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == long.class)
+				{
+					long[] a = ((long[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (long) this.add(idx).dereference();
+					}
+				}
+				else if (clazz == double.class)
+				{
+					double[] a = ((double[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = (double) this.add(idx).dereference();
+					}
+				}
+				else
+				{
+					Object[] a = ((Object[]) arr);
+					for (int idx = 0; idx < num; ++idx)
+					{
+						a[idx] = this.add(idx).dereference();
+					}
+				}
+				return arr;
 			}
 
 			/**

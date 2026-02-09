@@ -4,7 +4,6 @@ import java.lang.foreign.MemorySegment;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
-import java.nio.ByteOrder;
 import java.util.List;
 
 import jvmsp.type.cxx_type;
@@ -13,22 +12,6 @@ import jvmsp.type.java_type;
 
 public abstract class memory
 {
-
-	/**
-	 * 字节序
-	 */
-	public static enum endian
-	{
-		LITTLE, BIG;
-	}
-
-	public static final endian LOCAL_ENDIAN;
-
-	static
-	{
-		LOCAL_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN ? endian.BIG : endian.LITTLE;
-	}
-
 	public static final pointer malloc(long size)
 	{
 		return pointer.at(unsafe.allocate(size));
@@ -59,19 +42,14 @@ public abstract class memory
 		unsafe.free(ptr.address());
 	}
 
-	public static final void memset(pointer ptr, int value, long bytes)
+	public static final void memset(pointer ptr, int value, long num)
 	{
-		unsafe.memset(null, ptr.address(), bytes, (byte) value);
+		unsafe.memset(null, ptr.address(), num, (byte) value);
 	}
 
-	public static final void memcpy(pointer ptrDest, pointer ptrSrc, long bytes)
+	public static final void memcpy(pointer ptr_dest, pointer ptr_src, long num)
 	{
-		unsafe.memcpy(null, ptrSrc.address(), null, ptrDest.address(), bytes);
-	}
-
-	public static final void memcpy(long addrDest, long addrSrc, long bytes)
-	{
-		unsafe.memcpy(null, addrSrc, null, addrDest, bytes);
+		unsafe.memcpy(null, ptr_src.address(), null, ptr_dest.address(), num);
 	}
 
 	private static Class<?> jdk_internal_foreign_NativeMemorySegmentImpl;
