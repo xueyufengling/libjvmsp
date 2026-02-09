@@ -663,7 +663,8 @@ public class shared_object
 		 * 
 		 * @return
 		 */
-		@SuppressWarnings("rawtypes")
+		@SuppressWarnings(
+		{ "rawtypes" })
 		public static final String host_cabi()
 		{
 			try
@@ -1096,6 +1097,11 @@ public class shared_object
 		public cxx_type return_type;
 		public cxx_type[] arg_types;
 
+		public String toString()
+		{
+			return return_type.toString() + " " + function_name + "(" + arg_types + ")";
+		}
+
 		public function_signature(String function_name, cxx_type return_type, cxx_type... arg_types)
 		{
 			this.function_name = function_name;
@@ -1157,7 +1163,14 @@ public class shared_object
 		}
 	}
 
-	public static final MethodHandle find_native_function(long handle, function_signature signature)
+	/**
+	 * 查找指定签名的函数
+	 * 
+	 * @param handle
+	 * @param signature
+	 * @return
+	 */
+	public static final MethodHandle dlsym(long handle, function_signature signature)
 	{
 		return symbols.bind(signature.resolve_stub(), 0, signature.resolve_addr(handle));
 	}

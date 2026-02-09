@@ -8,7 +8,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
-import jvmsp.internal.reflection_factory;
+import jvmsp.reflection.reflection_factory;
 
 /**
  * 句柄操作相关，包括调用native方法<br>
@@ -1079,7 +1079,7 @@ public class symbols
 	}
 
 	/**
-	 * 重新绑定参数，返回BoundMethodHandle对象
+	 * 将target转换为可以对参数进行重新绑定的BoundMethodHandle对象
 	 * 
 	 * @param target
 	 * @return

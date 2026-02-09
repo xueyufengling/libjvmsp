@@ -10,8 +10,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
-import jvmsp.internal.iterate_on_write_list;
-
 public class class_loader
 {
 	private static MethodHandle ClassLoader_defineClass0;

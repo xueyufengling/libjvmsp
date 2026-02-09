@@ -1,4 +1,4 @@
-package jvmsp.internal;
+package jvmsp;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedDeque;
