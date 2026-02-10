@@ -968,6 +968,27 @@ public abstract class type
 
 		public static final pointer_type pvoid = pointer_type.of(_void);
 
+		public static final pointer_type pchar = pointer_type.of(_char);
+		public static final pointer_type punsigned_char = pointer_type.of(unsigned_char);
+		public static final pointer_type pshort = pointer_type.of(_short);
+		public static final pointer_type punsigned_short = pointer_type.of(unsigned_short);
+		public static final pointer_type pint = pointer_type.of(_int);
+		public static final pointer_type punsigned_int = pointer_type.of(unsigned_int);
+		public static final pointer_type pbool = pointer_type.of(bool);
+		public static final pointer_type plong_long = pointer_type.of(_long_long);
+		public static final pointer_type punsigned_long_long = pointer_type.of(unsigned_long_long);
+		public static final pointer_type pfloat = pointer_type.of(_float);
+		public static final pointer_type pdouble = pointer_type.of(_double);
+		public static final pointer_type pint8_t = pointer_type.of(int8_t);
+		public static final pointer_type puint8_t = pointer_type.of(uint8_t);
+		public static final pointer_type pint16_t = pointer_type.of(int16_t);
+		public static final pointer_type puint16_t = pointer_type.of(uint16_t);
+		public static final pointer_type pint32_t = pointer_type.of(int32_t);
+		public static final pointer_type puint32_t = pointer_type.of(uint32_t);
+		public static final pointer_type pint64_t = pointer_type.of(int64_t);
+		public static final pointer_type puint64_t = pointer_type.of(uint64_t);
+		public static final pointer_type psize_t = pointer_type.of(size_t);
+
 		public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", type.sizeof(pvoid), ValueLayout.ADDRESS);
 
 		/**
@@ -1065,6 +1086,19 @@ public abstract class type
 		public static final cxx_type jfloat = define_primitive("jfloat", true, sizeof(_float), ValueLayout.JAVA_FLOAT);
 		public static final cxx_type jdouble = define_primitive("jdouble", true, sizeof(_double), ValueLayout.JAVA_DOUBLE);
 
+		public static final pointer_type poop = pointer_type.of(oop);
+		public static final pointer_type pjobject = pointer_type.of(jobject);
+		public static final pointer_type pjclass = pointer_type.of(jclass);
+		public static final pointer_type pjboolean = pointer_type.of(jboolean);
+		public static final pointer_type pjbyte = pointer_type.of(jbyte);
+		public static final pointer_type pjchar = pointer_type.of(jchar);
+		public static final pointer_type pjshort = pointer_type.of(jshort);
+		public static final pointer_type pjint = pointer_type.of(jint);
+		public static final pointer_type pjsize = pointer_type.of(jsize);
+		public static final pointer_type pjlong = pointer_type.of(jlong);
+		public static final pointer_type pjfloat = pointer_type.of(jfloat);
+		public static final pointer_type pjdouble = pointer_type.of(jdouble);
+
 		public static final cxx_type of(Class<?> jtype)
 		{
 			if (jtype == byte.class)
@@ -1094,7 +1128,7 @@ public abstract class type
 		 * 不要用于取对象地址，短时间内可能不会出问题，但对象会随着GC过程移动，原先的地址会失效。<br>
 		 * 主要配合memory使用，对分配的固定地址内存进行操作。
 		 */
-		public static class pointer
+		public static class pointer implements AutoCloseable
 		{
 			/**
 			 * C++层的指针转换为(void*)(uint64_t)addr
@@ -1500,6 +1534,33 @@ public abstract class type
 				}
 			}
 
+			/**
+			 * 创建一个新指针，地址和本指针相同，但托管在try-with-resources代码中自动释放指针
+			 * 
+			 * @return
+			 */
+			public final pointer auto()
+			{
+				final class auto_pointer extends pointer
+				{
+					private auto_pointer(pointer ptr)
+					{
+						super(ptr.addr, ptr.type, ptr.stride);
+					}
+
+					/**
+					 * try-with-resources代码结束时自动释放指针
+					 * 
+					 */
+					@Override
+					public void close() throws Exception
+					{
+						memory.free(this);
+					}
+				}
+				return new auto_pointer(this);
+			}
+
 			public final void print_memory(long size)
 			{
 				pointer indicator = this.copy().cast(uint8_t);
@@ -1507,6 +1568,12 @@ public abstract class type
 				{
 					System.out.print(String.format("%02x", cxx_type.uint_ptr((byte) indicator.dereference())) + " ");
 				}
+			}
+
+			@Override
+			public void close() throws Exception
+			{
+				// 无操作，仅为让pointer声明通过编译器的AutoCloseable检查
 			}
 		}
 

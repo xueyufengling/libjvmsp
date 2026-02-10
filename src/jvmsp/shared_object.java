@@ -1159,7 +1159,7 @@ public class shared_object
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("wrap native method handle of '" + downcall_entry.toString() + "' failed", ex);
+			throw new java.lang.InternalError("wrap native function of '" + downcall_entry.toString() + "' failed", ex);
 		}
 	}
 

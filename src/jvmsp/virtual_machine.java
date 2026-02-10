@@ -742,9 +742,9 @@ public class virtual_machine
 
 		static
 		{
-			// 加载JNI，本类所有涉及JVM相关的函数都必须在load()以后才能调用
+			// 加载JNI，本类所有涉及JVM相关的函数都必须在加载libjvm.so以后才能调用
 			_libjvm = shared_object.dlopen("jvm");
-			JNI_GetCreatedJavaVMs = shared_object.dlsym(_libjvm, shared_object.function_signature.of("JNI_GetCreatedJavaVMs", cxx_type.jint, cxx_type.pvoid, cxx_type.jsize, cxx_type.pvoid));
+			JNI_GetCreatedJavaVMs = shared_object.dlsym(_libjvm, shared_object.function_signature.of("JNI_GetCreatedJavaVMs", cxx_type.jint, cxx_type.pvoid, cxx_type.jsize, cxx_type.pjsize));
 		}
 
 		/**
@@ -756,18 +756,13 @@ public class virtual_machine
 		public static final long[] process_jvm_handles(int max_num)
 		{
 			int ret = 0;
-			pointer vm_buf = memory.malloc(max_num, cxx_type.pvoid);
-			pointer vm_num = memory.malloc(cxx_type.jsize);
-			try
+			try (pointer vm_buf = memory.malloc(max_num, cxx_type.pvoid).auto(); pointer vm_num = memory.malloc(cxx_type.jsize).auto();)
 			{
 				ret = (int) JNI_GetCreatedJavaVMs.invokeExact(vm_buf.address(), max_num, vm_num.address());
 				if (ret == 0)
 				{
 					int final_num = Math.min(max_num, (int) vm_num.dereference());
-					long[] handles = (long[]) vm_buf.to_jarray(final_num, long.class);
-					memory.free(vm_buf);
-					memory.free(vm_num);
-					return handles;
+					return (long[]) vm_buf.to_jarray(final_num, long.class);
 				}
 				else
 				{
@@ -776,8 +771,6 @@ public class virtual_machine
 			}
 			catch (Throwable ex)
 			{
-				memory.free(vm_buf);
-				memory.free(vm_num);
 				throw new java.lang.InternalError("call JNI_GetCreatedJavaVMs() failed", ex);
 			}
 		}
