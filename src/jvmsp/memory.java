@@ -1,14 +1,14 @@
 package jvmsp;
 
-import java.lang.foreign.MemorySegment;
-import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.List;
 
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
+import jvmsp.libso.libc;
 
 public abstract class memory
 {
@@ -52,91 +52,55 @@ public abstract class memory
 		unsafe.memcpy(null, ptr_src.address(), null, ptr_dest.address(), num);
 	}
 
-	private static Class<?> jdk_internal_foreign_NativeMemorySegmentImpl;
-	private static Class<?> jdk_internal_foreign_MemorySessionImpl;
-
-	private static MethodHandle NativeMemorySegmentImpl_constructor;
-	private static MethodHandle MemorySessionImpl_heapSession;
-
-	static
-	{
-		try
-		{
-			jdk_internal_foreign_NativeMemorySegmentImpl = Class.forName("jdk.internal.foreign.NativeMemorySegmentImpl");
-			jdk_internal_foreign_MemorySessionImpl = Class.forName("jdk.internal.foreign.MemorySessionImpl");
-			NativeMemorySegmentImpl_constructor = symbols.find_constructor(jdk_internal_foreign_NativeMemorySegmentImpl, long.class, long.class, boolean.class, jdk_internal_foreign_MemorySessionImpl);
-			MemorySessionImpl_heapSession = symbols.find_static_method(jdk_internal_foreign_MemorySessionImpl, "heapSession", jdk_internal_foreign_MemorySessionImpl, Object.class);
-		}
-		catch (ClassNotFoundException ex)
-		{
-			ex.printStackTrace();
-		}
-	}
-
 	/**
-	 * 创建GlobalSession
+	 * 从Java的字符串对象拷贝一个新的C字符串
 	 * 
-	 * @param base 基地址
+	 * @param str Java字符串对象
+	 * @param cs  字符编码
 	 * @return
 	 */
-	public static final Object memsess(Object base)
+	public static final pointer c_str(String str, Charset cs)
 	{
-		try
-		{
-			return MemorySessionImpl_heapSession.invoke(base);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("create heap memory session of '" + base + "' failed", ex);
-		}
+		byte[] bytes = str.getBytes(cs);
+		long cstr_addr = unsafe.allocate(bytes.length + 1);
+		unsafe.memcpy(bytes, unsafe.ARRAY_OBJECT_BASE_OFFSET, null, cstr_addr, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
+		unsafe.write(cstr_addr + bytes.length, (byte) 0);
+		return pointer.at(cstr_addr, cxx_type._char);
+	}
+
+	public static final pointer c_str(String str)
+	{
+		return c_str(str, Charset.defaultCharset());
 	}
 
 	/**
-	 * 机器本地内存的GlobalSession，直接配合native地址使用。
-	 */
-	public static final Object native_session = memsess(null);
-
-	/**
-	 * 为native地址创建MemorySegment对象，该对象为JVM内部FFI相关功能使用。<br>
-	 * FFI的MethodHandle的构成为，第一个参数固定为函数指针的MemorySegment，后续参数类型按照函数的形参顺序依次传递。<br>
-	 * 其中，参数和返回值中的C++类型不论大小和是否primitive均为MemorySegment类型，Java类型则为对应的Class<?>。
+	 * 从C字符串地址拷贝并构造一个新的Java字符串
 	 * 
-	 * @param addr      native地址
-	 * @param size      该地址储存的值的内存大小
-	 * @param read_only 是否只读
-	 * @param scope     地址的域，通常来说就是机器的全局域
+	 * @param cstr_addr C字符串指针
+	 * @param cs        字符编码
 	 * @return
 	 */
-	public static final MemorySegment memseg(long addr, long size, boolean read_only, Object scope)
+	public static final String string(long cstr_addr, Charset cs)
 	{
-		try
-		{
-			return (MemorySegment) NativeMemorySegmentImpl_constructor.invoke(addr, size, read_only, scope);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("create memory segment of native address '" + addr + "' failed", ex);
-		}
+		long len = libc.strlen(cstr_addr);
+		byte[] bytes = new byte[(int) len];// 不包含结尾的'\0'
+		unsafe.memcpy(null, cstr_addr, bytes, unsafe.ARRAY_OBJECT_BASE_OFFSET, bytes.length);
+		return new String(bytes, cs);
 	}
 
-	public static final MemorySegment memseg(long addr, long size, boolean read_only)
+	public static final String string(pointer cstr, Charset cs)
 	{
-		return memseg(addr, size, read_only, native_session);
+		return string(cstr.address(), cs);
 	}
 
-	public static final MemorySegment memseg(long addr, long size)
+	public static final String string(long cstr_addr)
 	{
-		return memseg(addr, size, false);
+		return string(cstr_addr, Charset.defaultCharset());
 	}
 
-	public static final MemorySegment memseg(pointer ptr)
+	public static final String string(pointer cstr)
 	{
-		return memseg(ptr.address(), cxx_type.sizeof(ptr.type()));
-	}
-
-	public static final MemorySegment memseg(pointer ptr, long size)
-	{
-		return memseg(ptr.address(), size);
+		return string(cstr.address());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -178,8 +142,8 @@ public abstract class memory
 		return list.toArray(arr);
 	}
 
-	public static final Class<?> get_list_type(Type listField)
+	public static final Class<?> get_list_type(Type list_field)
 	{
-		return reflection.first_generic_class(listField);
+		return reflection.first_generic_class(list_field);
 	}
 }

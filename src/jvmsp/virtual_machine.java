@@ -19,9 +19,6 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
 import jvmsp.type.cxx_type;
-import jvmsp.type.cxx_type.function_pointer_type;
-import jvmsp.type.cxx_type.function_signature;
-import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
 
 /**
@@ -517,6 +514,43 @@ public class virtual_machine
 			}
 		}
 		_oop_base_offset_in_bytes = java_type.HEADER_BYTE_LENGTH;
+	}
+
+	/**
+	 * 宿主机的操作系统信息
+	 */
+	public static enum platform
+	{
+		windows, linux, macos;
+
+		public static final platform host;
+
+		private static final platform get_host_platform()
+		{
+			switch (shared_object.abi.host_cabi())
+			{
+			case "SYS_V":
+			case "LINUX_AARCH_64":
+			case "LINUX_PPC_64_LE":
+			case "LINUX_RISCV_64":
+			case "LINUX_S390":
+				return linux;
+			case "WIN_64":
+			case "WIN_AARCH_64":
+				return windows;
+			case "MAC_OS_AARCH_64":
+				return macos;
+			case "FALLBACK":
+			case "UNSUPPORTED":
+			default:
+				return null;
+			}
+		}
+
+		static
+		{
+			host = get_host_platform();
+		}
 	}
 
 	/**

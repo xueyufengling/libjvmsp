@@ -1,18 +1,12 @@
 package jvmsp;
 
-import java.lang.annotation.Annotation;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -658,7 +652,7 @@ public abstract class type<_T>
 			this.align_size = size;
 			this.default_align_size = size;
 			this.pragma_pack = size;
-			defined_types.computeIfAbsent(name, (String t) -> this);
+			defined_types.put(name, this);
 		}
 
 		private cxx_type(String name, boolean is_signed, long size, memory_layout_type layout_type)
@@ -675,7 +669,7 @@ public abstract class type<_T>
 			this.base_fields = new ArrayList<>();
 			this.derived_top = resolve_base_fields(base_fields, 0);
 			mark_dirty();
-			defined_types.computeIfAbsent(name, (String t) -> this);
+			defined_types.put(name, this);
 		}
 
 		/**
@@ -714,6 +708,11 @@ public abstract class type<_T>
 		private static final cxx_type define_primitive(String type_name, long size, MemoryLayout memory_layout)
 		{
 			return define_primitive(type_name, false, size, memory_layout);
+		}
+
+		private static final cxx_type define_primitive(String type_name, cxx_type t)
+		{
+			return define_primitive(type_name, t.size(), t.memory_layout());
 		}
 
 		/**
@@ -1031,6 +1030,8 @@ public abstract class type<_T>
 		public static final cxx_type _double = cxx_type.define_primitive("double", true, type.sizeof(_long_long), memory_layout_type.PRIMITIVE_FLOAT);
 		public static final cxx_type _void = cxx_type.define_primitive("void", false, 0, (MemoryLayout) null);
 
+		public static final cxx_type _enum = typedef(_int, "_enum");
+
 		/**
 		 * 无符号机器数据字
 		 */
@@ -1112,11 +1113,12 @@ public abstract class type<_T>
 			 * 指针的类型
 			 */
 			protected cxx_type pointed_to_type;
+			protected String pointed_to_type_name;// 指针类型创建时，指向的类型有可能还未声明，此时pointed_to_type为null，需要保留指向类型的名称后期动态查找
 
-			protected pointer_type(String ptr_type_name, cxx_type type)
+			protected pointer_type(String ptr_type_name, cxx_type pointed_to_type)
 			{
 				super(ptr_type_name, false, WORD.size(), ValueLayout.ADDRESS);
-				this.pointed_to_type = type;
+				this.pointed_to_type = pointed_to_type;
 			}
 
 			protected pointer_type(cxx_type type)
@@ -1124,13 +1126,24 @@ public abstract class type<_T>
 				this(type.typename() + "*", type);
 			}
 
-			protected pointer_type(String type_name)
+			protected pointer_type(String ptr_type_name, String pointed_to_type_name)
 			{
-				this(cxx_type.of(type_name));
+				super(ptr_type_name, false, WORD.size(), ValueLayout.ADDRESS);
+				this.pointed_to_type_name = pointed_to_type_name;
+				this.pointed_to_type = cxx_type.of(pointed_to_type_name);
+			}
+
+			protected pointer_type(String pointed_to_type_name)
+			{
+				this(pointed_to_type_name + "*", pointed_to_type_name);
 			}
 
 			public cxx_type pointed_to_type()
 			{
+				if (pointed_to_type == null)
+				{
+					this.pointed_to_type = cxx_type.of(pointed_to_type_name);
+				}
 				return pointed_to_type;
 			}
 
@@ -1457,22 +1470,55 @@ public abstract class type<_T>
 			}
 		}
 
-		public static final cxx_type oop = define_primitive("oop", sizeof(unsigned_int), ValueLayout.ADDRESS);
-		public static final cxx_type jobject = define_primitive("jobject", sizeof(oop), ValueLayout.ADDRESS);
-		public static final cxx_type jclass = define_primitive("jclass", sizeof(oop), ValueLayout.ADDRESS);
+		public static final cxx_type va_list = typedef(pchar, "va_list");
+
+		/**
+		 * JNI中的Java基本类型
+		 */
+		public static final cxx_type oop = define_primitive("oop", unsigned_int);// oop为32位
+
+		public static final cxx_type jobject = define_primitive("jobject", sizeof(pvoid), ValueLayout.ADDRESS);
+		public static final cxx_type jweak = typedef(jobject, "jweak");
+		public static final cxx_type jclass = typedef(jobject, "jclass");
+		public static final cxx_type jstring = typedef(jobject, "jstring");
+		public static final cxx_type jthrowable = typedef(jobject, "jthrowable");
+		public static final cxx_type jfieldID = define_primitive("jfieldID ", sizeof(pvoid), ValueLayout.ADDRESS);
+		public static final cxx_type jmethodID = define_primitive("jmethodID ", sizeof(pvoid), ValueLayout.ADDRESS);
+		public static final cxx_type jarray = define_primitive("jarray", sizeof(pvoid), ValueLayout.ADDRESS);
+		public static final cxx_type jbooleanArray = typedef(jarray, "jbooleanArray");
+		public static final cxx_type jbyteArray = typedef(jarray, "jbyteArray");
+		public static final cxx_type jcharArray = typedef(jarray, "jcharArray");
+		public static final cxx_type jshortArray = typedef(jarray, "jshortArray");
+		public static final cxx_type jintArray = typedef(jarray, "jintArray");
+		public static final cxx_type jlongArray = typedef(jarray, "jlongArray");
+		public static final cxx_type jfloatArray = typedef(jarray, "jfloatArray");
+		public static final cxx_type jdoubleArray = typedef(jarray, "jdoubleArray");
+		public static final cxx_type jobjectArray = typedef(jarray, "jobjectArray");
+
 		public static final cxx_type jboolean = define_primitive("jboolean", false, sizeof(uint8_t), ValueLayout.JAVA_BOOLEAN);
 		public static final cxx_type jbyte = define_primitive("jbyte", true, sizeof(int8_t), ValueLayout.JAVA_BYTE);
 		public static final cxx_type jchar = define_primitive("jchar", false, sizeof(uint16_t), ValueLayout.JAVA_CHAR);
 		public static final cxx_type jshort = define_primitive("jshort", true, sizeof(int16_t), ValueLayout.JAVA_SHORT);
 		public static final cxx_type jint = define_primitive("jint", true, sizeof(int32_t), ValueLayout.JAVA_INT);
-		public static final cxx_type jsize = define_primitive("jsize", true, sizeof(jint), ValueLayout.JAVA_INT);
+		public static final cxx_type jsize = typedef(jint, "jsize");
 		public static final cxx_type jlong = define_primitive("jlong", true, sizeof(int64_t), ValueLayout.JAVA_LONG);
 		public static final cxx_type jfloat = define_primitive("jfloat", true, sizeof(_float), ValueLayout.JAVA_FLOAT);
 		public static final cxx_type jdouble = define_primitive("jdouble", true, sizeof(_double), ValueLayout.JAVA_DOUBLE);
 
-		public static final pointer_type poop = pointer_type.of(oop);
-		public static final pointer_type pjobject = pointer_type.of(jobject);
-		public static final pointer_type pjclass = pointer_type.of(jclass);
+		public static final cxx_type jobjectRefType = typedef(_enum, "jobjectRefType");
+
+		private static final MemoryLayout _jvalue_layout = MemoryLayout.unionLayout(
+				ValueLayout.JAVA_BOOLEAN.withName("z"),
+				ValueLayout.JAVA_BYTE.withName("b"),
+				ValueLayout.JAVA_CHAR.withName("c"),
+				ValueLayout.JAVA_SHORT.withName("s"),
+				ValueLayout.JAVA_INT.withName("i"),
+				ValueLayout.JAVA_LONG.withName("j"),
+				ValueLayout.JAVA_FLOAT.withName("f"),
+				ValueLayout.JAVA_DOUBLE.withName("d"),
+				ValueLayout.ADDRESS.withName("l"));
+		public static final cxx_type jvalue = define_primitive("jvalue", true, _jvalue_layout.byteSize(), _jvalue_layout);
+
 		public static final pointer_type pjboolean = pointer_type.of(jboolean);
 		public static final pointer_type pjbyte = pointer_type.of(jbyte);
 		public static final pointer_type pjchar = pointer_type.of(jchar);
@@ -1522,7 +1568,7 @@ public abstract class type<_T>
 			/**
 			 * 指针所指向的C++类型
 			 */
-			cxx_type type;
+			cxx_type pointed_to_type;
 
 			/**
 			 * 指针算术运算的步长，与类型有关，以byte为单位
@@ -1533,13 +1579,13 @@ public abstract class type<_T>
 			 * 仅指针算术运算使用！
 			 * 
 			 * @param addr
-			 * @param type
+			 * @param pointed_to_type
 			 * @param stride
 			 */
-			private pointer(long addr, cxx_type type, long stride)
+			private pointer(long addr, cxx_type pointed_to_type, long stride)
 			{
 				this.addr = addr;
-				this.type = type;
+				this.pointed_to_type = pointed_to_type;
 				this.stride = stride;
 			}
 
@@ -1547,11 +1593,11 @@ public abstract class type<_T>
 			 * C++对象指针
 			 * 
 			 * @param addr
-			 * @param type
+			 * @param pointed_to_type
 			 */
-			private pointer(long addr, cxx_type type)
+			private pointer(long addr, cxx_type pointed_to_type)
 			{
-				this(addr, type, type.size());
+				this(addr, pointed_to_type, pointed_to_type.size());
 			}
 
 			/**
@@ -1565,7 +1611,7 @@ public abstract class type<_T>
 			private pointer(pointer ptr)
 			{
 				this.addr = ptr.addr;
-				this.type = ptr.type;
+				this.pointed_to_type = ptr.pointed_to_type;
 				this.stride = ptr.stride;
 			}
 
@@ -1591,14 +1637,14 @@ public abstract class type<_T>
 				return addr;
 			}
 
-			public cxx_type type()
+			public cxx_type pointed_to_type()
 			{
-				return type;
+				return pointed_to_type;
 			}
 
 			public cxx_type pointer_type()
 			{
-				return pointer_type.of(type);
+				return pointer_type.of(pointed_to_type);
 			}
 
 			public boolean is_nullptr()
@@ -1716,19 +1762,19 @@ public abstract class type<_T>
 			@Override
 			public int hashCode()
 			{
-				return Objects.hashCode(addr) ^ Objects.hashCode(type);
+				return Objects.hashCode(addr) ^ Objects.hashCode(pointed_to_type);
 			}
 
 			/**
 			 * 把给定的地址和类型包装为指针
 			 * 
 			 * @param addr
-			 * @param type
+			 * @param pointed_to_type
 			 * @return
 			 */
-			public static final pointer at(long addr, cxx_type type)
+			public static final pointer at(long addr, cxx_type pointed_to_type)
 			{
-				return new pointer(addr, type);
+				return new pointer(addr, pointed_to_type);
 			}
 
 			public static final pointer at(long addr)
@@ -1761,12 +1807,12 @@ public abstract class type<_T>
 			/**
 			 * 强制转换指针
 			 * 
-			 * @param dest_type
+			 * @param dest_pointed_to_type
 			 * @return
 			 */
-			public pointer cast(cxx_type dest_type)
+			public pointer cast(cxx_type dest_pointed_to_type)
 			{
-				this.type = dest_type;
+				this.pointed_to_type = dest_pointed_to_type;
 				return this;
 			}
 
@@ -1792,6 +1838,66 @@ public abstract class type<_T>
 			}
 
 			/**
+			 * 解引用后赋值，即向地址addr写入新值
+			 * 
+			 * @param x
+			 * @return
+			 */
+			public final Object dereference_assign(Object x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final byte dereference_assign(byte x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final boolean dereference_assign(boolean x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final char dereference_assign(char x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final short dereference_assign(short x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final int dereference_assign(int x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final long dereference_assign(long x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final float dereference_assign(float x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			public final double dereference_assign(double x)
+			{
+				unsafe.write(addr, x);
+				return x;
+			}
+
+			/**
 			 * 指针加法，返回一个新指针
 			 * 
 			 * @param step
@@ -1799,7 +1905,7 @@ public abstract class type<_T>
 			 */
 			public pointer add(long step)
 			{
-				return new pointer(addr + stride * step, type, stride);
+				return new pointer(addr + stride * step, pointed_to_type, stride);
 			}
 
 			/**
@@ -1822,7 +1928,7 @@ public abstract class type<_T>
 
 			public pointer sub(long step)
 			{
-				return new pointer(addr - stride * step, type, stride);
+				return new pointer(addr - stride * step, pointed_to_type, stride);
 			}
 
 			public pointer dec(long step)
@@ -1846,7 +1952,7 @@ public abstract class type<_T>
 			 * @param _jobject
 			 * @return
 			 */
-			static final long address_of_jobject(Object _jobject)
+			public static final long address_of_jobject(Object _jobject)
 			{
 				return unsafe.native_address_of(new Object[]
 				{ _jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
@@ -1910,11 +2016,11 @@ public abstract class type<_T>
 			public Object dereference()
 			{
 				// 不可对void*类型的指针取值
-				if (type == _void)
+				if (pointed_to_type == _void)
 					throw new java.lang.IllegalAccessError("cannot dereference a void* pointer at " + this.toString());
 				else
 				{
-					return __access(addr, type);
+					return __access(addr, pointed_to_type);
 				}
 			}
 
@@ -1929,7 +2035,7 @@ public abstract class type<_T>
 				{
 					private auto_pointer(pointer ptr)
 					{
-						super(ptr.addr, ptr.type, ptr.stride);
+						super(ptr.addr, ptr.pointed_to_type, ptr.stride);
 					}
 
 					/**
@@ -2115,7 +2221,7 @@ public abstract class type<_T>
 	}
 
 	/**
-	 * Java类型所占字节数
+	 * Java类型相关信息和操作
 	 */
 	public static abstract class java_type
 	{
@@ -2230,7 +2336,7 @@ public abstract class type<_T>
 		/**
 		 * Java对象所占用内存的大小，无对齐大小。每个Class<?>计算一次后将缓存。
 		 * 
-		 * @param pointed_to_type
+		 * @param jtype
 		 * @return
 		 */
 		public static final long sizeof_object(Class<?> jtype)
@@ -3069,542 +3175,5 @@ public abstract class type<_T>
 					throw new IllegalArgumentException("Class " + this.getClass() + " have multipe base class, specify the target base class type.");
 			}
 		}
-
-		/**
-		 * 遍历类的工具，无视访问修饰符和反射过滤<br>
-		 * 提供原始Field、Method、Constructor等，对其进行修改会导致反射获取到的所有副本都被修改
-		 */
-
-		@FunctionalInterface
-		public static interface field_operation<_F>
-		{
-			/**
-			 * 遍历每个字段，处理的是root原对象，即反射缓存的对象。
-			 * 
-			 * @param f
-			 * @param is_static 目标字段是否是静态的
-			 * @param value     字段值，无效则为null
-			 * @return 是否继续迭代，返回true代表继续迭代，false则终止迭代
-			 */
-			public boolean operate(Field f, boolean is_static, _F value);
-
-			@FunctionalInterface
-			public static interface simple<_F>
-			{
-				/**
-				 * 遍历每个字段，处理的是root原对象，即反射缓存的对象。
-				 * 
-				 * @param f
-				 * @param is_static 目标字段是否是静态的
-				 * @param value     字段值，无效则为null
-				 */
-				public boolean operate(String field_name, Class<?> field_type, boolean is_static, _F value);
-			}
-
-			@FunctionalInterface
-			public static interface annotated<_F, _T extends Annotation>
-			{
-				/**
-				 * 遍历每个具有某注解的字段
-				 * 
-				 * @param f
-				 * @param is_static 目标字段是否是静态的
-				 * @param value     字段值，无效则为null
-				 */
-				public boolean operate(Field f, boolean is_static, _F value, _T annotation);
-
-				@FunctionalInterface
-				public static interface simple<_F, _T extends Annotation>
-				{
-					/**
-					 * 遍历每个具有某注解的字段
-					 * 
-					 * @param f
-					 * @param is_static 目标字段是否是静态的
-					 * @param value     字段值，无效则为null
-					 */
-					public boolean operate(String field_name, Class<?> field_type, boolean is_static, _F value, _T annotation);
-				}
-			}
-
-			@FunctionalInterface
-			public static interface generic<_F>
-			{
-				/**
-				 * 遍历具有单个泛型参数的字段
-				 * 
-				 * @param f
-				 * @param is_static 目标字段是否是静态的
-				 * @param value     字段值，无效则为null
-				 * @return 是否继续迭代，返回true代表继续迭代，false则终止迭代
-				 */
-				public boolean operate(Field f, boolean is_static, Class<?> genericType, _F value);
-			}
-		}
-
-		/**
-		 * op()中形参value为字段值<br>
-		 * 字段如果是静态的，则传入值；如果是非静态字段则传入target的该字段值（若target为Class<?>则表示无对象，传入null）
-		 * 
-		 * @param obj
-		 * @param op
-		 */
-		@SuppressWarnings(
-		{ "unchecked", "rawtypes" })
-		public static final <_F> void walk_fields(Object target, field_operation<_F> op)
-		{
-			Class<?> clazz;
-			Object obj;
-			if (target instanceof Class c)
-			{
-				clazz = c;
-				obj = null;
-			}
-			else
-			{
-				clazz = target.getClass();
-				obj = target;
-			}
-			Field[] fields = reflection.find_declared_fields(clazz);
-			field_operation rop = (field_operation) op;
-			for (Field f : fields)
-			{
-				boolean is_static = Modifier.isStatic(f.getModifiers());
-				if (!rop.operate(f, is_static, is_static ? reflection.read(clazz, f) : (obj == null ? null : reflection.read(obj, f))))
-					return;
-			}
-		}
-
-		@SuppressWarnings(
-		{ "rawtypes", "unchecked" })
-		public static final <_F> void walk_fields(Object target, field_operation.simple<_F> op)
-		{
-			field_operation.simple rop = (field_operation.simple) op;
-			walk_fields(target, (Field f, boolean is_static, Object value) ->
-			{
-				return rop.operate(f.getName(), f.getType(), is_static, value);
-			});
-		}
-
-		/**
-		 * 遍历含有某个注解的全部字段
-		 * 
-		 * @param clazz
-		 * @param annotation
-		 * @param op
-		 */
-		@SuppressWarnings(
-		{ "unchecked", "rawtypes" })
-		public static final <_F, _T extends Annotation> void walk_fields(Object target, Class<_T> annotation_clazz, field_operation.annotated<_F, _T> op)
-		{
-			field_operation.annotated rop = (field_operation.annotated) op;
-			walk_fields(target, (Field f, boolean is_static, Object value) ->
-			{
-				_T annotation = f.getAnnotation(annotation_clazz);
-				if (annotation != null)
-					return rop.operate(f, is_static, value, annotation);
-				return true;
-			});
-		}
-
-		@SuppressWarnings(
-		{ "unchecked", "rawtypes" })
-		public static final <_F, _T extends Annotation> void walk_fields(Object target, Class<_T> annotation_clazz, field_operation.annotated.simple<_F, _T> op)
-		{
-			field_operation.annotated.simple rop = (field_operation.annotated.simple) op;
-			walk_fields(target, annotation_clazz, (Field f, boolean is_static, Object value, _T annotation) ->
-			{
-				return rop.operate(f.getName(), f.getType(), is_static, value, annotation);
-			});
-		}
-
-		/**
-		 * 遍历指定类的目标类型或其子类的字段
-		 * 
-		 * @param <_T>
-		 * @param clazz
-		 * @param targetType
-		 * @param op
-		 */
-		@SuppressWarnings("unchecked")
-		public static final <_T> void walk_fields(Object target, Class<_T> targetType, field_operation<_T> op)
-		{
-			walk_fields(target, (Field f, boolean is_static, Object value) ->
-			{
-				if (reflection.is(f, targetType))
-					return op.operate(f, is_static, (_T) value);
-				return true;
-			});
-		}
-
-		@SuppressWarnings(
-		{ "rawtypes", "unchecked" })
-		public static final <_F> void walk_fields(Object target, Class<_F> field_type, field_operation.generic<_F> op)
-		{
-			field_operation.generic rop = (field_operation.generic) op;
-			walk_fields(target, field_type, (Field f, boolean is_static, _F value) ->
-			{
-				return rop.operate(f, is_static, reflection.first_generic_class(f), value);
-			});
-		}
-
-		/**
-		 * 遍历target中全部第一个泛型参数为single_generic_type的field_type类型的字段
-		 * 
-		 * @param <_F>
-		 * @param target
-		 * @param field_type
-		 * @param single_generic_type
-		 * @param op
-		 */
-		public static final <_F, _G> void walk_fields(Object target, Class<_F> field_type, Class<_G> single_generic_type, field_operation<_F> op)
-		{
-			walk_fields(target, field_type, (Field f, boolean is_static, Class<?> genericType, _F value) ->
-			{
-				if (reflection.is(genericType, single_generic_type))
-				{
-					return op.operate(f, is_static, (_F) value);
-				}
-				return true;
-			});
-		}
-
-		@FunctionalInterface
-		public static interface method_operation<_M>
-		{
-			/**
-			 * 遍历每个方法，处理的是root原对象，即反射缓存的对象。
-			 * 
-			 * @param m
-			 * @param is_static 目标字段是否是静态的
-			 * @param value     方法所属对象实例，静态方法则为null
-			 */
-			public boolean operate(Method m, boolean is_static, _M obj);
-
-			@FunctionalInterface
-			public static interface annotated<_M, _T extends Annotation>
-			{
-				/**
-				 * 遍历每个具有某注解的方法
-				 * 
-				 * @param m
-				 * @param is_static 目标字段是否是静态的
-				 * @param value     方法所属对象实例，静态方法则为null
-				 */
-				public boolean operate(Method m, boolean is_static, _M obj, _T annotation);
-			}
-		}
-
-		@SuppressWarnings(
-		{ "unchecked", "rawtypes" })
-		public static final <_M> void walk_methods(Object target, method_operation<_M> op)
-		{
-			Class<?> clazz;
-			Object obj;
-			if (target instanceof Class c)
-			{
-				clazz = c;
-				obj = null;
-			}
-			else
-			{
-				clazz = target.getClass();
-				obj = target;
-			}
-			Method[] methods = reflection.find_declared_methods(clazz);
-			method_operation rop = (method_operation) op;
-			for (Method m : methods)
-			{
-				boolean is_static = Modifier.isStatic(m.getModifiers());
-				if (!rop.operate(m, is_static, obj))
-					return;
-			}
-		}
-
-		@SuppressWarnings(
-		{ "unchecked", "rawtypes" })
-		public static final <_M, _T extends Annotation> void walk_methods(Object target, Class<_T> annotation_clazz, method_operation.annotated<_M, _T> op)
-		{
-			method_operation.annotated rop = (method_operation.annotated) op;
-			walk_methods(target, (Method m, boolean is_static, Object obj) ->
-			{
-				_T annotation = m.getAnnotation(annotation_clazz);
-				if (annotation != null)
-					return rop.operate(m, is_static, obj, annotation);
-				return true;
-			});
-		}
-
-		@FunctionalInterface
-		public static interface constructor_operation<_C>
-		{
-			/**
-			 * 遍历每个构造函数，处理的是root原对象，即反射缓存的对象。
-			 * 
-			 * @param c
-			 */
-			public boolean operate(Constructor<_C> c);
-
-			@FunctionalInterface
-			public static interface annotated<_C, _T extends Annotation>
-			{
-				/**
-				 * 遍历每个具有某注解的构造函数
-				 * 
-				 * @param c
-				 * @param annotation
-				 */
-				public boolean operate(Constructor<_C> c, _T annotation);
-			}
-		}
-
-		public static final <_C> void walk_constructors(Class<_C> clazz, constructor_operation<_C> op)
-		{
-			Constructor<_C>[] constructors = reflection.__find_declared_constructors(clazz);
-			for (Constructor<_C> c : constructors)
-			{
-				if (!op.operate(c))
-					return;
-			}
-		}
-
-		public static final <_C, _T extends Annotation> void walk_constructors(Class<_C> clazz, Class<_T> annotation_clazz, constructor_operation.annotated<_C, _T> op)
-		{
-			walk_constructors(clazz, (Constructor<_C> c) ->
-			{
-				_T annotation = c.getAnnotation(annotation_clazz);
-				if (annotation != null)
-					return op.operate(c, annotation);
-				return true;
-			});
-		}
-
-		@FunctionalInterface
-		public static interface executable_operation<_E>
-		{
-			/**
-			 * 遍历每个方法或构造函数，处理的是root原对象，即反射缓存的对象。
-			 * 
-			 * @param e
-			 * @param is_static 目标字段是否是静态的
-			 * @param value     字段值，无效则为null
-			 */
-			public boolean operate(Executable e, boolean is_static, _E obj);
-		}
-
-		@SuppressWarnings(
-		{ "rawtypes", "unchecked" })
-		public static final <_E> void walk_executables(Object target, executable_operation<_E> op)
-		{
-			Class<?> clazz;
-			Object obj;
-			if (target instanceof Class c)
-			{
-				clazz = c;
-				obj = null;
-			}
-			else
-			{
-				clazz = target.getClass();
-				obj = target;
-			}
-			Method[] methods = reflection.find_declared_methods(clazz);
-			Constructor<?>[] constructors = reflection.__find_declared_constructors(clazz);
-			executable_operation rop = (executable_operation) op;
-			for (Constructor<?> c : constructors)
-			{
-				if (!rop.operate(c, Modifier.isStatic(c.getModifiers()), obj))
-					return;
-			}
-			for (Method m : methods)
-			{
-				if (!rop.operate(m, Modifier.isStatic(m.getModifiers()), obj))
-					return;
-			}
-		}
-
-		@FunctionalInterface
-		public static interface accessible_object_operation<_A>
-		{
-			/**
-			 * 遍历每个字段，处理的是root原对象，即反射缓存的对象。
-			 * 
-			 * @param ao
-			 * @param is_static 目标字段是否是静态的
-			 * @param value     字段值，无效则为null
-			 */
-			public boolean operate(AccessibleObject ao, boolean is_static, _A obj);
-		}
-
-		@SuppressWarnings(
-		{ "rawtypes", "unchecked" })
-		public static final <_A> void walk_accessible_objects(Object target, accessible_object_operation<_A> op)
-		{
-			Class<?> clazz;
-			Object obj;
-			if (target instanceof Class c)
-			{
-				clazz = c;
-				obj = null;
-			}
-			else
-			{
-				clazz = target.getClass();
-				obj = target;
-			}
-			Field[] fields = reflection.find_declared_fields(clazz);
-			Method[] methods = reflection.find_declared_methods(clazz);
-			Constructor<?>[] constructors = reflection.__find_declared_constructors(clazz);
-			accessible_object_operation rop = (accessible_object_operation) op;
-			for (Field f : fields)
-			{
-				if (!rop.operate(f, Modifier.isStatic(f.getModifiers()), obj))
-					return;
-			}
-			for (Constructor<?> c : constructors)
-			{
-				if (!rop.operate(c, Modifier.isStatic(c.getModifiers()), obj))
-					return;
-			}
-			for (Method m : methods)
-			{
-				if (!rop.operate(m, Modifier.isStatic(m.getModifiers()), obj))
-					return;
-			}
-		}
-
-		/**
-		 * 扫描过滤
-		 */
-		@FunctionalInterface
-		public static interface filter
-		{
-			/**
-			 * 过滤AnnotatedElement的条件。
-			 * 
-			 * @param scanned_clazz
-			 * @return 返回为true才收集该元素
-			 */
-			public boolean condition(AnnotatedElement scanned_ae);
-
-			public static final filter RESERVE_ALL = (AnnotatedElement scanned_ae) -> true;
-
-			@FunctionalInterface
-			public static interface _class
-			{
-				/**
-				 * 过滤扫描到的类，只有返回true的类才被保留。
-				 * 
-				 * @param scanned_clazz
-				 * @return
-				 */
-				public boolean condition(Class<?> scanned_clazz);
-
-				public static final _class RESERVE_ALL = (Class<?> scanned_clazz) -> true;
-			}
-		}
-
-		/**
-		 * 扫描所有被注解的元素，包括Class，Field，Method，Constructor等<br>
-		 * 
-		 * @param loader
-		 * @param filter
-		 * @return
-		 */
-		public static final ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader, filter filter)
-		{
-			ArrayList<AnnotatedElement> annotated = new ArrayList<>();
-			ArrayList<Class<?>> classes = class_loader.loaded_classes_copy(loader);
-			for (Class<?> clazz : classes)
-			{
-				if (clazz.getAnnotations().length > 0)
-				{
-					if (filter.condition(clazz))
-						annotated.add(clazz);
-				}
-				walk_accessible_objects(clazz, (AccessibleObject ao, boolean isStatic, Object obj) ->
-				{
-					if (ao.getAnnotations().length > 0)
-					{
-						if (filter.condition(ao))
-							annotated.add(ao);
-					}
-					return true;
-				});
-			}
-			return annotated;
-		}
-
-		public static final ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader)
-		{
-			return scan_annotated_elements(loader, filter.RESERVE_ALL);
-		}
-
-		/**
-		 * 扫描指定ClassLoader的指定注解的元素
-		 * 
-		 * @param <_T>
-		 * @param loader           要扫描的ClassLoader
-		 * @param annotation_clazz 注解类，不要求必须是Annotation子类，可以是任何类型
-		 * @param filter           过滤条件
-		 * @return
-		 */
-		@SuppressWarnings("unchecked")
-		public static final <_T> ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader, Class<_T> annotation_clazz, filter filter)
-		{
-			ArrayList<AnnotatedElement> annotated = new ArrayList<>();
-			ArrayList<Class<?>> classes = class_loader.loaded_classes_copy(loader);
-			for (Class<?> clazz : classes)
-			{
-				if (clazz.isAnnotationPresent((Class<? extends Annotation>) annotation_clazz))
-				{
-					if (filter.condition(clazz))// 不满足条件的AnnotatedElement不放入结果
-						annotated.add(clazz);
-				}
-				walk_accessible_objects(clazz, (AccessibleObject ao, boolean isStatic, Object obj) ->
-				{
-					if (ao.isAnnotationPresent((Class<? extends Annotation>) annotation_clazz))
-					{
-						if (filter.condition(ao))
-							annotated.add(ao);
-					}
-					return true;
-				});
-			}
-			return annotated;
-		}
-
-		public static final <_T> ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader, Class<_T> annotation_clazz)
-		{
-			return scan_annotated_elements(loader, annotation_clazz, filter.RESERVE_ALL);
-		}
-
-		@SuppressWarnings("unchecked")
-		public static final <_T> ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader, Class<_T> annotation_clazz, filter._class filter)
-		{
-			ArrayList<AnnotatedElement> annotated = new ArrayList<>();
-			ArrayList<Class<?>> classes = class_loader.loaded_classes_copy(loader);
-			for (Class<?> clazz : classes)
-			{
-				// 不满足条件的类直接略过
-				if (!filter.condition(clazz))
-					continue;
-				if (clazz.isAnnotationPresent((Class<? extends Annotation>) annotation_clazz))
-					annotated.add(clazz);
-				walk_accessible_objects(clazz, (AccessibleObject ao, boolean isStatic, Object obj) ->
-				{
-					if (ao.isAnnotationPresent((Class<? extends Annotation>) annotation_clazz))
-						annotated.add(ao);
-					return true;
-				});
-			}
-			return annotated;
-		}
-
-		public static final <_T> ArrayList<AnnotatedElement> scan_annotated_classes(ClassLoader loader, Class<_T> annotation_clazz)
-		{
-			return scan_annotated_elements(loader, annotation_clazz, filter._class.RESERVE_ALL);
-		}
 	}
-
 }

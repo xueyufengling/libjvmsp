@@ -1679,4 +1679,19 @@ public final class unsafe
 			throw new java.lang.InternalError("class '" + clazz + "' ensure initialized failed", ex);
 		}
 	}
+
+	/**
+	 * 获取ptr指向的地址的基地址<br>
+	 * 例如<br>
+	 * int x = 0;<br>
+	 * int* ptr = &x;<br>
+	 * 则get_pointed_base(ptr)为x储存的实际地址。
+	 * 
+	 * @param ptr 指针
+	 * @return
+	 */
+	public static final long get_pointed_base(long ptr)
+	{
+		return unsafe.read_long(ptr);
+	}
 }

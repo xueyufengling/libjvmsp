@@ -1232,7 +1232,7 @@ public abstract class reflection
 	 */
 	public static final void force_replace(ClassLoader loader, Class<?> target_annotation_clazz, Class<?> new_annotation_clazz, Object new_annotation, boolean is_system, annotation_replace_operation op)
 	{
-		ArrayList<AnnotatedElement> annotated = java_type.scan_annotated_elements(loader, target_annotation_clazz);
+		ArrayList<AnnotatedElement> annotated = class_operation.scan_annotated_elements(loader, target_annotation_clazz);
 		for (AnnotatedElement ae : annotated)
 		{
 			// 如果是系统注解，那么包含该注解的类也必须是BootstrapLoader加载的类

@@ -1,4 +1,4 @@
-package jvmsp.libjvm;
+package jvmsp.libso;
 
 import java.lang.invoke.MethodHandle;
 
@@ -14,6 +14,18 @@ import jvmsp.unsafe;
  */
 public abstract class libjvm
 {
+	public static final cxx_type JNINativeMethod = cxx_type.define("JNINativeMethod")
+			.decl_field("name", cxx_type.pchar)
+			.decl_field("signature", cxx_type.pchar)
+			.decl_field("fnPtr", cxx_type.pvoid)
+			.resolve();
+
+	public static final cxx_type pJNINativeMethod = cxx_type.pointer_type.of(JNINativeMethod);
+
+	public static final cxx_type JavaVM = cxx_type.typedef(cxx_type.pvoid, "JavaVM");
+
+	public static final cxx_type pJNIEnv = cxx_type.pointer_type.of("JNINativeInterface_");
+
 	public static final int JNI_OK = 0;
 	public static final int JNI_ERR = -1;
 	public static final int JNI_EDETACHED = -2;
@@ -72,11 +84,11 @@ public abstract class libjvm
 	}
 
 	/**
-	 * JNI_GetCreatedJavaVMs()函数。<br>
-	 * 获取到的是JNIInvokeInterface_*[]，需要再次取引用得到各个JNIInvokeInterface_对象的基地址
+	 * JNI_GetCreatedJavaVMs()函数，获取该进程的所有JVM实例。<br>
+	 * 一般的JVM实现每个进程只支持一个JVM实例，但此处仍然保留多实例的获取。<br>
 	 * 
 	 * @param max_num 最多获取多少个指针
-	 * @return
+	 * @return获取到的是JNIInvokeInterface_*[]，需要再次取引用得到各个JNIInvokeInterface_对象的基地址。
 	 */
 	public static final long[] get_created_java_vms(int max_num)
 	{
@@ -103,12 +115,32 @@ public abstract class libjvm
 		long[] jvms = get_created_java_vms(max_num);
 		jni_invoke_interface[] interfaces = new jni_invoke_interface[jvms.length];
 		for (int i = 0; i < jvms.length; ++i)
-			interfaces[i] = new jni_invoke_interface(unsafe.read_long(jvms[i]));
+			interfaces[i] = new jni_invoke_interface(unsafe.get_pointed_base(jvms[i]));
 		return interfaces;
 	}
 
 	public static final jni_invoke_interface jni_invoke_interfaces()
 	{
 		return jni_invoke_interfaces(1)[0];
+	}
+
+	public static final jni_native_interface jni_native_interface(jni_invoke_interface ii, int jni_version)
+	{
+		return new jni_native_interface(unsafe.get_pointed_base(ii.get_env(jni_version)));
+	}
+
+	public static final jni_native_interface jni_native_interface(jni_invoke_interface ii)
+	{
+		return new jni_native_interface(unsafe.get_pointed_base(ii.get_env()));
+	}
+
+	public static final jni_native_interface jni_native_interface(int jni_version)
+	{
+		return jni_native_interface(jni_invoke_interfaces(), jni_version);
+	}
+
+	public static final jni_native_interface jni_native_interface()
+	{
+		return jni_native_interface(jni_invoke_interfaces());
 	}
 }

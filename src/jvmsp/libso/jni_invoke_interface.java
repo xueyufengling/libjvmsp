@@ -1,4 +1,4 @@
-package jvmsp.libjvm;
+package jvmsp.libso;
 
 import java.lang.invoke.MethodHandle;
 
@@ -23,13 +23,13 @@ public class jni_invoke_interface
 			.decl_field("AttachCurrentThreadAsDaemon", function_pointer_type.of(cxx_type.jint, cxx_type.pvoid, cxx_type.pvoid, cxx_type.pvoid))
 			.resolve();
 
-	private final cxx_type.object JNIInvokeInterface_instance;
+	private final cxx_type.object JNIInvokeInterface_base;
 
-	private final MethodHandle JNIInvokeInterface_DestroyJavaVM;
-	private final MethodHandle JNIInvokeInterface_AttachCurrentThread;
-	private final MethodHandle JNIInvokeInterface_DetachCurrentThread;
-	private final MethodHandle JNIInvokeInterface_GetEnv;
-	private final MethodHandle JNIInvokeInterface_AttachCurrentThreadAsDaemon;
+	private final MethodHandle DestroyJavaVM;
+	private final MethodHandle AttachCurrentThread;
+	private final MethodHandle DetachCurrentThread;
+	private final MethodHandle GetEnv;
+	private final MethodHandle AttachCurrentThreadAsDaemon;
 
 	/**
 	 * 创建一个JNI调用接口
@@ -38,12 +38,12 @@ public class jni_invoke_interface
 	 */
 	public jni_invoke_interface(long JNIInvokeInterface_addr)
 	{
-		this.JNIInvokeInterface_instance = JNIInvokeInterface_.new object(JNIInvokeInterface_addr);
-		this.JNIInvokeInterface_DestroyJavaVM = JNIInvokeInterface_instance.callable("DestroyJavaVM");
-		this.JNIInvokeInterface_AttachCurrentThread = JNIInvokeInterface_instance.callable("AttachCurrentThread");
-		this.JNIInvokeInterface_DetachCurrentThread = JNIInvokeInterface_instance.callable("DetachCurrentThread");
-		this.JNIInvokeInterface_GetEnv = JNIInvokeInterface_instance.callable("GetEnv");
-		this.JNIInvokeInterface_AttachCurrentThreadAsDaemon = JNIInvokeInterface_instance.callable("AttachCurrentThreadAsDaemon");
+		this.JNIInvokeInterface_base = JNIInvokeInterface_.new object(JNIInvokeInterface_addr);
+		this.DestroyJavaVM = JNIInvokeInterface_base.callable("DestroyJavaVM");
+		this.AttachCurrentThread = JNIInvokeInterface_base.callable("AttachCurrentThread");
+		this.DetachCurrentThread = JNIInvokeInterface_base.callable("DetachCurrentThread");
+		this.GetEnv = JNIInvokeInterface_base.callable("GetEnv");
+		this.AttachCurrentThreadAsDaemon = JNIInvokeInterface_base.callable("AttachCurrentThreadAsDaemon");
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class jni_invoke_interface
 	{
 		try
 		{
-			int ret = (int) JNIInvokeInterface_DestroyJavaVM.invokeExact(JNIInvokeInterface_instance.address());
+			int ret = (int) DestroyJavaVM.invokeExact(JNIInvokeInterface_base.address());
 			libjvm._check_jni_call_ret(ret);
 		}
 		catch (Throwable ex)
@@ -67,7 +67,7 @@ public class jni_invoke_interface
 	{
 		try
 		{
-			int ret = (int) JNIInvokeInterface_DetachCurrentThread.invokeExact(JNIInvokeInterface_instance.address());
+			int ret = (int) DetachCurrentThread.invokeExact(JNIInvokeInterface_base.address());
 			libjvm._check_jni_call_ret(ret);
 		}
 		catch (Throwable ex)
@@ -76,11 +76,17 @@ public class jni_invoke_interface
 		}
 	}
 
+	/**
+	 * 获取JNINativeInterface_的指针
+	 * 
+	 * @param jni_version 当前的JNI版本，如果不知道则可以最低传入JNI_VERSION_1_1
+	 * @return
+	 */
 	public final long get_env(int jni_version)
 	{
 		try (pointer penv = memory.malloc(cxx_type.pvoid).auto();)
 		{
-			int ret = (int) JNIInvokeInterface_GetEnv.invokeExact(JNIInvokeInterface_instance.address(), penv.address(), jni_version);
+			int ret = (int) GetEnv.invokeExact(JNIInvokeInterface_base.address(), penv.address(), jni_version);
 			libjvm._check_jni_call_ret(ret);
 			return (long) penv.dereference();
 		}
@@ -89,4 +95,10 @@ public class jni_invoke_interface
 			throw new java.lang.InternalError("call JNIInvokeInterface_::GetEnv() failed", ex);
 		}
 	}
+
+	public final long get_env()
+	{
+		return get_env(libjvm.JNI_VERSION_1_1);
+	}
+
 }
