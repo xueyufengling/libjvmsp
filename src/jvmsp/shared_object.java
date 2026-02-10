@@ -2,7 +2,6 @@ package jvmsp;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
-import java.lang.foreign.MemoryLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
@@ -12,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import jvmsp.type.cxx_type;
+import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.java_type;
 
 /**
@@ -89,7 +89,7 @@ public class shared_object
 	}
 
 	/**
-	 * Java内部方法加载具有JNI_OnLoad的JNI模块so库 https://github.com/openjdk/jdk/blob/14a6e928ce9a10f6d85fae8db4ce303da20bde85/src/java.base/share/native/libjava/NativeLibraries.c#L119 注：若抛出错误 java.lang.UnsatisfiedLinkError: unsupported JNI version 0x00010001 required by xxx 则说明目标的JNI版本过低，至少要JNI_VERSION_1_8； 或者未查找到符号（未找到符号默认JNI版本为JNI_VERSION_1_1，即0x00010001）
+	 * Java内部方法加载具有JNI_OnLoad_<name>的JNI模块so库 https://github.com/openjdk/jdk/blob/14a6e928ce9a10f6d85fae8db4ce303da20bde85/src/java.base/share/native/libjava/NativeLibraries.c#L119 注：若抛出错误 java.lang.UnsatisfiedLinkError: unsupported JNI version 0x00010001 required by xxx 则说明目标的JNI版本过低，至少要JNI_VERSION_1_8； 或者未查找到符号（未找到符号默认JNI版本为JNI_VERSION_1_1，即0x00010001）
 	 * 
 	 * @param native_library_impl     必须是NativeLibraryImpl对象
 	 * @param name                    库名称，不可传入空指针，否则报错
@@ -1088,67 +1088,18 @@ public class shared_object
 	}
 
 	/**
-	 * 函数签名
+	 * 获取本函数签名类型的stub函数的MethodHandle
+	 * 
+	 * @return
 	 */
-	public static class function_signature
+	public static final MethodHandle stub_function(cxx_type.function_type func_type)
 	{
-		public String function_name;
+		return stub_function(abi.host.native_entry(abi.host.resolve_constraints(func_type.to_function_descriptor())));
+	}
 
-		public cxx_type return_type;
-		public cxx_type[] arg_types;
-
-		public String toString()
-		{
-			return return_type.toString() + " " + function_name + "(" + arg_types + ")";
-		}
-
-		public function_signature(String function_name, cxx_type return_type, cxx_type... arg_types)
-		{
-			this.function_name = function_name;
-			this.return_type = return_type;
-			this.arg_types = arg_types;
-		}
-
-		public function_signature(cxx_type return_type, cxx_type[] arg_types)
-		{
-			this(null, return_type, arg_types);
-		}
-
-		public static final function_signature of(String function_name, cxx_type return_type, cxx_type... arg_types)
-		{
-			return new function_signature(function_name, return_type, arg_types);
-		}
-
-		public static final function_signature of(cxx_type return_type, cxx_type... arg_types)
-		{
-			return new function_signature(return_type, arg_types);
-		}
-
-		public final FunctionDescriptor to_function_descriptor()
-		{
-			MemoryLayout[] arg_layouts = new MemoryLayout[arg_types.length];
-			for (int idx = 0; idx < arg_types.length; ++idx)
-				arg_layouts[idx] = arg_types[idx].memory_layout();
-			if (return_type == cxx_type._void)
-				return FunctionDescriptor.ofVoid(arg_layouts);
-			else
-				return FunctionDescriptor.of(return_type.memory_layout(), arg_layouts);
-		}
-
-		/**
-		 * 获取本函数签名类型的stub函数的MethodHandle
-		 * 
-		 * @return
-		 */
-		public final MethodHandle resolve_stub()
-		{
-			return stub_function(abi.host.native_entry(abi.host.resolve_constraints(this.to_function_descriptor())));
-		}
-
-		public final long resolve_addr(long handle)
-		{
-			return dlsym(handle, function_name);
-		}
+	public static final MethodHandle stub_function(cxx_type.function_pointer_type func_ptr_type)
+	{
+		return stub_function(func_ptr_type.pointed_to_type());
 	}
 
 	public static final MethodHandle stub_function(Object downcall_entry)
@@ -1172,6 +1123,6 @@ public class shared_object
 	 */
 	public static final MethodHandle dlsym(long handle, function_signature signature)
 	{
-		return symbols.bind(signature.resolve_stub(), 0, signature.resolve_addr(handle));
+		return symbols.bind(stub_function(signature.func_type), 0, dlsym(handle, signature.function_name));
 	}
 }

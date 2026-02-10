@@ -1,6 +1,7 @@
 package jvmsp;
 
 import java.lang.annotation.Annotation;
+import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
@@ -19,7 +20,7 @@ import java.util.Objects;
 
 import jvmsp.type.cxx_type.pointer;
 
-public abstract class type
+public abstract class type<_T>
 {
 	public static enum lang
 	{
@@ -73,14 +74,15 @@ public abstract class type
 	 * 
 	 * @return
 	 */
-	public final type resolve()
+	@SuppressWarnings("unchecked")
+	public final _T resolve()
 	{
 		if (!is_primitive && dirty)
 		{
 			dirty = false;
 			resolve_type_info();
 		}
-		return this;
+		return (_T) this;
 	}
 
 	/**
@@ -100,11 +102,13 @@ public abstract class type
 	 * @param t
 	 * @return
 	 */
+	@SuppressWarnings("rawtypes")
 	public static final long sizeof(type t)
 	{
 		return t.size();
 	}
 
+	@SuppressWarnings("rawtypes")
 	public static final long sizeof(type... ts)
 	{
 		long total_size = 0;
@@ -115,28 +119,84 @@ public abstract class type
 		return total_size;
 	}
 
-	private String name;
+	private String typename;
 
 	/**
 	 * 获取类型名称
 	 * 
 	 * @return
 	 */
-	public String name()
+	public String typename()
 	{
-		return name;
+		return typename;
 	}
 
 	@Override
 	public String toString()
 	{
-		return name;
+		return typename;
+	}
+
+	/**
+	 * 转换为字符串"types[0], types[2], types[3]"此类格式
+	 * 
+	 * @param types
+	 * @return
+	 */
+	@SuppressWarnings("rawtypes")
+	public static final String to_string(type... types)
+	{
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < types.length; i++)
+		{
+			sb.append(types[i].typename());
+			if (i != types.length - 1)
+			{
+				sb.append(", ");
+			}
+		}
+		return sb.toString();
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static final String func_to_string(type ret_type, type... arg_types)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append(ret_type.typename());
+		sb.append('(');
+		sb.append(to_string(arg_types));
+		sb.append(')');
+		return sb.toString();
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static final String func_to_string(String func_name, type ret_type, type... arg_types)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append(ret_type.typename());
+		sb.append(' ');
+		sb.append(func_name);
+		sb.append('(');
+		sb.append(to_string(arg_types));
+		sb.append(')');
+		return sb.toString();
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static final String func_ptr_to_string(type ret_type, type... arg_types)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append(ret_type.typename());
+		sb.append("(*)(");
+		sb.append(to_string(arg_types));
+		sb.append(')');
+		return sb.toString();
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hashCode(name) ^ Objects.hashCode(size);
+		return Objects.hashCode(typename) ^ Objects.hashCode(size);
 	}
 
 	@Override
@@ -144,7 +204,7 @@ public abstract class type
 	{
 		if (obj == this)
 			return true;
-		return (obj instanceof type type) && this.name.equals(type.name);
+		return (obj instanceof type type) && this.typename.equals(type.typename);
 	}
 
 	private boolean is_primitive;
@@ -204,7 +264,7 @@ public abstract class type
 
 	protected type(String name, boolean is_primitive, boolean is_signed, long size, MemoryLayout memory_layout)
 	{
-		this.name = name;
+		this.typename = name;
 		this.is_primitive = is_primitive;
 		this.memory_layout = memory_layout;
 		this.is_signed = is_signed;
@@ -242,7 +302,7 @@ public abstract class type
 	/**
 	 * C++对象内存布局计算
 	 */
-	public static class cxx_type extends type implements Cloneable
+	public static class cxx_type extends type<cxx_type> implements Cloneable
 	{
 		public static final Object __access(long native_addr, cxx_type type)
 		{
@@ -291,7 +351,7 @@ public abstract class type
 			@Override
 			public String toString()
 			{
-				return type.toString() + ' ' + name;
+				return decl_type.toString() + ' ' + name;
 			}
 
 			private String name;
@@ -304,12 +364,12 @@ public abstract class type
 			/**
 			 * 该字段的类型
 			 */
-			private cxx_type type;
+			private cxx_type decl_type;
 
 			/**
 			 * 声明该字段的类
 			 */
-			cxx_type decl_type;
+			cxx_type struct_type;
 
 			/**
 			 * 字段偏移量
@@ -336,9 +396,9 @@ public abstract class type
 			 * 
 			 * @return
 			 */
-			public cxx_type type()
+			public cxx_type decl_type()
 			{
-				return type;
+				return decl_type;
 			}
 
 			/**
@@ -346,15 +406,15 @@ public abstract class type
 			 * 
 			 * @return
 			 */
-			public cxx_type decl_type()
+			public cxx_type struct_type()
 			{
-				return decl_type;
+				return struct_type;
 			}
 
 			private field(String name, cxx_type type)
 			{
 				this.name = name;
-				this.type = type;
+				this.decl_type = type;
 			}
 
 			/**
@@ -372,12 +432,74 @@ public abstract class type
 			/**
 			 * 访问一个基本类型字段并返回Java值
 			 * 
-			 * @param native_addr
+			 * @param base_addr
 			 * @return
 			 */
-			final Object access(long native_addr)
+			public final Object read(long base_addr)
 			{
-				return __access(native_addr + offset, type);
+				return __access(base_addr + offset, decl_type);
+			}
+
+			public final void write(long base_addr, Object x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, byte x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, boolean x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, char x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, short x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, int x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, long x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, float x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, double x)
+			{
+				unsafe.write(base_addr + offset, x);
+			}
+
+			public final void write(long base_addr, pointer x)
+			{
+				unsafe.write(base_addr + offset, x.address());
+			}
+
+			/**
+			 * 将该字段的值解释为函数指针并返回可调用的MethodHandle。<br>
+			 * decl_type必须是function_pointer_type，否则抛出异常。
+			 * 
+			 * @param base_addr
+			 * @return
+			 */
+			public final MethodHandle callable(long base_addr)
+			{
+				return symbols.bind(shared_object.stub_function((cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
 			}
 		}
 
@@ -490,7 +612,7 @@ public abstract class type
 			for (int i = 0; i < fields.size(); ++i)
 			{
 				field current_field = fields.get(i).clone();
-				cxx_type current_field_type = current_field.type();
+				cxx_type current_field_type = current_field.decl_type();
 				long as = Math.min(current_field_type.pragma_pack(), current_field_type.override_align_size(this));// 字段对齐数
 				if (current_offset % as != 0)
 					current_offset = (current_offset / as + 1) * as;// 字节对齐
@@ -600,17 +722,17 @@ public abstract class type
 		 * @param field
 		 * @return
 		 */
-		public field decl_field(field field)
+		public cxx_type decl_field(field field)
 		{
-			if (is_primitive() || field.type().equals(this))// 禁止给原生类型添加字段，或添加类本身作为字段
+			if (is_primitive() || field.decl_type().equals(this))// 禁止给原生类型添加字段，或添加类本身作为字段
 				throw new java.lang.InternalError("cannot append field \"" + field + "\" to " + this + ". append fields to primitive types or append self as a field are not allowed.");
 			fields.add(field);
-			field.decl_type = this;
+			field.struct_type = this;
 			mark_dirty();// 标记size更新
-			return field;
+			return this;
 		}
 
-		public field decl_field(String name, cxx_type type)
+		public cxx_type decl_field(String name, cxx_type type)
 		{
 			return decl_field(field.define(name, type));
 		}
@@ -636,7 +758,7 @@ public abstract class type
 				for (int idx = 0; idx < fields.size(); ++idx)
 				{
 					field f = fields.get(idx);
-					cxx_type f_type = f.type();// 字段f的类型
+					cxx_type f_type = f.decl_type();// 字段f的类型
 					long as = Math.min(pragma_pack, f_type.align_size());// 字段对齐数
 					if (as > align_size)
 						align_size = as;// 更新本结构体的整体对齐字节数
@@ -694,7 +816,7 @@ public abstract class type
 			else if (self_f_idx < fields.size())
 				return fields.get(self_f_idx);
 			else
-				return null;
+				throw new java.lang.NoSuchFieldError("field index '" + idx + "' doesn't exists in '" + typename() + "'");
 		}
 
 		public int declared_field_index(String field_name)
@@ -703,7 +825,7 @@ public abstract class type
 				for (int idx = 0; idx < fields.size(); ++idx)// 优先使用派生类的字段
 					if (fields.get(idx).name().equals(field_name))
 						return idx;
-			return -1;
+			throw new java.lang.NoSuchFieldError("declared field '" + field_name + "' doesn't exists in '" + typename() + "'");
 		}
 
 		/**
@@ -723,7 +845,7 @@ public abstract class type
 					if (base_fields.get(idx).name().equals(field_name))// 派生类没有该字段则查找基类字段
 						return idx;
 			}
-			return -1;
+			throw new java.lang.NoSuchFieldError("declared field '" + field_name + "' doesn't exists in '" + typename() + "'");
 		}
 
 		public field declared_field(String field_name)
@@ -738,7 +860,7 @@ public abstract class type
 						return f;
 				}
 			}
-			return null;
+			throw new java.lang.NoSuchFieldError("declared field '" + field_name + "' doesn't exists in '" + typename() + "'");
 		}
 
 		/**
@@ -764,7 +886,7 @@ public abstract class type
 						return f;
 				}
 			}
-			return null;
+			throw new java.lang.NoSuchFieldError("field '" + field_name + "' doesn't exists in '" + typename() + "'");
 		}
 
 		/**
@@ -817,7 +939,7 @@ public abstract class type
 				for (int i = 0; i < fields.size(); ++i)
 				{
 					field f = fields.get(i);
-					System.out.println("│ " + layout_info_element("" + (print_idx_as_from + i), 1) + layout_info_element("in: " + f.decl_type.toString(), type_element_size_in_tab) + layout_info_element(f.toString(), type_element_size_in_tab) + layout_info_element("offset: " + f.offset + ",", number_element_size_in_tab) + layout_info_element("size: " + sizeof(f.type()), number_element_size_in_tab) + "│");
+					System.out.println("│ " + layout_info_element("" + (print_idx_as_from + i), 1) + layout_info_element("in: " + f.struct_type.toString(), type_element_size_in_tab) + layout_info_element(f.toString(), type_element_size_in_tab) + layout_info_element("offset: " + f.offset + ",", number_element_size_in_tab) + layout_info_element("size: " + sizeof(f.decl_type()), number_element_size_in_tab) + "│");
 				}
 			}
 
@@ -932,27 +1054,84 @@ public abstract class type
 		public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", false, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type size_t = cxx_type.define_primitive("size_t", false, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
 
+		/**
+		 * 函数类型
+		 */
+		public static class function_type extends cxx_type
+		{
+			private final cxx_type ret_type;
+			private final cxx_type[] arg_types;
+
+			protected function_type(String func_type_name, cxx_type ret_type, cxx_type[] arg_types)
+			{
+				super(func_type_name, false, 0, (MemoryLayout) null);// 函数类型不同于变量类型，本身不可被声明，仅储存了返回值和参数类型信息
+				this.ret_type = ret_type;
+				this.arg_types = arg_types;
+			}
+
+			protected function_type(cxx_type ret_type, cxx_type[] arg_types)
+			{
+				this(type.func_to_string(ret_type, arg_types), ret_type, arg_types);
+			}
+
+			public final cxx_type return_type()
+			{
+				return ret_type;
+			}
+
+			public final cxx_type[] argument_types()
+			{
+				return arg_types;
+			}
+
+			public static final function_type of(cxx_type ret_type, cxx_type... arg_types)
+			{
+				return new function_type(ret_type, arg_types);
+			}
+
+			/**
+			 * 将函数类型转换为FunctionDescriptor，供FFI API使用
+			 * 
+			 * @return
+			 */
+			public final FunctionDescriptor to_function_descriptor()
+			{
+				MemoryLayout[] arg_layouts = new MemoryLayout[arg_types.length];
+				for (int idx = 0; idx < arg_types.length; ++idx)
+					arg_layouts[idx] = arg_types[idx].memory_layout();
+				if (ret_type == cxx_type._void)
+					return FunctionDescriptor.ofVoid(arg_layouts);
+				else
+					return FunctionDescriptor.of(ret_type.memory_layout(), arg_layouts);
+			}
+		}
+
 		public static class pointer_type extends cxx_type
 		{
 			/**
 			 * 指针的类型
 			 */
-			cxx_type type;
+			protected cxx_type pointed_to_type;
 
-			private pointer_type(cxx_type type)
+			protected pointer_type(String ptr_type_name, cxx_type type)
 			{
-				super(type.name() + "*", false, WORD.size(), ValueLayout.ADDRESS);
-				this.type = type;
+				super(ptr_type_name, false, WORD.size(), ValueLayout.ADDRESS);
+				this.pointed_to_type = type;
 			}
 
-			private pointer_type(String type_name)
+			protected pointer_type(cxx_type type)
+			{
+				this(type.typename() + "*", type);
+			}
+
+			protected pointer_type(String type_name)
 			{
 				this(cxx_type.of(type_name));
 			}
 
-			public final cxx_type type()
+			public cxx_type pointed_to_type()
 			{
-				return type;
+				return pointed_to_type;
 			}
 
 			public static final pointer_type of(String type_name)
@@ -963,6 +1142,81 @@ public abstract class type
 			public static final pointer_type of(cxx_type type)
 			{
 				return new pointer_type(type);
+			}
+		}
+
+		public static class function_pointer_type extends pointer_type
+		{
+			protected function_pointer_type(cxx_type.function_type func_type)
+			{
+				super(type.func_ptr_to_string(func_type.return_type(), func_type.argument_types()), func_type);
+			}
+
+			protected function_pointer_type(cxx_type ret_type, cxx_type... arg_types)
+			{
+				this(cxx_type.function_type.of(ret_type, arg_types));
+			}
+
+			@Override
+			public final cxx_type.function_type pointed_to_type()
+			{
+				return ((cxx_type.function_type) pointed_to_type);
+			}
+
+			public final FunctionDescriptor to_function_descriptor()
+			{
+				return pointed_to_type().to_function_descriptor();
+			}
+
+			public static final function_pointer_type of(cxx_type.function_type func_type)
+			{
+				return new function_pointer_type(func_type);
+			}
+
+			public static final function_pointer_type of(cxx_type ret_type, cxx_type... arg_types)
+			{
+				return new function_pointer_type(ret_type, arg_types);
+			}
+		}
+
+		/**
+		 * 函数签名
+		 */
+		public static class function_signature
+		{
+			public String function_name;
+
+			public cxx_type.function_type func_type;
+
+			public String toString()
+			{
+				return type.func_to_string(function_name, func_type.return_type(), func_type.argument_types());
+			}
+
+			public function_signature(String function_name, cxx_type.function_type func_type)
+			{
+				this.function_name = function_name;
+				this.func_type = func_type;
+			}
+
+			public function_signature(String function_name, cxx_type return_type, cxx_type... arg_types)
+			{
+				this(function_name, cxx_type.function_type.of(return_type, arg_types));
+			}
+
+			public function_signature(cxx_type return_type, cxx_type... arg_types)
+			{
+				this(null, return_type, arg_types);
+			}
+
+			public static final function_signature of(String function_name, cxx_type return_type, cxx_type... arg_types)
+			{
+				return new function_signature(function_name, return_type, arg_types);
+			}
+
+			public static final function_signature of(cxx_type return_type, cxx_type... arg_types)
+			{
+				return new function_signature(return_type, arg_types);
 			}
 		}
 
@@ -1050,26 +1304,156 @@ public abstract class type
 		 */
 		public class object
 		{
-			final pointer ptr;
+			private final long addr;
 
-			object(pointer ptr)
+			public object(pointer ptr)
 			{
-				this.ptr = ptr.copy().cast(cxx_type.this);
+				this.addr = ptr.address();
 			}
 
-			object(long addr)
+			public object(long addr)
 			{
-				this.ptr = pointer.at(addr);
+				this.addr = addr;
 			}
 
-			public final Object access(String field_name)
+			/**
+			 * 所属类型
+			 * 
+			 * @return
+			 */
+			public final cxx_type type()
 			{
-				return access(cxx_type.this.field(field_name));
+				return cxx_type.this;
 			}
 
-			public final Object access(field f)
+			public final long address()
 			{
-				return f.access(ptr.addr);
+				return addr;
+			}
+
+			public final field get_field(String field_name)
+			{
+				return type().field(field_name);
+			}
+
+			public final Object read(field f)
+			{
+				return f.read(addr);
+			}
+
+			public final Object read(String field_name)
+			{
+				return read(get_field(field_name));
+			}
+
+			public final void write(field f, Object x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, byte x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, boolean x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, char x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, short x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, int x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, long x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, float x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, double x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(field f, pointer x)
+			{
+				f.write(addr, x);
+			}
+
+			public final void write(String field_name, Object x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, byte x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, boolean x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, char x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, short x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, int x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, long x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, float x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, double x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final void write(String field_name, pointer x)
+			{
+				write(get_field(field_name), x);
+			}
+
+			public final MethodHandle callable(field f)
+			{
+				return f.callable(addr);
+			}
+
+			public final MethodHandle callable(String field_name)
+			{
+				return callable(type().field(field_name));
 			}
 		}
 
@@ -1361,7 +1745,7 @@ public abstract class type
 			 * 将给定的十六进制地址和类型包装为指针
 			 * 
 			 * @param hex
-			 * @param type
+			 * @param pointed_to_type
 			 * @return
 			 */
 			public static final pointer at(String hex)
@@ -1482,7 +1866,7 @@ public abstract class type
 
 			public static final pointer address_of(cxx_type.object cxx_obj)
 			{
-				return cxx_obj.ptr.copy();
+				return pointer.at(cxx_obj.addr);
 			}
 
 			/**
@@ -1846,7 +2230,7 @@ public abstract class type
 		/**
 		 * Java对象所占用内存的大小，无对齐大小。每个Class<?>计算一次后将缓存。
 		 * 
-		 * @param type
+		 * @param pointed_to_type
 		 * @return
 		 */
 		public static final long sizeof_object(Class<?> jtype)

@@ -19,8 +19,10 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
 import jvmsp.type.cxx_type;
-import jvmsp.type.java_type;
+import jvmsp.type.cxx_type.function_pointer_type;
+import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
+import jvmsp.type.java_type;
 
 /**
  * 管理JVM的相关功能
@@ -43,7 +45,7 @@ public class virtual_machine
 	public static final long HeapBaseMinAddress;
 
 	/**
-	 * 64或32，JVM有没有16位的还真不清楚
+	 * 64或32位JVM
 	 */
 	public static final int NATIVE_JVM_BIT_VERSION;
 
@@ -718,7 +720,7 @@ public class virtual_machine
 			Object[] vm_storage_arr = new_array(types.length);
 			for (int idx = 0; idx < types.length; ++idx)
 			{
-				vm_storage_arr[idx] = type.STACK.allocate((short) cxx_type.sizeof(types[idx]), 0, types[idx].name());
+				vm_storage_arr[idx] = type.STACK.allocate((short) cxx_type.sizeof(types[idx]), 0, types[idx].typename());
 			}
 			return vm_storage_arr;
 		}
@@ -728,51 +730,9 @@ public class virtual_machine
 			Object[] vm_storage_arr = new_array(types.length);
 			for (int idx = 0; idx < types.length; ++idx)
 			{
-				vm_storage_arr[idx] = type.PLACEHOLDER.allocate((short) cxx_type.sizeof(types[idx]), idx, types[idx].name());
+				vm_storage_arr[idx] = type.PLACEHOLDER.allocate((short) cxx_type.sizeof(types[idx]), idx, types[idx].typename());
 			}
 			return vm_storage_arr;
-		}
-	}
-
-	public static class jni
-	{
-		private static final long _libjvm;
-
-		private static final MethodHandle JNI_GetCreatedJavaVMs;
-
-		static
-		{
-			// 加载JNI，本类所有涉及JVM相关的函数都必须在加载libjvm.so以后才能调用
-			_libjvm = shared_object.dlopen("jvm");
-			JNI_GetCreatedJavaVMs = shared_object.dlsym(_libjvm, shared_object.function_signature.of("JNI_GetCreatedJavaVMs", cxx_type.jint, cxx_type.pvoid, cxx_type.jsize, cxx_type.pjsize));
-		}
-
-		/**
-		 * 获取进程内的所有JVM句柄
-		 * 
-		 * @param max_num 最多获取多少个JVM句柄
-		 * @return
-		 */
-		public static final long[] process_jvm_handles(int max_num)
-		{
-			int ret = 0;
-			try (pointer vm_buf = memory.malloc(max_num, cxx_type.pvoid).auto(); pointer vm_num = memory.malloc(cxx_type.jsize).auto();)
-			{
-				ret = (int) JNI_GetCreatedJavaVMs.invokeExact(vm_buf.address(), max_num, vm_num.address());
-				if (ret == 0)
-				{
-					int final_num = Math.min(max_num, (int) vm_num.dereference());
-					return (long[]) vm_buf.to_jarray(final_num, long.class);
-				}
-				else
-				{
-					throw new java.lang.InternalError("call JNI failed, error code = " + ret);
-				}
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("call JNI_GetCreatedJavaVMs() failed", ex);
-			}
 		}
 	}
 }
