@@ -5,9 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
-import jvmsp.type.cxx_type;
-import jvmsp.type.java_type;
-
 /**
  * jdk.internal.misc.Unsafe的相关操作。 无空指针及参数检查，需要自行确保参数正确性确保不会引发JVM崩溃 注：对于final修饰的变量，基本类型和String会内联，因此修改变量内存无效
  */
@@ -25,10 +22,9 @@ public final class unsafe
 	private static MethodHandle putAddress;
 	private static MethodHandle addressSize;
 	private static MethodHandle getUncompressedObject;
-	private static MethodHandle allocateMemory;
-	private static MethodHandle freeMemory;
-	private static MethodHandle setMemory;
-	private static MethodHandle copyMemory;
+	private static MethodHandle allocateMemory0;
+	private static MethodHandle freeMemory0;
+	private static MethodHandle setMemory0;
 	private static MethodHandle copyMemory0;
 
 	private static MethodHandle defineClass;
@@ -110,6 +106,7 @@ public final class unsafe
 
 	public static final int ARRAY_BYTE_BASE_OFFSET;
 	public static final int ARRAY_BYTE_INDEX_SCALE;
+
 	/**
 	 * OOP大小，只会是4或8.<br>
 	 * 32位JVM和开启压缩OOP的64位JVM上为4，未开启压缩OOP的64位JVM上为8.<br>
@@ -139,10 +136,9 @@ public final class unsafe
 		putAddress = symbols.find_special_method(jdk_internal_misc_Unsafe, "putAddress", void.class, Object.class, long.class, long.class);
 		addressSize = symbols.find_special_method(jdk_internal_misc_Unsafe, "addressSize", int.class);
 		getUncompressedObject = symbols.find_special_method(jdk_internal_misc_Unsafe, "getUncompressedObject", Object.class, long.class);
-		allocateMemory = symbols.find_special_method(jdk_internal_misc_Unsafe, "allocateMemory", long.class, long.class);
-		freeMemory = symbols.find_special_method(jdk_internal_misc_Unsafe, "freeMemory", void.class, long.class);
-		setMemory = symbols.find_special_method(jdk_internal_misc_Unsafe, "setMemory", void.class, Object.class, long.class, long.class, byte.class);
-		copyMemory = symbols.find_special_method(jdk_internal_misc_Unsafe, "copyMemory", void.class, Object.class, long.class, Object.class, long.class, long.class);
+		allocateMemory0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "allocateMemory0", long.class, long.class);
+		freeMemory0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "freeMemory0", void.class, long.class);
+		setMemory0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "setMemory0", void.class, Object.class, long.class, long.class, byte.class);
 		copyMemory0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "copyMemory0", void.class, Object.class, long.class, Object.class, long.class, long.class);
 
 		defineClass = symbols.find_special_method(jdk_internal_misc_Unsafe, "defineClass", Class.class, String.class, byte[].class, int.class, int.class, ClassLoader.class, ProtectionDomain.class);
@@ -323,32 +319,34 @@ public final class unsafe
 	}
 
 	/**
-	 * 内存地址操作
+	 * Unsafe的putAddress()方法.<br>
+	 * 在base基地址+offset处储存一个地址值。<br>
 	 * 
 	 * @param base
 	 * @param offset
 	 * @param x
 	 */
-	public static final void store_address(Object base, long offset, long x)
+	public static final void store_address(Object base, long offset, long addr)
 	{
 		try
 		{
-			putAddress.invoke(instance_jdk_internal_misc_Unsafe, base, offset, x);
+			putAddress.invoke(instance_jdk_internal_misc_Unsafe, base, offset, addr);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("store jvm address of '" + base + "' failed", ex);
+			throw new java.lang.InternalError("store address of '" + base + "' + '" + offset + "' failed", ex);
 		}
 	}
 
 	/**
-	 * Unsafe的getAddress方法，令人不解的是即便开启压缩OOP，ADDRESS_SIZE也总是8，正常来说应该是4.
+	 * Unsafe的getAddress()方法.<br>
+	 * 该方法读取base基地址+offset处指向的地址。<br>
 	 * 
 	 * @param base
 	 * @param offset
 	 * @return
 	 */
-	public static final long address_of(Object base, long offset)
+	public static final long pointed_to_address(Object base, long offset)
 	{
 		try
 		{
@@ -356,83 +354,8 @@ public final class unsafe
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("get jvm address of '" + base + "' failed", ex);
+			throw new java.lang.InternalError("get pointed-to address of '" + base + "' + '" + offset + "' failed", ex);
 		}
-	}
-
-	/**
-	 * 一个根据是否开启压缩OOP动态决定地址大小的方法，可能这才是正确的获取对象地址的方式。
-	 * 
-	 * @param base
-	 * @param offset
-	 * @return
-	 */
-	public static final long native_address_of(Object base, long offset)
-	{
-		try
-		{
-			if (OOP_SIZE == 4)
-			{
-				int addr = (int) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset);// 地址是个32位无符号整数，不能直接强转成有符号的long整数。
-				if (virtual_machine.ON_64_BIT_JVM)// 64位的JVM上，对象地址却只有4字节，就说明需要向左位移来得到真实地址。
-					return java_type.decode_oop(addr);
-				else
-					return cxx_type.uint_ptr(addr);
-			}
-			else
-				return (long) getLong.invoke(instance_jdk_internal_misc_Unsafe, base, offset);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("get native address of '" + base + "' failed", ex);
-		}
-	}
-
-	public static final void store_native_address(Object base, long offset, long addr)
-	{
-		try
-		{
-			if (OOP_SIZE == 4)
-			{
-				if (virtual_machine.ON_64_BIT_JVM)
-					putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, java_type.encode_oop(addr));// 向右位移并丢弃高32位
-				else
-					putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, addr);
-			}
-			else
-				putLong.invoke(instance_jdk_internal_misc_Unsafe, base, offset, addr);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("store native address of '" + base + "' failed", ex);
-		}
-	}
-
-	/**
-	 * 获取字段的内存地址
-	 * 
-	 * @param obj
-	 * @param field
-	 * @return
-	 */
-	public static final long address_of(Object obj, Field field)
-	{
-		if (Modifier.isStatic(field.getModifiers()))
-			return address_of(static_field_base(field), static_field_offset(field));
-		else
-			return address_of(obj, object_field_offset(field));
-	}
-
-	/**
-	 * 获取字段的内存地址
-	 * 
-	 * @param obj
-	 * @param field
-	 * @return
-	 */
-	public static final long address_of(Object obj, String field)
-	{
-		return address_of(obj, reflection.find_declared_field(obj, field));
 	}
 
 	public static final int address_size()
@@ -447,27 +370,32 @@ public final class unsafe
 		}
 	}
 
-	public static final Object uncompressed_object(Object base, long offset)
+	/**
+	 * 将addr视作oop的指针，并调用JNIHandles::make_local(oop)返回jobject。<br>
+	 * 即将目标oop注册到线程本地引用表、oop与jobject通过JNIHandles::make_local()函数族和JNIHandles::resolve()可以相互转换。<br>
+	 * 
+	 */
+	public static final Object oop_make_local(long addr)
 	{
 		try
 		{
-			return getUncompressedObject.invoke(instance_jdk_internal_misc_Unsafe, base, offset);
+			return getUncompressedObject.invoke(instance_jdk_internal_misc_Unsafe, addr);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("get uncompressed object failed", ex);
+			throw new java.lang.InternalError("make local oop at '" + addr + "' failed", ex);
 		}
 	}
 
-	public static final long allocate(long bytes)
+	public static final long allocate(long size)
 	{
 		try
 		{
-			return (long) allocateMemory.invoke(instance_jdk_internal_misc_Unsafe, bytes);
+			return (long) allocateMemory0.invoke(instance_jdk_internal_misc_Unsafe, size);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("allocate memory failed, size = " + bytes, ex);
+			throw new java.lang.InternalError("allocate memory failed, size = " + size, ex);
 		}
 	}
 
@@ -475,7 +403,7 @@ public final class unsafe
 	{
 		try
 		{
-			freeMemory.invoke(instance_jdk_internal_misc_Unsafe, address);
+			freeMemory0.invoke(instance_jdk_internal_misc_Unsafe, address);
 		}
 		catch (Throwable ex)
 		{
@@ -483,11 +411,11 @@ public final class unsafe
 		}
 	}
 
-	public static final void memset(Object base, long offset, long bytes, byte value)
+	public static final void memset(Object base, long offset, long num, byte value)
 	{
 		try
 		{
-			setMemory.invoke(instance_jdk_internal_misc_Unsafe, base, offset, bytes, value);
+			setMemory0.invoke(instance_jdk_internal_misc_Unsafe, base, offset, num, value);
 		}
 		catch (Throwable ex)
 		{
@@ -495,27 +423,15 @@ public final class unsafe
 		}
 	}
 
-	public static final void memcpy(Object src_base, long src_offset, Object dest_base, long dest_offset, long bytes)
+	public static final void memcpy(Object src_base, long src_offset, Object dest_base, long dest_offset, long num)
 	{
 		try
 		{
-			copyMemory.invoke(instance_jdk_internal_misc_Unsafe, src_base, src_offset, dest_base, dest_offset, bytes);
+			copyMemory0.invoke(instance_jdk_internal_misc_Unsafe, src_base, src_offset, dest_base, dest_offset, num);
 		}
 		catch (Throwable ex)
 		{
 			throw new java.lang.InternalError("memcpy failed", ex);
-		}
-	}
-
-	public static final void __memcpy(Object src_base, long src_offset, Object dest_base, long dest_offset, long bytes)
-	{
-		try
-		{
-			copyMemory0.invoke(instance_jdk_internal_misc_Unsafe, src_base, src_offset, dest_base, dest_offset, bytes);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("raw memcpy failed", ex);
 		}
 	}
 

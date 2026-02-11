@@ -19,7 +19,7 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
 import jvmsp.type.cxx_type;
-import jvmsp.type.java_type;
+import jvmsp.type.cxx_type.pointer;
 
 /**
  * 管理JVM的相关功能
@@ -31,20 +31,24 @@ public class virtual_machine
 	 */
 	public static final boolean UseCompressedOops;
 
+	public static final boolean UseCompactObjectHeaders;
+
+	public static final boolean UseCompressedClassPointers;
+
 	/**
 	 * 对象字节对齐，默认为8,必须是2的幂，一般来说是机器的数据字大小，即int类型大小。
 	 */
 	public static final long ObjectAlignmentInBytes;
 
 	/**
-	 * 堆内存base的最小地址。
+	 * 堆内存base的最小地址。即堆的基地址
 	 */
 	public static final long HeapBaseMinAddress;
 
 	/**
 	 * 64或32位JVM
 	 */
-	public static final int NATIVE_JVM_BIT_VERSION;
+	public static final int JVM_BIT_VERSION;
 
 	/**
 	 * 是否运行在64位JVM，该变量为缓存值，用于指针的快速条件判断
@@ -52,19 +56,9 @@ public class virtual_machine
 	public static final boolean ON_64_BIT_JVM;
 
 	/**
-	 * JVM是否是HotSpot，如果是才能使用HotSpotDiagnostic获取JVM参数
-	 */
-	public static final boolean NATIVE_JVM_HOTSPOT;
-
-	/**
 	 * 64位JVM开启UseCompressedOops的情况下，如果oop被压缩时，指向的地址有按位偏移。NATIVE_ADDRESS_SHIFT=log2(ObjectAlignmentInBytes)
 	 */
 	public static final int OOP_ENCODE_ADDRESS_SHIFT;
-
-	/**
-	 * 机器CPU的数据字长度，也是native指针长度。根据JVM位数判断。
-	 */
-	public static final int NATIVE_WORD_SIZE;
 
 	/**
 	 * uint32_t的最大值，用于掩码和计算32位机器最大寻址地址。
@@ -86,42 +80,67 @@ public class virtual_machine
 	 */
 	private static final HotSpotDiagnosticMXBean instance_HotSpotDiagnosticMXBean;
 
+	/**
+	 * 压缩模式
+	 */
+	public static enum oops_mode
+	{
+		UnscaledNarrowOop, // 无压缩
+		ZeroBasedNarrowOop, // 压缩，基地址为0
+		DisjointBaseNarrowOop, //
+		HeapBasedNarrowOop;// 压缩，基地址非0
+	};
+
 	static
 	{
-		String bit_version = System.getProperty("sun.arch.data.model");
-		if (bit_version != null && bit_version.contains("64"))
-			NATIVE_JVM_BIT_VERSION = 64;
+		// 获取JVM位数，支持多种JVM实现
+		String arch = System.getProperty("os.arch");
+		if (arch == null)
+			throw new java.lang.UnknownError("system property 'os.arch' found null, this property is guaranteed Java Specification");
+		if (arch.contains("64"))
+			JVM_BIT_VERSION = 64;
 		else
-		{
-			String arch = System.getProperty("os.arch");
-			if (arch != null && arch.contains("64"))
-				NATIVE_JVM_BIT_VERSION = 64;
-			else
-				NATIVE_JVM_BIT_VERSION = 32;
-		}
-		if (NATIVE_JVM_BIT_VERSION == 64)
+			JVM_BIT_VERSION = 32;
+
+		if (JVM_BIT_VERSION == 64)
 			ON_64_BIT_JVM = true;
 		else
 			ON_64_BIT_JVM = false;
-		NATIVE_WORD_SIZE = NATIVE_JVM_BIT_VERSION / 8;// 实际上还有16位机器，此时数据字长度只有2字节，但我们这无法获取本地机器的数据字长度，只能根据JVM位数去判断。
-		boolean hotspot = false;
-		boolean compressed_oops = false;
-		long align_bytes = 8;
-		long heap_base_min_addr = 0;
-		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
-		if (instance_HotSpotDiagnosticMXBean != null)
-		{
-			hotspot = true;// 获取HotSpotDiagnosticMXBean的getVMOption()方法
-			if (NATIVE_JVM_BIT_VERSION == 64) // 64位JVM需要检查是否启用了指针压缩
-				compressed_oops = get_bool_option("UseCompressedOops");
-			align_bytes = get_long_option("ObjectAlignmentInBytes");
-			heap_base_min_addr = get_long_option("HeapBaseMinAddress");
-		}
-		NATIVE_JVM_HOTSPOT = hotspot;
 
-		UseCompressedOops = compressed_oops;
-		ObjectAlignmentInBytes = align_bytes;
-		HeapBaseMinAddress = heap_base_min_addr;
+		boolean _UseCompressedOops = false;
+		boolean _UseCompactObjectHeaders = false;
+		boolean _UseCompressedClassPointers = false;
+		long _ObjectAlignmentInBytes = 8;
+		long _HeapBaseMinAddress = 0;
+		// 获取HotSpotDiagnosticMXBean实例
+		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
+
+		if (instance_HotSpotDiagnosticMXBean == null)
+		{
+			throw new java.lang.InternalError("only Hotspot JVM supported");
+		}
+		else
+		{
+			try
+			{
+				if (ON_64_BIT_JVM) // 64位JVM需要检查是否启用了指针压缩
+					_UseCompressedOops = get_bool_option("UseCompressedOops");
+				_ObjectAlignmentInBytes = get_long_option("ObjectAlignmentInBytes");
+				_HeapBaseMinAddress = get_long_option("HeapBaseMinAddress");
+				_UseCompactObjectHeaders = virtual_machine.get_bool_option("UseCompactObjectHeaders");
+				_UseCompressedClassPointers = virtual_machine.get_bool_option("UseCompressedClassPointers");
+			}
+			catch (Throwable ex)
+			{
+				// 获取不存在的Flag时会抛出异常，为了适配低版本JVM可能没有相应的标志，需要捕获错误但不操作
+			}
+		}
+
+		UseCompressedOops = _UseCompressedOops;
+		ObjectAlignmentInBytes = _ObjectAlignmentInBytes;
+		HeapBaseMinAddress = _HeapBaseMinAddress;
+		UseCompactObjectHeaders = _UseCompactObjectHeaders;
+		UseCompressedClassPointers = _UseCompressedClassPointers;
 
 		OOP_ENCODE_ADDRESS_SHIFT = uint64_log2(ObjectAlignmentInBytes);
 
@@ -278,6 +297,111 @@ public class virtual_machine
 		{
 			ex.printStackTrace();
 		}
+	}
+
+	/**
+	 * ------------------------ Java内存模型 --------------------------
+	 * 每个Java对象都具有内存native地址，这个地址会随着GC移动而变化。<br>
+	 * Java对象起始地址储存的是Object Header，即对象的JVM内部信息和元信息。对象头之后的连续内存是Java对象的成员数据。<br>
+	 * 为了表征对象，需要为每个对象指定一个标识符，这个标识符就是oop。<br>
+	 * oop本质只是个标识符，并不强制要求必须是根据native地址计算的，它也可以是JVM内部对象真实地址表的索引。但在Hotspot中，该值就是根据native地址计算的。<br>
+	 * Java层操作的所有对象都是引用，即oop。<br>
+	 * 以下结论均适用于Hotspot实现。<br>
+	 * 1. oop通过native地址计算，因此oop会随着GC移动而变化。可以通过JVM实现中的算法直接根据oop的值计算出真实native地址。<br>
+	 * 如果将java.lang.Object对象置于Object[]数组内，并读取数组中对应索引的long值，则该值是对象当前的实际oop。<br>
+	 * oop压缩指将native地址取相对于JVM的堆内存基地址的偏移量并位移对象字节对齐值构成一个32位的oop，此时计算native地址还需要堆内存基地址。<br>
+	 * 如果开启了oop压缩，则通过Object[]数组读取到的是压缩后的oop，需要解压缩才能使用。<br>
+	 * 2. 未压缩的oop是一个指针，定义为oopDesc*，而oopDesc正是Object Header对象，即未压缩的oop实际指向了Java对象本身的内存。<br>
+	 * 3. jobject是oop的别名，而未压缩的oop又直接指向Java对象内存。<br>
+	 * oop可以通过JNIHandles::make_local()等函数转换成jobject，jobject通过JNIHandles::resolve()可转换为oop。<br>
+	 */
+
+	/**
+	 * OOP相关操作 https://github.com/openjdk/jdk/blob/9586817cea3f1cad8a49d43e9106e25dafa04765/src/hotspot/share/oops/compressedOops.cpp#L49<br>
+	 * 对象头压缩/Klass压缩是指将对象头的Klass Word从64位压缩到32位的narrowKlass。<br>
+	 * 开启UseCompressedOops后，默认开启Klass压缩，但oop是否压缩取决于分配的堆内存大小。
+	 */
+
+	/**
+	 * 最大堆内存大小
+	 */
+	public static final long MAX_HEAP_SIZE;
+
+	/**
+	 * 堆内存末尾在内存中的绝对地址
+	 */
+	public static final long HEAP_END_ADDRESS;
+
+	/**
+	 * 堆内存的实际起始地址，大于等于HeapBaseMinAddress
+	 */
+	public static final long HEAP_BASE_ADDRESS;
+
+	/**
+	 * 压缩oop时的位移
+	 */
+	public static final long OOPS_SHIFT;
+
+	/**
+	 * 堆内存相对地址范围
+	 */
+	public static final long heap_address_range;
+
+	static
+	{
+		MAX_HEAP_SIZE = virtual_machine.max_heap_size();
+		HEAP_END_ADDRESS = virtual_machine.HeapBaseMinAddress + MAX_HEAP_SIZE;// 这是最大的范围，实际范围可能只是其中一段区间。
+		if (HEAP_END_ADDRESS > virtual_machine.UnscaledOopHeapMax)
+		{// 实际堆内存大小大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
+			OOPS_SHIFT = virtual_machine.OOP_ENCODE_ADDRESS_SHIFT;
+		}
+		else if (virtual_machine.UseCompressedOops)// 指定了UseCompressedOops后则必定压缩。
+			OOPS_SHIFT = virtual_machine.OOP_ENCODE_ADDRESS_SHIFT;
+		else// 堆内存的末尾绝对地址小于4GB就不压缩
+			OOPS_SHIFT = 0;
+		if (HEAP_END_ADDRESS <= virtual_machine.OopEncodingHeapMax)
+		{
+			HEAP_BASE_ADDRESS = 0;
+		}
+		else
+		{
+			HEAP_BASE_ADDRESS = pointer.jnull.address();
+		}
+		heap_address_range = HEAP_END_ADDRESS - HEAP_BASE_ADDRESS;
+	}
+
+	/**
+	 * 编码压缩oop<br>
+	 * oop.encode_heap_oop_not_null
+	 * 
+	 * @param native_addr
+	 * @return
+	 */
+	public static final int encode_oop(long native_addr)
+	{
+		return (int) ((native_addr - HEAP_BASE_ADDRESS) >> OOPS_SHIFT);
+	}
+
+	/**
+	 * 堆上的地址
+	 * 
+	 * @param native_addr
+	 * @return
+	 */
+	public static final long address_on_heap(long native_addr)
+	{
+		return native_addr - HEAP_BASE_ADDRESS;
+	}
+
+	/**
+	 * 解码压缩oop，位移可能为0，此时表示未压缩的相对于堆起始位置的相对地址.
+	 * 
+	 * @param oop
+	 * @return
+	 */
+	public static final long decode_oop(int oop)
+	{
+		return ((oop & cxx_type.UINT32_T_MASK) << OOPS_SHIFT) + HEAP_BASE_ADDRESS;
 	}
 
 	/**
@@ -452,68 +576,6 @@ public class virtual_machine
 	public static final void attach(String agent_path)
 	{
 		attach(agent_path, null);
-	}
-
-	/**
-	 * 对象layout类型
-	 */
-	public static enum object_layout
-	{
-		/**
-		 * JDK 24+<br>
-		 * 开启对象头压缩，包含压缩klass pointer，即+UseCompressedClassPointers<br>
-		 * +UseCompactObjectHeaders
-		 */
-		Compact,
-		/**
-		 * 压缩klass pointer，但不压缩对象头<br>
-		 * +UseCompressedClassPointers -UseCompactObjectHeaders
-		 */
-		Compressed,
-		/**
-		 * 未压缩klass pointer，也未压缩对象头<br>
-		 * -UseCompressedClassPointers -UseCompactObjectHeaders
-		 */
-		Uncompressed,
-		/**
-		 * 未定义
-		 */
-		Undefined
-	}
-
-	public static final object_layout _klass_mode;
-	public static final long _oop_base_offset_in_bytes;
-	public static final boolean _oop_has_klass_gap;
-
-	static
-	{
-		boolean UseCompactObjectHeaders = false;
-		try
-		{
-			UseCompactObjectHeaders = get_bool_option("UseCompactObjectHeaders");
-		}
-		catch (Exception ex)
-		{
-		}
-		if (UseCompactObjectHeaders)
-		{
-			_klass_mode = object_layout.Compact;
-			_oop_has_klass_gap = false;
-		}
-		else
-		{
-			if (get_bool_option("UseCompressedClassPointers"))
-			{
-				_klass_mode = object_layout.Compressed;
-				_oop_has_klass_gap = true;
-			}
-			else
-			{
-				_klass_mode = object_layout.Uncompressed;
-				_oop_has_klass_gap = false;
-			}
-		}
-		_oop_base_offset_in_bytes = java_type.HEADER_BYTE_LENGTH;
 	}
 
 	/**

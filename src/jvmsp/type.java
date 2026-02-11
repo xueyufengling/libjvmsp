@@ -12,8 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
-import jvmsp.type.cxx_type.pointer;
-
 public abstract class type<_T>
 {
 	public static enum lang
@@ -300,7 +298,9 @@ public abstract class type<_T>
 	{
 		public static final Object __access(long native_addr, cxx_type type)
 		{
-			if (type == jobject || type == jclass)
+			if (type == _void)
+				throw new java.lang.IllegalAccessError("error: dereferencing 'void*' pointer " + pointer.to_hex(native_addr));
+			if (type == jobject)
 				return unsafe.read_reference(native_addr);
 			switch ((int) type.size())
 			{
@@ -1630,7 +1630,15 @@ public abstract class type<_T>
 				this(parse_address(hex));
 			}
 
-			public static final pointer nullptr = pointer.at(address_of_jobject(null));
+			/**
+			 * C++的nullptr一定是0
+			 */
+			public static final pointer nullptr = pointer.to(0);
+
+			/**
+			 * Java的null地址，对应堆内存的基地址0偏移处。堆内存起始地址并不一定是0.
+			 */
+			public static final pointer jnull = pointer.to(java_type.oop_of(null));
 
 			public long address()
 			{
@@ -1652,13 +1660,18 @@ public abstract class type<_T>
 				return addr == 0;
 			}
 
+			public static final String to_hex(long addr)
+			{
+				return "0x" + ((addr >> 32 == 0) ? String.format("%08x", addr) : String.format("%016x", addr));
+			}
+
 			/**
 			 * 十六进制地址
 			 */
 			@Override
 			public String toString()
 			{
-				return "0x" + ((addr >> 32 == 0) ? String.format("%08x", addr) : String.format("%016x", addr));
+				return to_hex(addr);
 			}
 
 			/**
@@ -1678,7 +1691,7 @@ public abstract class type<_T>
 					byte[] a = ((byte[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (byte) this.add(idx).dereference();
+						a[idx] = (byte) this.at(idx);
 					}
 				}
 				else if (clazz == boolean.class)
@@ -1686,7 +1699,7 @@ public abstract class type<_T>
 					boolean[] a = ((boolean[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (boolean) this.add(idx).dereference();
+						a[idx] = (boolean) this.at(idx);
 					}
 				}
 				else if (clazz == short.class)
@@ -1694,7 +1707,7 @@ public abstract class type<_T>
 					short[] a = ((short[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (short) this.add(idx).dereference();
+						a[idx] = (short) this.at(idx);
 					}
 				}
 				else if (clazz == char.class)
@@ -1702,7 +1715,7 @@ public abstract class type<_T>
 					char[] a = ((char[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (char) this.add(idx).dereference();
+						a[idx] = (char) this.at(idx);
 					}
 				}
 				else if (clazz == int.class)
@@ -1710,7 +1723,7 @@ public abstract class type<_T>
 					int[] a = ((int[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (int) this.add(idx).dereference();
+						a[idx] = (int) this.at(idx);
 					}
 				}
 				else if (clazz == float.class)
@@ -1718,7 +1731,7 @@ public abstract class type<_T>
 					float[] a = ((float[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (float) this.add(idx).dereference();
+						a[idx] = (float) this.at(idx);
 					}
 				}
 				else if (clazz == long.class)
@@ -1726,7 +1739,7 @@ public abstract class type<_T>
 					long[] a = ((long[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (long) this.add(idx).dereference();
+						a[idx] = (long) this.at(idx);
 					}
 				}
 				else if (clazz == double.class)
@@ -1734,7 +1747,7 @@ public abstract class type<_T>
 					double[] a = ((double[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = (double) this.add(idx).dereference();
+						a[idx] = (double) this.at(idx);
 					}
 				}
 				else
@@ -1742,7 +1755,7 @@ public abstract class type<_T>
 					Object[] a = ((Object[]) arr);
 					for (int idx = 0; idx < num; ++idx)
 					{
-						a[idx] = this.add(idx).dereference();
+						a[idx] = this.at(idx);
 					}
 				}
 				return arr;
@@ -1772,17 +1785,17 @@ public abstract class type<_T>
 			 * @param pointed_to_type
 			 * @return
 			 */
-			public static final pointer at(long addr, cxx_type pointed_to_type)
+			public static final pointer to(long addr, cxx_type pointed_to_type)
 			{
 				return new pointer(addr, pointed_to_type);
 			}
 
-			public static final pointer at(long addr)
+			public static final pointer to(long addr)
 			{
 				return new pointer(addr);
 			}
 
-			public static final pointer at(int _32bit_addr)
+			public static final pointer to(int _32bit_addr)
 			{
 				return new pointer(cxx_type.uint_ptr(_32bit_addr));
 			}
@@ -1794,7 +1807,7 @@ public abstract class type<_T>
 			 * @param pointed_to_type
 			 * @return
 			 */
-			public static final pointer at(String hex)
+			public static final pointer to(String hex)
 			{
 				return new pointer(hex);
 			}
@@ -1814,6 +1827,29 @@ public abstract class type<_T>
 			{
 				this.pointed_to_type = dest_pointed_to_type;
 				return this;
+			}
+
+			/**
+			 * 将指针视作C数组并使用索引读值
+			 * 
+			 * @param dest_pointed_to_type
+			 * @param offset
+			 * @param stride
+			 * @return
+			 */
+			public Object at(cxx_type dest_pointed_to_type, long offset, long stride)
+			{
+				return __access(addr + offset * stride, pointed_to_type);
+			}
+
+			public Object at(cxx_type dest_pointed_to_type, long offset)
+			{
+				return at(dest_pointed_to_type, offset, dest_pointed_to_type.size());
+			}
+
+			public Object at(long offset)
+			{
+				return at(pointed_to_type, offset, pointed_to_type.size());
 			}
 
 			/**
@@ -1943,36 +1979,14 @@ public abstract class type<_T>
 				return this;
 			}
 
-			/**
-			 * 获取对象的地址，返回long<br>
-			 * 利用Object[]的元素为oop指针的事实来间接取地址，该地址为JVM内部相对地址，不一定是实际的绝对地址。该地址可直接用于InternalUnsafe的相关方法<br>
-			 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址直接就是绝对地址。<br>
-			 * 在开启UseCompressedOops的64位JVM上，取的地址是相对偏移量，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+相对偏移量为0的基地址（即nullptr的绝对地址）才是绝对地址。
-			 * 
-			 * @param _jobject
-			 * @return
-			 */
-			public static final long address_of_jobject(Object _jobject)
-			{
-				return unsafe.native_address_of(new Object[]
-				{ _jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
-			}
-
-			/**
-			 * 取对象地址，即andress_of_object()。基本类型都是by value传递参数入栈，取地址没意义，因此只能取对象的地址。<br>
-			 * 如果要取对象的字段（可能是基本类型）的地址，使用本方法的其他重载方法。
-			 * 
-			 * @param jobject
-			 * @return
-			 */
 			public static final pointer address_of(Object _jobject)
 			{
-				return pointer.at(address_of_jobject(_jobject), jobject);
+				return pointer.to(java_type.uncompressed_oop_of(_jobject), jobject);
 			}
 
 			public static final pointer address_of(cxx_type.object cxx_obj)
 			{
-				return pointer.at(cxx_obj.addr);
+				return pointer.to(cxx_obj.addr);
 			}
 
 			/**
@@ -1985,9 +1999,9 @@ public abstract class type<_T>
 			public static final pointer address_of(Object jobject, Field field)
 			{
 				if (Modifier.isStatic(field.getModifiers()))// 静态字段
-					return pointer.at(address_of_jobject(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(java_type.uncompressed_oop_of(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
 				else
-					return pointer.at(address_of_jobject(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(java_type.uncompressed_oop_of(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
 			}
 
 			public static final pointer address_of(Object jobject, String field)
@@ -1996,32 +2010,13 @@ public abstract class type<_T>
 			}
 
 			/**
-			 * 对一个对象指针取引用
-			 * 
-			 * @param addr
-			 * @return
-			 */
-			static final Object dereference_object(long addr)
-			{
-				Object[] __ref_fetch = new Object[1];
-				unsafe.store_native_address(__ref_fetch, unsafe.ARRAY_OBJECT_BASE_OFFSET, addr);
-				return __ref_fetch[0];
-			}
-
-			/**
-			 * 取引用值
+			 * 解引用值
 			 * 
 			 * @return
 			 */
 			public Object dereference()
 			{
-				// 不可对void*类型的指针取值
-				if (pointed_to_type == _void)
-					throw new java.lang.IllegalAccessError("cannot dereference a void* pointer at " + this.toString());
-				else
-				{
-					return __access(addr, pointed_to_type);
-				}
+				return __access(addr, pointed_to_type);
 			}
 
 			/**
@@ -2085,9 +2080,9 @@ public abstract class type<_T>
 				this.type = ref_type;
 			}
 
-			long address_of_reference()
+			public final long address()
 			{
-				return pointer.address_of_jobject(base) + offset;
+				return java_type.uncompressed_oop_of(base) + offset;
 			}
 
 			public Object value()
@@ -2110,7 +2105,7 @@ public abstract class type<_T>
 					return unsafe.read_double(offset);
 				else
 				{
-					Object deref_obj = pointer.dereference_object(address_of_reference());
+					Object deref_obj = java_type.jobject_from_oop(address());
 					java_type.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
@@ -2208,7 +2203,7 @@ public abstract class type<_T>
 				else if (type == double.class)
 					unsafe.write(base, offset, java_type.double_value(v));
 				else
-					unsafe.__memcpy(v, java_type.HEADER_BYTE_LENGTH, base, java_type.HEADER_BYTE_LENGTH, java_type.sizeof_object(v.getClass()) - java_type.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+					unsafe.memcpy(v, java_type.HEADER_BYTE_LENGTH, base, java_type.HEADER_BYTE_LENGTH, java_type.sizeof_object(v.getClass()) - java_type.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 				return this;
 			}
 		}
@@ -2404,105 +2399,53 @@ public abstract class type<_T>
 		{
 			Class<T> clazz = (Class<T>) jobject.getClass();
 			T o = unsafe.allocate(clazz);
-			unsafe.__memcpy(jobject, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(jobject, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 
 		/**
-		 * OOP相关操作 https://github.com/openjdk/jdk/blob/9586817cea3f1cad8a49d43e9106e25dafa04765/src/hotspot/share/oops/compressedOops.cpp#L49<br>
-		 * oop压缩相关常量。是否会运行时动态变更未知。<br>
-		 * oop压缩指将绝对地址取相对于堆base的偏移量并位移构成一个32位的oop。<br>
-		 * 对象头压缩/Klass压缩是指将对象头的Klass Word从64位压缩到32位的narrowKlass。<br>
-		 * 开启UseCompressedOops后，默认开启Klass压缩，但oop是否压缩取决于分配的堆内存大小。
-		 */
-
-		/**
-		 * 压缩模式
-		 */
-		public static enum oops_mode
-		{
-			UnscaledNarrowOop, // 无压缩
-			ZeroBasedNarrowOop, // 压缩，基地址为0
-			DisjointBaseNarrowOop, //
-			HeapBasedNarrowOop;// 压缩，基地址非0
-		};
-
-		oops_mode mode;
-
-		/**
-		 * 最大堆内存大小
-		 */
-		public static final long max_heap_size;
-
-		/**
-		 * 堆内存末尾在内存中的绝对地址
-		 */
-		public static final long heap_space_end;
-
-		/**
-		 * 堆内存的起始地址
-		 */
-		public static final long base;
-
-		/**
-		 * 压缩oop时的位移
-		 */
-		public static final long shift;
-
-		/**
-		 * 堆内存相对地址范围
-		 */
-		public static final long heap_address_range;
-
-		static
-		{
-			max_heap_size = virtual_machine.max_heap_size();
-			heap_space_end = virtual_machine.HeapBaseMinAddress + max_heap_size;// 这是最大的范围，实际范围可能只是其中一段区间，这种方法或许并不准确。
-			if (heap_space_end > virtual_machine.UnscaledOopHeapMax)
-			{// 实际堆内存大小大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
-				shift = virtual_machine.OOP_ENCODE_ADDRESS_SHIFT;
-			}
-			else if (virtual_machine.UseCompressedOops)// 指定了UseCompressedOops后则必定压缩。
-				shift = virtual_machine.OOP_ENCODE_ADDRESS_SHIFT;
-			else// 堆内存的末尾绝对地址小于4GB就不压缩
-				shift = 0;
-			if (heap_space_end <= virtual_machine.OopEncodingHeapMax)
-			{
-				base = 0;
-			}
-			else
-			{
-				base = pointer.nullptr.address();// 这对吗？
-			}
-			heap_address_range = heap_space_end - base;
-		}
-
-		/**
-		 * 编码压缩oop<br>
-		 * oop.encode_heap_oop_not_null
+		 * 获取对象（压缩后的）的oop，返回long<br>
+		 * 利用Object[]的元素为oop指针的事实来间接取oop。<br>
+		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址直接就是未压缩的oop，直接指向Java对象本身的内存。<br>
+		 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
 		 * 
-		 * @param native_addr
+		 * @param _jobject
 		 * @return
 		 */
-		public static final int encode_oop(long native_addr)
+		public static final long oop_of(Object _jobject)
 		{
-			return (int) ((native_addr - base) >> shift);
+			return unsafe.pointed_to_address(new Object[]
+			{ _jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
 		}
 
-		public static final long pointer_delta(long native_addr)
+		public static final long oop_of(long native_addr)
 		{
-			return native_addr - base;
+			return virtual_machine.encode_oop(native_addr);
 		}
 
 		/**
-		 * 解码压缩oop，位移可能为0，此时表示未压缩的相对于堆起始位置的相对地址.
+		 * 从（压缩后的）oop获取Java对象。<br>
+		 * 如果开启了oop压缩，则必须传入压缩后的oop。<br>
 		 * 
-		 * @param oop_addr
+		 * @param addr
 		 * @return
 		 */
-		public static final long decode_oop(int oop_addr)
+		public static final Object jobject_from_oop(long addr)
 		{
-			return ((oop_addr & cxx_type.UINT32_T_MASK) << shift) + base;
+			Object[] _jobjects = new Object[1];
+			unsafe.store_address(_jobjects, unsafe.ARRAY_OBJECT_BASE_OFFSET, addr);
+			return _jobjects[0];
+		}
+
+		/**
+		 * 获取未压缩的oop，该地址为Java对象的实际内存地址
+		 * 
+		 * @param _jobject
+		 * @return
+		 */
+		public static final long uncompressed_oop_of(Object _jobject)
+		{
+			return virtual_machine.decode_oop((int) oop_of(_jobject));
 		}
 
 		/**
@@ -2730,14 +2673,14 @@ public abstract class type<_T>
 
 		static
 		{
-			if (virtual_machine.NATIVE_JVM_BIT_VERSION == 32)
+			if (virtual_machine.JVM_BIT_VERSION == 32)
 			{
 				MARKWORD_LENGTH = __32_bit.MARKWORD_LENGTH;
 				KLASS_WORD_OFFSET = __32_bit.KLASS_OFFSET;
 				KLASS_WORD_LENGTH = __32_bit.KLASS_LENGTH;
 				HEADER_LENGTH = __32_bit.HEADER_LENGTH;
 			}
-			else if (virtual_machine.NATIVE_JVM_BIT_VERSION == 64)
+			else if (virtual_machine.JVM_BIT_VERSION == 64)
 			{
 				if (virtual_machine.UseCompressedOops)
 				{
@@ -2756,7 +2699,7 @@ public abstract class type<_T>
 			}
 			else
 			{
-				throw new java.lang.InternalError("unknown native jvm bit-version '" + virtual_machine.NATIVE_JVM_BIT_VERSION + "'");
+				throw new java.lang.InternalError("unknown native jvm bit-version '" + virtual_machine.JVM_BIT_VERSION + "'");
 			}
 			MARKWORD_BYTE_LENGTH = MARKWORD_LENGTH / 8;
 			KLASS_WORD_BYTE_OFFSET = KLASS_WORD_OFFSET / 8;
@@ -2860,6 +2803,68 @@ public abstract class type<_T>
 		{
 			return (_T) (Object) obj;
 		}
+
+		/**
+		 * 对象layout类型
+		 */
+		public static enum object_layout
+		{
+			/**
+			 * JDK 24+<br>
+			 * 开启对象头压缩，包含压缩klass pointer，即+UseCompressedClassPointers<br>
+			 * +UseCompactObjectHeaders
+			 */
+			Compact,
+			/**
+			 * 压缩klass pointer，但不压缩对象头<br>
+			 * +UseCompressedClassPointers -UseCompactObjectHeaders
+			 */
+			Compressed,
+			/**
+			 * 未压缩klass pointer，也未压缩对象头<br>
+			 * -UseCompressedClassPointers -UseCompactObjectHeaders
+			 */
+			Uncompressed,
+			/**
+			 * 未定义
+			 */
+			Undefined
+		}
+
+		public static final object_layout _KLASS_MODE;
+		public static final long _OBJECT_HEADER_BASE_OFFSET;
+		public static final boolean _OOP_HAS_KLASS_GAP;
+
+		static
+		{
+			if (virtual_machine.UseCompactObjectHeaders)
+			{
+				_KLASS_MODE = object_layout.Compact;
+				_OOP_HAS_KLASS_GAP = false;
+			}
+			else
+			{
+				if (virtual_machine.UseCompressedClassPointers)
+				{
+					_KLASS_MODE = object_layout.Compressed;
+					_OOP_HAS_KLASS_GAP = true;
+				}
+				else
+				{
+					_KLASS_MODE = object_layout.Uncompressed;
+					_OOP_HAS_KLASS_GAP = false;
+				}
+			}
+			_OBJECT_HEADER_BASE_OFFSET = java_type.HEADER_BYTE_LENGTH;
+		}
+
+		/**
+		 * 其他常用操作
+		 * 
+		 * @param <T>
+		 * @param cast_type_klass_word
+		 * @return
+		 */
 
 		@SuppressWarnings("unchecked")
 		public static final <T> T undefined(long cast_type_klass_word)

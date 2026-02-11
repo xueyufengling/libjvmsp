@@ -6,6 +6,7 @@ import jvmsp.memory;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_pointer_type;
 import jvmsp.type.cxx_type.pointer;
+import jvmsp.type.java_type;
 
 /**
  * JNINativeInterface_的函数封装
@@ -725,10 +726,10 @@ public class jni_native_interface
 
 	public final long get_string_utf_chars(String jstr, boolean is_copy)
 	{
-		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto(); pointer cstr = memory.c_str(jstr))
+		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto();)
 		{
 			pis_copy.dereference_assign(is_copy);
-			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), cstr.address(), pis_copy.address());
+			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), java_type.oop_of(jstr), pis_copy.address());
 		}
 		catch (Throwable ex)
 		{
@@ -774,6 +775,18 @@ public class jni_native_interface
 		catch (Throwable ex)
 		{
 			throw new java.lang.InternalError("call JNINativeInterface_::FindClass() failed", ex);
+		}
+	}
+
+	public final void fatal_error(String msg)
+	{
+		try (pointer cstr = memory.c_str(msg).auto())
+		{
+			FatalError.invokeExact(JNINativeInterface_base.address(), cstr.address());
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call JNINativeInterface_::FatalError() failed", ex);
 		}
 	}
 }

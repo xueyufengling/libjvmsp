@@ -26,6 +26,24 @@ public abstract class libjvm
 
 	public static final cxx_type pJNIEnv = cxx_type.pointer_type.of("JNINativeInterface_");
 
+	/**
+	 * 引用类型
+	 */
+	public static enum ref_type
+	{
+		JNIInvalidRefType(0),
+		JNILocalRefType(1), // 线程本地引用
+		JNIGlobalRefType(2), // 全局引用
+		JNIWeakGlobalRefType(3);// 弱全局引用
+
+		public final int type;
+
+		private ref_type(int type)
+		{
+			this.type = type;
+		}
+	}
+
 	public static final int JNI_OK = 0;
 	public static final int JNI_ERR = -1;
 	public static final int JNI_EDETACHED = -2;

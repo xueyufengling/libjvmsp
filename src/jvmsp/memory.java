@@ -14,27 +14,27 @@ public abstract class memory
 {
 	public static final pointer malloc(long size)
 	{
-		return pointer.at(unsafe.allocate(size));
+		return pointer.to(unsafe.allocate(size));
 	}
 
 	public static final pointer malloc(long num, Class<?> type_clazz)
 	{
-		return pointer.at(unsafe.allocate(num * java_type.sizeof(type_clazz)), cxx_type.of(type_clazz));
+		return pointer.to(unsafe.allocate(num * java_type.sizeof(type_clazz)), cxx_type.of(type_clazz));
 	}
 
 	public static final pointer malloc(long num, cxx_type type)
 	{
-		return pointer.at(unsafe.allocate(num * cxx_type.sizeof(type)), type);
+		return pointer.to(unsafe.allocate(num * cxx_type.sizeof(type)), type);
 	}
 
 	public static final pointer malloc(cxx_type type)
 	{
-		return pointer.at(unsafe.allocate(cxx_type.sizeof(type)), type);
+		return pointer.to(unsafe.allocate(cxx_type.sizeof(type)), type);
 	}
 
 	public static final pointer malloc(cxx_type... types)
 	{
-		return pointer.at(unsafe.allocate(cxx_type.sizeof(types)));
+		return pointer.to(unsafe.allocate(cxx_type.sizeof(types)));
 	}
 
 	public static final void free(pointer ptr)
@@ -65,7 +65,7 @@ public abstract class memory
 		long cstr_addr = unsafe.allocate(bytes.length + 1);
 		unsafe.memcpy(bytes, unsafe.ARRAY_OBJECT_BASE_OFFSET, null, cstr_addr, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
 		unsafe.write(cstr_addr + bytes.length, (byte) 0);
-		return pointer.at(cstr_addr, cxx_type._char);
+		return pointer.to(cstr_addr, cxx_type._char);
 	}
 
 	public static final pointer c_str(String str)

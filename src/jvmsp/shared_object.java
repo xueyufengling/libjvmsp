@@ -1123,6 +1123,10 @@ public class shared_object
 	 */
 	public static final MethodHandle dlsym(long handle, function_signature signature)
 	{
-		return symbols.bind(stub_function(signature.func_type), 0, dlsym(handle, signature.function_name));
+		long addr = dlsym(handle, signature.function_name);
+		if (addr == 0)
+			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
+		else
+			return symbols.bind(stub_function(signature.func_type), 0, addr);
 	}
 }
