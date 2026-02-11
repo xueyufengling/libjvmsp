@@ -314,6 +314,7 @@ public class virtual_machine
 	 * 2. 未压缩的oop是一个指针，定义为oopDesc*，而oopDesc正是Object Header对象，即未压缩的oop实际指向了Java对象本身的内存。<br>
 	 * 3. jobject是oop的别名，而未压缩的oop又直接指向Java对象内存。<br>
 	 * oop可以通过JNIHandles::make_local()等函数转换成jobject，jobject通过JNIHandles::resolve()可转换为oop。<br>
+	 * 对于local的jobject，jobject正是指向oop的指针。对于global和weak global的引用，则需要通过NativeAccess<>::oop_load(weak_global_ptr(jobject))函数获取oop。<br>
 	 */
 
 	/**

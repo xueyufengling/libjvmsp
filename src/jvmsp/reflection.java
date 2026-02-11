@@ -1050,18 +1050,13 @@ public abstract class reflection
 	/**
 	 * 包相关
 	 */
-	public static final List<String> class_names_in_package(Class<?> any_class_in_package, file_system.uri.resolver resolver, String package_name, boolean include_subpackage)
-	{
-		String path = file_system.classpath(any_class_in_package, resolver);
-		if (path.endsWith(file_system.JAR_EXTENSION_NAME))
-			return file_system.class_names_in_jar(any_class_in_package, resolver, package_name, include_subpackage);
-		else
-			return file_system.class_names_local(any_class_in_package, resolver, package_name, include_subpackage);
-	}
-
 	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
 	{
-		return class_names_in_package(any_class_in_package, file_system.uri.resolver.DEFAULT, package_name, include_subpackage);
+		String path = file_system.classpath(any_class_in_package);
+		if (path.endsWith(file_system.JAR_EXTENSION_NAME))
+			return file_system.class_names_in_jar(any_class_in_package, package_name, include_subpackage);
+		else
+			return file_system.class_names_local(any_class_in_package, package_name, include_subpackage);
 	}
 
 	public static final List<String> class_names_in_package(String package_name, boolean include_subpackage)

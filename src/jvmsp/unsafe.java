@@ -371,19 +371,21 @@ public final class unsafe
 	}
 
 	/**
-	 * 将addr视作oop的指针，并调用JNIHandles::make_local(oop)返回jobject。<br>
+	 * * 将addr视作oop的指针，并调用JNIHandles::make_local(oop)返回jobject。<br>
 	 * 即将目标oop注册到线程本地引用表、oop与jobject通过JNIHandles::make_local()函数族和JNIHandles::resolve()可以相互转换。<br>
 	 * 
+	 * @param oop_addr 指向oop的指针
+	 * @return
 	 */
-	public static final Object oop_make_local(long addr)
+	public static final Object oop_make_local(long oop_addr)
 	{
 		try
 		{
-			return getUncompressedObject.invoke(instance_jdk_internal_misc_Unsafe, addr);
+			return getUncompressedObject.invoke(instance_jdk_internal_misc_Unsafe, oop_addr);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("make local oop at '" + addr + "' failed", ex);
+			throw new java.lang.InternalError("make local oop at '" + oop_addr + "' failed", ex);
 		}
 	}
 

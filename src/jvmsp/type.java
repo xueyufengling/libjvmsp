@@ -2105,7 +2105,7 @@ public abstract class type<_T>
 					return unsafe.read_double(offset);
 				else
 				{
-					Object deref_obj = java_type.jobject_from_oop(address());
+					Object deref_obj = java_type.object_from_oop(address());
 					java_type.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
@@ -2283,47 +2283,47 @@ public abstract class type<_T>
 		/**
 		 * 基本类型包装类的拆箱
 		 * 
-		 * @param b
+		 * @param x
 		 * @return
 		 */
-		public static final byte byte_value(Object b)
+		public static final byte byte_value(Object x)
 		{
-			return ((Number) b).byteValue();
+			return ((Number) x).byteValue();
 		}
 
-		public static final char char_value(Object c)
+		public static final char char_value(Object x)
 		{
-			return ((Character) c).charValue();
+			return ((Character) x).charValue();
 		}
 
-		public static final boolean boolean_value(Object bool)
+		public static final boolean boolean_value(Object x)
 		{
-			return ((Boolean) bool).booleanValue();
+			return ((Boolean) x).booleanValue();
 		}
 
-		public static final short short_value(Object s)
+		public static final short short_value(Object x)
 		{
-			return ((Number) s).shortValue();
+			return ((Number) x).shortValue();
 		}
 
-		public static final int int_value(Object i)
+		public static final int int_value(Object x)
 		{
-			return ((Number) i).intValue();
+			return ((Number) x).intValue();
 		}
 
-		public static final float float_value(Object f)
+		public static final float float_value(Object x)
 		{
-			return ((Number) f).floatValue();
+			return ((Number) x).floatValue();
 		}
 
-		public static final long long_value(Object l)
+		public static final long long_value(Object x)
 		{
-			return ((Number) l).longValue();
+			return ((Number) x).longValue();
 		}
 
-		public static final double double_value(Object d)
+		public static final double double_value(Object x)
 		{
-			return ((Number) d).doubleValue();
+			return ((Number) x).doubleValue();
 		}
 
 		private static final HashMap<Class<?>, Long> cached_size = new HashMap<>();
@@ -2374,32 +2374,32 @@ public abstract class type<_T>
 		/**
 		 * 在已实例化的对象上再次调用构造函数，不会设置对象头，仅初始化字段。父类的构造函数也会被调用。
 		 * 
-		 * @param jobject
+		 * @param object
 		 * @param arg_types
 		 * @param args
 		 * @return
 		 */
-		public static final <T> T placement_new(T jobject, Class<?>[] arg_types, Object... args)
+		public static final <T> T placement_new(T object, Class<?>[] arg_types, Object... args)
 		{
-			Class<?> target_type = jobject.getClass();
+			Class<?> target_type = object.getClass();
 			MethodHandle constructor = symbols.constructor_method(target_type, arg_types);
 			try
 			{
-				constructor.invoke(memory.cat(jobject, args));
+				constructor.invoke(memory.cat(object, args));
 			}
 			catch (Throwable ex)
 			{
 				throw new java.lang.InternalError("placement new for " + target_type + " failed", ex);
 			}
-			return jobject;
+			return object;
 		}
 
 		@SuppressWarnings("unchecked")
-		public static final <T> T copy(T jobject)
+		public static final <T> T copy(T object)
 		{
-			Class<T> clazz = (Class<T>) jobject.getClass();
+			Class<T> clazz = (Class<T>) object.getClass();
 			T o = unsafe.allocate(clazz);
-			unsafe.memcpy(jobject, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(object, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 
@@ -2409,13 +2409,13 @@ public abstract class type<_T>
 		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址直接就是未压缩的oop，直接指向Java对象本身的内存。<br>
 		 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
 		 * 
-		 * @param _jobject
+		 * @param object
 		 * @return
 		 */
-		public static final long oop_of(Object _jobject)
+		public static final long oop_of(Object object)
 		{
 			return unsafe.pointed_to_address(new Object[]
-			{ _jobject }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
+			{ object }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
 		}
 
 		public static final long oop_of(long native_addr)
@@ -2430,7 +2430,7 @@ public abstract class type<_T>
 		 * @param addr
 		 * @return
 		 */
-		public static final Object jobject_from_oop(long addr)
+		public static final Object object_from_oop(long addr)
 		{
 			Object[] _jobjects = new Object[1];
 			unsafe.store_address(_jobjects, unsafe.ARRAY_OBJECT_BASE_OFFSET, addr);
@@ -2438,14 +2438,33 @@ public abstract class type<_T>
 		}
 
 		/**
+		 * 为oop创建一个local的handle，等价于JNIHandles::make_local(oop)。<br>
+		 * local引用本质上是个指向oop的指针。
+		 * 
+		 * @param oop 要创建local引用的oop
+		 * @return oop对应的handle，不需要的时候必须通过free()销毁
+		 */
+		public static final long local_handle(long oop)
+		{
+			long handle = unsafe.allocate(cxx_type.pvoid.size());
+			unsafe.write(handle, oop);
+			return handle;
+		}
+
+		public static final long local_handle(Object object)
+		{
+			return local_handle(oop_of(object));
+		}
+
+		/**
 		 * 获取未压缩的oop，该地址为Java对象的实际内存地址
 		 * 
-		 * @param _jobject
+		 * @param object
 		 * @return
 		 */
-		public static final long uncompressed_oop_of(Object _jobject)
+		public static final long uncompressed_oop_of(Object object)
 		{
-			return virtual_machine.decode_oop((int) oop_of(_jobject));
+			return virtual_machine.decode_oop((int) oop_of(object));
 		}
 
 		/**

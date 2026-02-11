@@ -729,7 +729,7 @@ public class jni_native_interface
 		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto();)
 		{
 			pis_copy.dereference_assign(is_copy);
-			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), java_type.oop_of(jstr), pis_copy.address());
+			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), java_type.local_handle(jstr), pis_copy.address());
 		}
 		catch (Throwable ex)
 		{

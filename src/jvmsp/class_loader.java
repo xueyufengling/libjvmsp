@@ -493,19 +493,14 @@ public class class_loader
 		load(loader, true, class_names);
 	}
 
-	public static final void load(Class<?> any_class_in_package, file_system.uri.resolver resolver, boolean init, String start_path, boolean include_subpackage)
+	public static final void load(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage)
 	{
-		List<String> class_names = reflection.class_names_in_package(any_class_in_package, resolver, start_path, include_subpackage);
+		List<String> class_names = reflection.class_names_in_package(any_class_in_package, start_path, include_subpackage);
 		ClassLoader loader = any_class_in_package.getClassLoader();
 		for (String clazz : class_names)
 		{
 			reflection.find_class(clazz, init, loader);
 		}
-	}
-
-	public static final void load(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage)
-	{
-		load(any_class_in_package, file_system.uri.resolver.DEFAULT, init, start_path, include_subpackage);
 	}
 
 	public static final void load(boolean init, String start_path, boolean include_subpackage)
