@@ -77,7 +77,7 @@ public class jni_invoke_interface
 	}
 
 	/**
-	 * 获取JNINativeInterface_的指针
+	 * 获取JNINativeInterface_的指针F
 	 * 
 	 * @param jni_version 当前的JNI版本，如果不知道则可以最低传入JNI_VERSION_1_1
 	 * @return

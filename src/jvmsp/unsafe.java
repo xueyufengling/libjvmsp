@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
+import jvmsp.type.java_type;
+
 /**
  * jdk.internal.misc.Unsafe的相关操作。 无空指针及参数检查，需要自行确保参数正确性确保不会引发JVM崩溃 注：对于final修饰的变量，基本类型和String会内联，因此修改变量内存无效
  */
@@ -1611,5 +1613,123 @@ public final class unsafe
 	public static final long get_pointed_base(long ptr)
 	{
 		return unsafe.read_long(ptr);
+	}
+
+	public static final <_T> Field first_memory_member_field(Class<_T> clazz)
+	{
+		Field[] fields = reflection.find_declared_fields(clazz);
+		if (fields.length == 0)
+			return null;
+		else
+		{
+			Field result = null;
+			long min_offset = Long.MAX_VALUE;
+			for (int idx = 0; idx < fields.length; ++idx)
+			{
+				Field current = fields[idx];
+				if (!Modifier.isStatic(current.getModifiers()))
+				{
+					long current_offset = unsafe.object_field_offset(current);
+					if (current_offset < min_offset)
+					{
+						result = current;
+						min_offset = current_offset;
+					}
+				}
+			}
+			return result;
+		}
+	}
+
+	/**
+	 * 获取内存排布中最后一个字段，按照实际内存中字段排布顺序索引。<br>
+	 * 内存中字段顺序可能有重排，不一定与声明顺序一致。<br>
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @return
+	 */
+	public static final <_T> Field last_memory_member_field(Class<_T> clazz)
+	{
+		Field[] fields = reflection.find_declared_fields(clazz);
+		if (fields.length == 0)
+			return null;
+		else
+		{
+			Field result = null;
+			long max_offset = Long.MIN_VALUE;
+			for (int idx = 0; idx < fields.length; ++idx)
+			{
+				Field current = fields[idx];
+				if (!Modifier.isStatic(current.getModifiers()))
+				{
+					long current_offset = unsafe.object_field_offset(current);
+					if (current_offset > max_offset)
+					{
+						result = current;
+						max_offset = current_offset;
+					}
+				}
+
+			}
+			return result;
+		}
+	}
+
+	/**
+	 * 获取该类型的成员字段终止偏移量
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @return 最后一个成员字段的偏移量+类型长度，该偏移量是字段末尾的下一个字节。
+	 */
+	public static final <_T> long bottom_offset(Class<_T> clazz)
+	{
+		if (clazz == Object.class)
+			return java_type.HEADER_BYTE_LENGTH;// 即便没有字段，也要计算对象头的偏移量
+		Field last = last_memory_member_field(clazz);
+		if (last == null)
+			return bottom_offset(clazz.getSuperclass());
+		else
+			return unsafe.object_field_offset(last) + java_type.sizeof(last.getType());
+	}
+
+	/**
+	 * 获取该类型的成员字段起始偏移量
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @return 该索引是第一个成员字段的第一个字节
+	 */
+	public static final <_T> long top_offset(Class<_T> clazz)
+	{
+		if (clazz == Object.class)
+			return java_type.HEADER_BYTE_LENGTH;
+		Field first = first_memory_member_field(clazz);
+		if (first == null)
+			return bottom_offset(clazz.getSuperclass());
+		else
+			return unsafe.object_field_offset(first);
+	}
+
+	/**
+	 * 复制指定类的所有字段值。<br>
+	 * 对于继承的对象，需要分别调用此方法复制所有父类的字段值。<br>
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @param src
+	 * @param dest
+	 */
+	public static final <_T> void copy_member_fields(Class<_T> clazz, _T src, _T dest)
+	{
+		long top_offset = top_offset(clazz);
+		long bottom_offset = bottom_offset(clazz);
+		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
+	}
+
+	public static final <_T> void copy_member_fields(Class<_T> clazz, _T src, _T dest, long top_offset, long bottom_offset)
+	{
+		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
 	}
 }

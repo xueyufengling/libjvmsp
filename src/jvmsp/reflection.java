@@ -1053,7 +1053,9 @@ public abstract class reflection
 	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
 	{
 		String path = file_system.classpath(any_class_in_package);
-		if (path.endsWith(file_system.JAR_EXTENSION_NAME))
+		if (path == null)
+			return List.of();
+		else if (path.endsWith(file_system.JAR_EXTENSION_NAME))
 			return file_system.class_names_in_jar(any_class_in_package, package_name, include_subpackage);
 		else
 			return file_system.class_names_local(any_class_in_package, package_name, include_subpackage);

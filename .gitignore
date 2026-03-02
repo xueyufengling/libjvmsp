@@ -2,3 +2,8 @@
 /dep/
 /.classpath
 /.project
+/jvmsp
+/META-INF
+/assets
+/pack.mcmeta
+/.gitignore
