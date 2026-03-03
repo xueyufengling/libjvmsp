@@ -1728,7 +1728,7 @@ public final class unsafe
 		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
 	}
 
-	public static final <_T> void copy_member_fields(Class<_T> clazz, _T src, _T dest, long top_offset, long bottom_offset)
+	public static final <_T> void copy_member_fields(_T src, _T dest, long top_offset, long bottom_offset)
 	{
 		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
 	}
