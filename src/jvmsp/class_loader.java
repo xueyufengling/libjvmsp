@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 
 public class class_loader
 {
@@ -493,14 +494,18 @@ public class class_loader
 		load(loader, true, class_names);
 	}
 
-	public static final void load(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage)
+	private static final void load(Class<?> any_class_in_package, boolean init, List<String> class_names)
 	{
-		List<String> class_names = reflection.class_names_in_package(any_class_in_package, start_path, include_subpackage);
 		ClassLoader loader = any_class_in_package.getClassLoader();
 		for (String clazz : class_names)
 		{
 			reflection.find_class(clazz, init, loader);
 		}
+	}
+
+	public static final void load(Class<?> any_class_in_package, boolean init, String start_path, boolean include_subpackage)
+	{
+		load(any_class_in_package, init, reflection.class_names_in_package(any_class_in_package, start_path, include_subpackage));
 	}
 
 	public static final void load(boolean init, String start_path, boolean include_subpackage)
@@ -509,15 +514,15 @@ public class class_loader
 		load(caller, init, start_path, include_subpackage);
 	}
 
-	/**
-	 * 加载并初始化类
-	 * 
-	 * @param class_names
-	 */
-	public static final void load(String start_path, boolean include_subpackage)
+	public static final void load(Class<?> any_class_in_package, Function<String, String> classpath_resolver, boolean init, String start_path, boolean include_subpackage)
+	{
+		load(any_class_in_package, init, reflection.class_names_in_package(any_class_in_package, classpath_resolver, start_path, include_subpackage));
+	}
+
+	public static final void load(Function<String, String> classpath_resolver, boolean init, String start_path, boolean include_subpackage)
 	{
 		Class<?> caller = reflection.caller_class();
-		load(caller, true, start_path, include_subpackage);
+		load(caller, classpath_resolver, init, start_path, include_subpackage);
 	}
 
 	/**

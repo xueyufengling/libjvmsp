@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import jvmsp.type.java_type;
 import sun.reflect.ReflectionFactory;
@@ -1050,15 +1051,24 @@ public abstract class reflection
 	/**
 	 * 包相关
 	 */
+	private static final List<String> class_names_in_classpath(String classpath, Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	{
+		if (classpath == null)
+			return List.of();
+		else if (classpath.endsWith(file_system.JAR_EXTENSION_NAME))
+			return file_system.class_names_in_jar(classpath, package_name, include_subpackage);
+		else
+			return file_system.class_names_local(classpath, package_name, include_subpackage);
+	}
+
 	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
 	{
-		String path = file_system.classpath(any_class_in_package);
-		if (path == null)
-			return List.of();
-		else if (path.endsWith(file_system.JAR_EXTENSION_NAME))
-			return file_system.class_names_in_jar(any_class_in_package, package_name, include_subpackage);
-		else
-			return file_system.class_names_local(any_class_in_package, package_name, include_subpackage);
+		return class_names_in_classpath(file_system.classpath(any_class_in_package), any_class_in_package, package_name, include_subpackage);
+	}
+
+	public static final List<String> class_names_in_package(Class<?> any_class_in_package, Function<String, String> classpath_resolver, String package_name, boolean include_subpackage)
+	{
+		return class_names_in_classpath(file_system.classpath(any_class_in_package, classpath_resolver), any_class_in_package, package_name, include_subpackage);
 	}
 
 	public static final List<String> class_names_in_package(String package_name, boolean include_subpackage)
@@ -1067,15 +1077,10 @@ public abstract class reflection
 		return class_names_in_package(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
-	public static final List<String> class_names_in_package(Class<?> any_class_in_package, String package_name)
-	{
-		return class_names_in_package(any_class_in_package, package_name, false);
-	}
-
-	public static final List<String> class_names_in_package(String package_name)
+	public static final List<String> class_names_in_package(Function<String, String> classpath_resolver, String package_name, boolean include_subpackage)
 	{
 		Class<?> caller = caller_class();
-		return class_names_in_package(caller, package_name);// 获取调用该方法的类
+		return class_names_in_package(caller, classpath_resolver, package_name, include_subpackage);
 	}
 
 	/**

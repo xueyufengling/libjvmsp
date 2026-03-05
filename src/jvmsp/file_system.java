@@ -19,6 +19,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
@@ -70,10 +71,21 @@ public class file_system
 		return null;
 	}
 
+	public static final String classpath(Class<?> clazz, Function<String, String> path_resolver)
+	{
+		return path_resolver.apply(classpath(clazz));
+	}
+
 	public static final String classpath()
 	{
 		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
 		return classpath(caller);
+	}
+
+	public static final String classpath(Function<String, String> path_resolver)
+	{
+		Class<?> caller = reflection.caller_class();
+		return classpath(caller, path_resolver);
 	}
 
 	/**
@@ -182,12 +194,12 @@ public class file_system
 		}
 	}
 
-	public static final List<String> class_names_local(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	public static final List<String> class_names_local(String classpath, String package_name, boolean include_subpackage)
 	{
 		List<String> class_names = new ArrayList<>();
-		file_system.filter_class(classpath(any_class_in_package), include_subpackage, (String class_full_name, Path entry) ->
+		file_system.filter_class(classpath, include_subpackage, (String class_full_name, Path entry) ->
 		{
-			if (package_name == "")// 没有包的默认空间
+			if ("".equals(package_name))// 没有包的默认空间
 			{
 				if (!class_full_name.contains("."))
 					class_names.add(class_full_name);
@@ -200,23 +212,6 @@ public class file_system
 			return true;
 		});
 		return class_names;
-	}
-
-	public static final List<String> class_names_local(String package_name, boolean include_subpackage)
-	{
-		Class<?> caller = reflection.caller_class();
-		return class_names_local(caller, package_name, include_subpackage);// 获取调用该方法的类
-	}
-
-	public static final List<String> class_names_local(Class<?> any_class_in_package, String package_name)
-	{
-		return class_names_local(any_class_in_package, package_name, false);
-	}
-
-	public static final List<String> class_names_local(String package_name)
-	{
-		Class<?> caller = reflection.caller_class();
-		return class_names_local(caller, package_name);// 获取调用该方法的类
 	}
 
 	/**
@@ -481,14 +476,13 @@ public class file_system
 	/**
 	 * 获取any_class_in_jar所在jar文件字节流
 	 * 
-	 * @param any_class_in_jar
-	 * @param resolver         路径解析器，根据URI分割为合法的文件系统路径和Entry路径
+	 * @param jar_path jar文件路径
 	 * @return
 	 * @throws FileNotFoundException
 	 */
-	public static final InputStream jar_stream(Class<?> any_class_in_jar) throws FileNotFoundException
+	public static final InputStream jar_stream(String jar_path) throws FileNotFoundException
 	{
-		return new FileInputStream(classpath(any_class_in_jar));
+		return new FileInputStream(jar_path);
 	}
 
 	public static final InputStream jar_stream(byte[] bytes)
@@ -543,12 +537,12 @@ public class file_system
 	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
 	 * @return 类名数组
 	 */
-	public static final List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	public static final List<String> class_names_in_jar(String jar_path, String package_name, boolean include_subpackage)
 	{
 		try
 		{
 			List<String> class_names = new ArrayList<>();
-			file_system.filter_class(jar_stream(any_class_in_package), package_name.replace('.', '/'), include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+			file_system.filter_class(jar_stream(jar_path), package_name.replace('.', '/'), include_subpackage, (String class_full_name, JarEntry entry, ByteArrayOutputStream bytes) ->
 			{
 				class_names.add(class_full_name);
 				return true;
@@ -557,67 +551,33 @@ public class file_system
 		}
 		catch (FileNotFoundException ex)
 		{
-			throw new java.lang.InternalError("get class names in jar of '" + any_class_in_package + "' with package '" + package_name + "' failed", ex);
+			throw new java.lang.InternalError("get class names in jar '" + jar_path + "' with package '" + package_name + "' failed", ex);
 		}
-	}
-
-	public static final List<String> class_names_in_jar(String package_name, boolean include_subpackage)
-	{
-		Class<?> caller = reflection.caller_class();
-		return class_names_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
-	}
-
-	public static final List<String> class_names_in_jar(Class<?> any_class_in_package, String package_name)
-	{
-		return class_names_in_jar(any_class_in_package, package_name, false);
-	}
-
-	public static final List<String> class_names_in_jar(String package_name)
-	{
-		Class<?> caller = reflection.caller_class();
-		return class_names_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
 	/**
 	 * 获取一个已经加载的jar文件中指定Java包下的所有类
 	 * 
-	 * @param any_class_in_package jar包内的任意一个类，这是为了获取加载jar包内加载class文件的ClassLoader
-	 * @param package_name         要获取的包名
-	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
+	 * @param jar_path           jar包路径
+	 * @param jar_class_loader   加载该jar的ClassLoader
+	 * @param package_name       要获取的包名
+	 * @param include_subpackage 是否获取该包及其所有递归子包的类名称
 	 * @return 包名数组
 	 */
-	public static final List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name, boolean include_subpackage)
+	public static final List<Class<?>> classes_in_jar(String jar_path, ClassLoader jar_class_loader, String package_name, boolean include_subpackage)
 	{
 		List<Class<?>> class_list = new ArrayList<>();
-		List<String> class_names = class_names_in_jar(any_class_in_package, package_name, include_subpackage);
-		ClassLoader class_loader = any_class_in_package.getClassLoader();
+		List<String> class_names = class_names_in_jar(jar_path, package_name, include_subpackage);
 		for (String class_name : class_names)
 			try
 			{
-				class_list.add(class_loader.loadClass(class_name));
+				class_list.add(jar_class_loader.loadClass(class_name));
 			}
 			catch (ClassNotFoundException ex)
 			{
-				throw new java.lang.InternalError("get classes in jar of '" + any_class_in_package + "' with package '" + package_name + "' failed", ex);
+				throw new java.lang.InternalError("get classes in jar '" + jar_path + "' with package '" + package_name + "' failed", ex);
 			}
 		return class_list;
-	}
-
-	public static final List<Class<?>> classes_in_jar(String package_name, boolean include_subpackage)
-	{
-		Class<?> caller = reflection.caller_class();
-		return classes_in_jar(caller, package_name, include_subpackage);// 获取调用该方法的类
-	}
-
-	public static final List<Class<?>> classes_in_jar(Class<?> any_class_in_package, String package_name)
-	{
-		return classes_in_jar(any_class_in_package, package_name, false);
-	}
-
-	public static final List<Class<?>> classes_in_jar(String package_name)
-	{
-		Class<?> caller = reflection.caller_class();
-		return classes_in_jar(caller, package_name);// 获取调用该方法的类
 	}
 
 	/**
@@ -628,30 +588,14 @@ public class file_system
 	 * @param include_subpackage   是否获取该包及其所有递归子包的类名称
 	 * @return 包名数组
 	 */
-	public static final List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class, boolean include_subpackage)
+	public static final List<Class<?>> subclasses_in_jar(String jar_path, ClassLoader jar_class_loader, String package_name, Class<?> super_class, boolean include_subpackage)
 	{
 		List<Class<?>> specified_class_list = new ArrayList<>();
-		List<Class<?>> class_list = classes_in_jar(any_class_in_package, package_name, include_subpackage);
+		List<Class<?>> class_list = classes_in_jar(jar_path, jar_class_loader, package_name, include_subpackage);
 		for (Class<?> clazz : class_list)
 			if (reflection.has_super(clazz, super_class))
 				specified_class_list.add(clazz);
 		return specified_class_list;
-	}
-
-	public static final List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class, boolean include_subpackage)
-	{
-		Class<?> caller = reflection.caller_class();
-		return subclasses_in_jar(caller, package_name, super_class, include_subpackage);// 获取调用该方法的类
-	}
-
-	public static final List<Class<?>> subclasses_in_jar(Class<?> any_class_in_package, String package_name, Class<?> super_class)
-	{
-		return subclasses_in_jar(any_class_in_package, package_name, super_class, false);
-	}
-
-	public static final List<Class<?>> subclasses_in_jar(String package_name, Class<?> super_class)
-	{
-		return subclasses_in_jar(reflection.caller_class(), package_name, super_class);// 获取调用该方法的类
 	}
 
 	// -------------------------------------------------------- foreach Operations --------------------------------------------------------------------
@@ -697,7 +641,7 @@ public class file_system
 		}
 		catch (IOException ex)
 		{
-			throw new java.lang.InternalError("foreach operation in local file system failed", ex);
+			throw new java.lang.InternalError("foreach operation in local file system '" + start_path + "' failed", ex);
 		}
 	}
 
@@ -774,7 +718,7 @@ public class file_system
 		}
 		catch (IOException ex)
 		{
-			throw new java.lang.InternalError("foreach operation in jar failed", ex);
+			throw new java.lang.InternalError("foreach file operation in '" + std_start_path + "' failed", ex);
 		}
 	}
 

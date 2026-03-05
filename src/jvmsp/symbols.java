@@ -1156,4 +1156,16 @@ public class symbols
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	public static final <_T> _T construct(Class<_T> clazz, Class<?>[] ctorTypes, Object... args)
+	{
+		try
+		{
+			return (_T) symbols.find_constructor(clazz, ctorTypes).invokeWithArguments(args);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("construct type '" + clazz + "' failed", ex);
+		}
+	}
 }
