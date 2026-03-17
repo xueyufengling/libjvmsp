@@ -89,7 +89,9 @@ public class shared_object
 	}
 
 	/**
-	 * Java内部方法加载具有JNI_OnLoad_<name>的JNI模块so库 https://github.com/openjdk/jdk/blob/14a6e928ce9a10f6d85fae8db4ce303da20bde85/src/java.base/share/native/libjava/NativeLibraries.c#L119 注：若抛出错误 java.lang.UnsatisfiedLinkError: unsupported JNI version 0x00010001 required by xxx 则说明目标的JNI版本过低，至少要JNI_VERSION_1_8； 或者未查找到符号（未找到符号默认JNI版本为JNI_VERSION_1_1，即0x00010001）
+	 * Java内部方法加载具有JNI_OnLoad_<name>的JNI模块so库。<br>
+	 * https://github.com/openjdk/jdk/blob/14a6e928ce9a10f6d85fae8db4ce303da20bde85/src/java.base/share/native/libjava/NativeLibraries.c#L119<br>
+	 * 注：若抛出错误 java.lang.UnsatisfiedLinkError: unsupported JNI version 0x00010001 required by xxx 则说明目标的JNI版本过低，至少要JNI_VERSION_1_8； 或者未查找到符号（未找到符号默认JNI版本为JNI_VERSION_1_1，即0x00010001）
 	 * 
 	 * @param native_library_impl     必须是NativeLibraryImpl对象
 	 * @param name                    库名称，不可传入空指针，否则报错
@@ -887,8 +889,6 @@ public class shared_object
 
 		public static class constraint
 		{
-			private static final long __klass_word;
-
 			private static Class<?> jdk_internal_foreign_abi_CallingSequence;
 			private static Class<?> jdk_internal_foreign_abi_Binding$Move;
 
@@ -916,7 +916,6 @@ public class shared_object
 				{
 					ex.printStackTrace();
 				}
-				__klass_word = java_type.get_klass_word(constraint.class);
 
 				CallingSequence_calleeMethodType = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "calleeMethodType", MethodType.class);
 				CallingSequence_needsReturnBuffer = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "needsReturnBuffer", boolean.class);
@@ -970,7 +969,7 @@ public class shared_object
 			 */
 			public static constraint __from(Object bindings)
 			{
-				return (constraint) java_type.cast(bindings, __klass_word);
+				return (constraint) java_type.cast(bindings, virtual_machine.host.get_klass_word(constraint.class));
 			}
 
 			public final Object calling_sequence()

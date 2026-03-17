@@ -14,27 +14,27 @@ public abstract class memory
 {
 	public static final pointer malloc(long size)
 	{
-		return pointer.to(unsafe.allocate(size));
+		return pointer.to(unsafe.malloc(size));
 	}
 
 	public static final pointer malloc(long num, Class<?> type_clazz)
 	{
-		return pointer.to(unsafe.allocate(num * java_type.sizeof(type_clazz)), cxx_type.of(type_clazz));
+		return pointer.to(unsafe.malloc(num * java_type.sizeof(type_clazz)), cxx_type.of(type_clazz));
 	}
 
 	public static final pointer malloc(long num, cxx_type type)
 	{
-		return pointer.to(unsafe.allocate(num * cxx_type.sizeof(type)), type);
+		return pointer.to(unsafe.malloc(num * cxx_type.sizeof(type)), type);
 	}
 
 	public static final pointer malloc(cxx_type type)
 	{
-		return pointer.to(unsafe.allocate(cxx_type.sizeof(type)), type);
+		return pointer.to(unsafe.malloc(cxx_type.sizeof(type)), type);
 	}
 
 	public static final pointer malloc(cxx_type... types)
 	{
-		return pointer.to(unsafe.allocate(cxx_type.sizeof(types)));
+		return pointer.to(unsafe.malloc(cxx_type.sizeof(types)));
 	}
 
 	public static final void free(pointer ptr)
@@ -49,7 +49,7 @@ public abstract class memory
 
 	public static final void memcpy(pointer ptr_dest, pointer ptr_src, long num)
 	{
-		unsafe.memcpy(null, ptr_src.address(), null, ptr_dest.address(), num);
+		unsafe.memcpy((Object) null, ptr_src.address(), (Object) null, ptr_dest.address(), num);
 	}
 
 	/**
@@ -62,8 +62,8 @@ public abstract class memory
 	public static final pointer c_str(String str, Charset cs)
 	{
 		byte[] bytes = str.getBytes(cs);
-		long cstr_addr = unsafe.allocate(bytes.length + 1);
-		unsafe.memcpy(bytes, unsafe.ARRAY_OBJECT_BASE_OFFSET, null, cstr_addr, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
+		long cstr_addr = unsafe.malloc(bytes.length + 1);
+		unsafe.memcpy(bytes, 0, cstr_addr, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
 		unsafe.write(cstr_addr + bytes.length, (byte) 0);
 		return pointer.to(cstr_addr, cxx_type._char);
 	}
@@ -84,7 +84,7 @@ public abstract class memory
 	{
 		long len = libc.strlen(cstr_addr);
 		byte[] bytes = new byte[(int) len];// 不包含结尾的'\0'
-		unsafe.memcpy(null, cstr_addr, bytes, unsafe.ARRAY_OBJECT_BASE_OFFSET, bytes.length);
+		unsafe.memcpy(cstr_addr, bytes, 0, bytes.length);
 		return new String(bytes, cs);
 	}
 

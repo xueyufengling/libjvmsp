@@ -391,7 +391,7 @@ public final class unsafe
 		}
 	}
 
-	public static final long allocate(long size)
+	public static final long malloc(long size)
 	{
 		try
 		{
@@ -439,6 +439,52 @@ public final class unsafe
 		}
 	}
 
+	public static final void memcpy(Object[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
+	{
+		memcpy((Object) src_arr, ARRAY_OBJECT_BASE_OFFSET + src_idx * java_type.object_reference_size, dest_base, dest_offset, num * java_type.object_reference_size);
+	}
+
+	public static final void memcpy(Object[] src_arr, long src_idx, Object[] dest_arr, long dest_idx, long num)
+	{
+		memcpy((Object) src_arr, ARRAY_OBJECT_BASE_OFFSET + src_idx * java_type.object_reference_size, (Object) dest_arr, ARRAY_OBJECT_BASE_OFFSET + dest_idx * java_type.object_reference_size, num * java_type.object_reference_size);
+	}
+
+	public static final void memcpy(byte[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
+	{
+		memcpy((Object) src_arr, ARRAY_BYTE_BASE_OFFSET + src_idx * java_type.byte_size, dest_base, dest_offset, num * java_type.byte_size);
+	}
+
+	public static final void memcpy(Object src_base, long src_offset, byte[] dest_arr, long dest_idx, long num)
+	{
+		memcpy(src_base, src_offset, (Object) dest_arr, ARRAY_BYTE_BASE_OFFSET + dest_idx * java_type.byte_size, num * java_type.byte_size);
+	}
+
+	/**
+	 * 从Java的byte[]数组拷贝数据到C/C++的内存地址
+	 * 
+	 * @param src_arr
+	 * @param src_idx
+	 * @param dest_addr
+	 * @param num
+	 */
+	public static final void memcpy(byte[] src_arr, long src_idx, long dest_addr, long num)
+	{
+		memcpy(src_arr, src_idx, (Object) null, dest_addr, num);
+	}
+
+	/**
+	 * 从C/C++的内存地址拷贝数据到Java的byte[]数组
+	 * 
+	 * @param src_addr
+	 * @param dest_arr
+	 * @param dest_idx
+	 * @param num
+	 */
+	public static final void memcpy(long src_addr, byte[] dest_arr, long dest_idx, long num)
+	{
+		memcpy((Object) null, src_addr, dest_arr, dest_idx, num);
+	}
+
 	/**
 	 * 获取数组的数据部分起始地址
 	 * 
@@ -476,7 +522,9 @@ public final class unsafe
 	}
 
 	/**
-	 * 存引用字段
+	 * 存引用字段。<br>
+	 * 注意：如果目标是类A的静态字段，那么需要在调用此方法改写之前先初始化A，否则A初始化会覆盖掉本方法写入的值。<br>
+	 * 使用类A才会触发类的初始化。<br>
 	 * 
 	 * @param o
 	 * @param offset
@@ -1686,7 +1734,7 @@ public final class unsafe
 	public static final <_T> long bottom_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return java_type.HEADER_BYTE_LENGTH;// 即便没有字段，也要计算对象头的偏移量
+			return virtual_machine.host.get_header_byte_length();// 即便没有字段，也要计算对象头的偏移量
 		Field last = last_memory_member_field(clazz);
 		if (last == null)
 			return bottom_offset(clazz.getSuperclass());
@@ -1704,7 +1752,7 @@ public final class unsafe
 	public static final <_T> long top_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return java_type.HEADER_BYTE_LENGTH;
+			return virtual_machine.host.get_header_byte_length();
 		Field first = first_memory_member_field(clazz);
 		if (first == null)
 			return bottom_offset(clazz.getSuperclass());

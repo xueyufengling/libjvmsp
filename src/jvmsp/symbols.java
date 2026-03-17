@@ -141,16 +141,20 @@ public class symbols
 		}
 	}
 
-	public static final MethodHandle find_initializer(Class<?> clazz)
+	/**
+	 * 查找Class的初始化方法
+	 * 
+	 * @param clazz
+	 * @return
+	 */
+	public static final MethodHandle constructor_method(Class<?> target_class, Class<?>... arg_types)
 	{
-		try
-		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, INITIALIZER_NAME, MethodType.methodType(void.class, new Class<?>[0]));
-		}
-		catch (IllegalAccessException | NoSuchMethodException ex)
-		{
-			throw new java.lang.InternalError("find initializer handle of '" + clazz + "' failed", ex);
-		}
+		Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
+		int flags = symbols.member_name_flags(member_name);
+		flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
+		flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
+		symbols.set_member_name_flags(member_name, flags);
+		return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
 	}
 
 	/**
@@ -504,9 +508,9 @@ public class symbols
 		{
 			ex.printStackTrace();
 		}
-		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "objectFieldOffset", long.class, java_lang_invoke_MemberName);
-		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldOffset", long.class, java_lang_invoke_MemberName);
-		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldBase", Object.class, java_lang_invoke_MemberName);
+		objectFieldOffset = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "objectFieldOffset", long.class, java_lang_invoke_MemberName);
+		staticFieldOffset = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldOffset", long.class, java_lang_invoke_MemberName);
+		staticFieldBase = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldBase", Object.class, java_lang_invoke_MemberName);
 		getMemberVMInfo = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "getMemberVMInfo", Object.class, java_lang_invoke_MemberName);
 	}
 
@@ -580,7 +584,6 @@ public class symbols
 	private static MethodHandle allFlagsSet;
 	private static MethodHandle anyFlagSet;
 
-	// unofficial modifier flags, used by HotSpot:
 	public static final int BRIDGE;
 	public static final int VARARGS;
 	public static final int SYNTHETIC;
@@ -591,19 +594,17 @@ public class symbols
 	private static MethodHandle isVarargs;
 	private static MethodHandle isSynthetic;
 
-	public static final String INITIALIZER_NAME = "<cinit>";
-	public static final String CONSTRUCTOR_NAME; // the ever-popular
+	public static final String INITIALIZER_NAME = "<clinit>";
+	public static final String CONSTRUCTOR_NAME;
 
-	// modifiers exported by the JVM:
 	public static final int RECOGNIZED_MODIFIERS;
 
-	// private flags, not part of RECOGNIZED_MODIFIERS:
-	public static final int IS_METHOD, // method (not constructor)
-			IS_CONSTRUCTOR, // constructor
-			IS_FIELD, // field
-			IS_TYPE, // nested type
-			CALLER_SENSITIVE, // @CallerSensitive annotation detected
-			TRUSTED_FINAL; // trusted final field
+	public static final int IS_METHOD,
+			IS_CONSTRUCTOR,
+			IS_FIELD,
+			IS_TYPE,
+			CALLER_SENSITIVE,
+			TRUSTED_FINAL;
 
 	public static final int ALL_ACCESS;
 	public static final int ALL_KINDS;
@@ -978,7 +979,7 @@ public class symbols
 	}
 
 	/**
-	 * 在一个对象上进行初始化
+	 * 在一个MemberName对象上进行初始化。<br>
 	 * 
 	 * @param member_name
 	 * @param def_class
@@ -1041,7 +1042,7 @@ public class symbols
 	 * @param arg_types
 	 * @return
 	 */
-	public static final MethodHandle constructor_method(Class<?> target_class, Class<?>... arg_types)
+	public static final MethodHandle initializer_method(Class<?> target_class, Class<?>... arg_types)
 	{
 		Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
 		int flags = symbols.member_name_flags(member_name);

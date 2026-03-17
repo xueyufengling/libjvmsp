@@ -1055,6 +1055,19 @@ public abstract class type<_T>
 		public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", false, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type size_t = cxx_type.define_primitive("size_t", false, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
 
+		public static class array_type extends cxx_type
+		{
+			protected array_type(String array_type_name, cxx_type type, int size)
+			{
+				super(array_type_name, false, size * type.size(), MemoryLayout.sequenceLayout(size, type.memory_layout()));
+			}
+
+			protected array_type(cxx_type type, int size)
+			{
+				this(type.typename() + '[' + size + ']', type, size);
+			}
+		}
+
 		/**
 		 * 函数类型
 		 */
@@ -1500,6 +1513,7 @@ public abstract class type<_T>
 		public static final cxx_type jchar = define_primitive("jchar", false, sizeof(uint16_t), ValueLayout.JAVA_CHAR);
 		public static final cxx_type jshort = define_primitive("jshort", true, sizeof(int16_t), ValueLayout.JAVA_SHORT);
 		public static final cxx_type jint = define_primitive("jint", true, sizeof(int32_t), ValueLayout.JAVA_INT);
+		public static final cxx_type juint = define_primitive("juint", true, sizeof(int32_t), ValueLayout.JAVA_INT);
 		public static final cxx_type jsize = typedef(jint, "jsize");
 		public static final cxx_type jlong = define_primitive("jlong", true, sizeof(int64_t), ValueLayout.JAVA_LONG);
 		public static final cxx_type jfloat = define_primitive("jfloat", true, sizeof(_float), ValueLayout.JAVA_FLOAT);
@@ -1634,11 +1648,6 @@ public abstract class type<_T>
 			 * C++的nullptr一定是0
 			 */
 			public static final pointer nullptr = pointer.to(0);
-
-			/**
-			 * Java的null地址，对应堆内存的基地址0偏移处。堆内存起始地址并不一定是0.
-			 */
-			public static final pointer jnull = pointer.to(java_type.oop_of(null));
 
 			public long address()
 			{
@@ -2106,7 +2115,7 @@ public abstract class type<_T>
 				else
 				{
 					Object deref_obj = java_type.object_from_oop(address());
-					java_type.set_klass_word(deref_obj, ref_type_klass_word);
+					virtual_machine.host.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
 			}
@@ -2142,7 +2151,7 @@ public abstract class type<_T>
 				if (!java_type.is_primitive(dest_type))
 				{
 					// 每次cast()的时候更新目标对象的类型
-					ref_type_klass_word = java_type.get_klass_word(dest_type);
+					ref_type_klass_word = virtual_machine.host.get_klass_word(dest_type);
 				}
 				return this;
 			}
@@ -2203,7 +2212,7 @@ public abstract class type<_T>
 				else if (type == double.class)
 					unsafe.write(base, offset, java_type.double_value(v));
 				else
-					unsafe.memcpy(v, java_type.HEADER_BYTE_LENGTH, base, java_type.HEADER_BYTE_LENGTH, java_type.sizeof_object(v.getClass()) - java_type.HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+					unsafe.memcpy(v, virtual_machine.host.get_header_byte_length(), base, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 				return this;
 			}
 		}
@@ -2223,6 +2232,14 @@ public abstract class type<_T>
 		/**
 		 * 在32位JVM或64位JVM中UseCompressedOops开启的情况下，对象引用占4字节
 		 */
+		public static final long byte_size = 1;
+		public static final long boolean_size = 1;
+		public static final long short_size = 2;
+		public static final long char_size = 2;
+		public static final long int_size = 4;
+		public static final long long_size = 8;
+		public static final long float_size = 4;
+		public static final long double_size = 8;
 		public static final long object_reference_size;
 
 		static
@@ -2268,14 +2285,22 @@ public abstract class type<_T>
 		{
 			if (type == void.class)
 				return 0;
-			else if (type == byte.class || type == boolean.class)
-				return 1;
-			else if (type == short.class || type == char.class)
-				return 2;
-			else if (type == int.class || type == float.class)
-				return 4;
-			else if (type == long.class || type == double.class)
-				return 8;
+			else if (type == byte.class)
+				return byte_size;
+			else if (type == boolean.class)
+				return boolean_size;
+			else if (type == short.class)
+				return short_size;
+			else if (type == char.class)
+				return char_size;
+			else if (type == int.class)
+				return int_size;
+			else if (type == float.class)
+				return float_size;
+			else if (type == long.class)
+				return long_size;
+			else if (type == double.class)
+				return double_size;
 			else
 				return object_reference_size;
 		}
@@ -2399,14 +2424,14 @@ public abstract class type<_T>
 		{
 			Class<T> clazz = (Class<T>) object.getClass();
 			T o = unsafe.allocate(clazz);
-			unsafe.memcpy(object, HEADER_BYTE_LENGTH, o, HEADER_BYTE_LENGTH, java_type.sizeof_object(clazz) - HEADER_BYTE_LENGTH);// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(object, virtual_machine.host.get_header_byte_length(), o, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 
 		/**
 		 * 获取对象（压缩后的）的oop，返回long<br>
 		 * 利用Object[]的元素为oop指针的事实来间接取oop。<br>
-		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址直接就是未压缩的oop，直接指向Java对象本身的内存。<br>
+		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址是未压缩的oop，直接指向Java对象本身的内存（对象头）。<br>
 		 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
 		 * 
 		 * @param object
@@ -2420,7 +2445,7 @@ public abstract class type<_T>
 
 		public static final long oop_of(long native_addr)
 		{
-			return virtual_machine.encode_oop(native_addr);
+			return virtual_machine.host.encode_oop(native_addr);
 		}
 
 		/**
@@ -2438,25 +2463,6 @@ public abstract class type<_T>
 		}
 
 		/**
-		 * 为oop创建一个local的handle，等价于JNIHandles::make_local(oop)。<br>
-		 * local引用本质上是个指向oop的指针。
-		 * 
-		 * @param oop 要创建local引用的oop
-		 * @return oop对应的handle，不需要的时候必须通过free()销毁
-		 */
-		public static final long local_handle(long oop)
-		{
-			long handle = unsafe.allocate(cxx_type.pvoid.size());
-			unsafe.write(handle, oop);
-			return handle;
-		}
-
-		public static final long local_handle(Object object)
-		{
-			return local_handle(oop_of(object));
-		}
-
-		/**
 		 * 获取未压缩的oop，该地址为Java对象的实际内存地址
 		 * 
 		 * @param object
@@ -2464,343 +2470,28 @@ public abstract class type<_T>
 		 */
 		public static final long uncompressed_oop_of(Object object)
 		{
-			return virtual_machine.decode_oop((int) oop_of(object));
-		}
-
-		/**
-		 * markWord
-		 */
-
-		private static abstract class __obj_header_base
-		{
-			// public static final void
-		}
-
-	// @formatter:off
-	/**
-	* 对象头的结构<br>
-	* Object Header由Mark Word和Klass Word组成<br>
-	* ObjectHeader 32-bit JVM<br>
-	* |----------------------------------------------------------------------------------------|--------------------|<br>
-	* |                                    Object Header (64 bits)                             |        State       |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* |                  Mark Word (32 bits)                  |      Klass Word (32 bits)      |                    |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* | identity_hashcode:25 | age:4 | biased_lock:1 | lock:2 |      OOP to metadata object    |       Normal       |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* |  thread:23 | epoch:2 | age:4 | biased_lock:1 | lock:2 |      OOP to metadata object    |       Biased       |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* |               ptr_to_lock_record:30          | lock:2 |      OOP to metadata object    | Lightweight Locked |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* |               ptr_to_heavyweight_monitor:30  | lock:2 |      OOP to metadata object    | Heavyweight Locked |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	* |                                              | lock:2 |      OOP to metadata object    |    Marked for GC   |<br>
-	* |-------------------------------------------------------|--------------------------------|--------------------|<br>
-	*/
-	// @formatter:on
-		@SuppressWarnings("unused")
-		private static final class __32_bit extends __obj_header_base
-		{
-			// 32位JVM无OOP指针压缩
-			public static final int HEADER_OFFSET = 0;
-			public static final int HEADER_LENGTH = 64;
-
-			public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-			public static final int MARKWORD_LENGTH = 32;
-			public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-			public static final int KLASS_LENGTH = 32;
-
-			public static final int IDENTITY_HASHCODE_OFFSET = MARKWORD_OFFSET;
-			public static final int IDENTITY_HASHCODE_LENGTH = 25;
-			public static final int AGE_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-			public static final int AGE_LENGTH = 4;
-			public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-			public static final int BIASED_LOCK_LENGTH = 1;
-
-			public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-			public static final int LOCK_LENGTH = 2;
-
-			public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-			public static final int THREAD_LENGTH = 23;
-			public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-			public static final int EPOCH_LENGTH = 2;
-
-			public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_LOCK_RECORD_LENGTH = 30;
-
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 30;
-		}
-
-	// @formatter:off
-	/**
-	* ObjectHeader 64-bit JVM<br>
-	* |------------------------------------------------------------------------------------------------------------|--------------------|<br>
-	* |                                            Object Header (128 bits)                                        |        State       |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                                  Mark Word (64 bits)                         |    Klass Word (64 bits)     |                    |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* | unused:25 | identity_hashcode:31 | unused:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Normal       |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* | thread:54 |       epoch:2        | unused:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Biased       |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                       ptr_to_lock_record:62                         | lock:2 |    OOP to metadata object   | Lightweight Locked |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                     ptr_to_heavyweight_monitor:62                   | lock:2 |    OOP to metadata object   | Heavyweight Locked |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                                                                     | lock:2 |    OOP to metadata object   |    Marked for GC   |<br>
-	* |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	*/
-	// @formatter:on
-		@SuppressWarnings("unused")
-		private static final class __64_bit_no_UseCompressedOops extends __obj_header_base
-		{
-
-			// 64位JVM无OOP指针压缩
-			public static final int HEADER_OFFSET = 0;
-			public static final int HEADER_LENGTH = 128;
-
-			public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-			public static final int MARKWORD_LENGTH = 64;
-			public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-			public static final int KLASS_LENGTH = 64;
-
-			public static final int UNUSED_1_NORMAL_OFFSET = MARKWORD_OFFSET;
-			public static final int UNUSED_1_NORMAL_LENGTH = 25;
-			public static final int IDENTITY_HASHCODE_OFFSET = UNUSED_1_NORMAL_OFFSET + UNUSED_1_NORMAL_LENGTH;
-			public static final int IDENTITY_HASHCODE_LENGTH = 31;
-			public static final int UNUSED_2_NORMAL_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-			public static final int UNUSED_2_NORMAL_LENGTH = 1;
-			public static final int AGE_OFFSET = UNUSED_2_NORMAL_OFFSET + UNUSED_2_NORMAL_LENGTH;
-			public static final int AGE_LENGTH = 4;
-			public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-			public static final int BIASED_LOCK_LENGTH = 1;
-			public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-			public static final int LOCK_LENGTH = 2;
-
-			public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-			public static final int THREAD_LENGTH = 54;
-			public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-			public static final int EPOCH_LENGTH = 2;
-			public static final int UNUSED_1_BIASED_OFFSET = EPOCH_OFFSET + EPOCH_LENGTH;
-			public static final int UNUSED_1_BIASED_LENGTH = 1;
-
-			public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_LOCK_RECORD_LENGTH = 62;
-
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 62;
-		}
-
-	// @formatter:off
-	/** <br>
-	* ObjectHeader 64-bit JVM UseCompressedOops=true<br>
-	* |--------------------------------------------------------------------------------------------------------------|--------------------|<br>
-	* |                                            Object Header (96 bits)                                           |        State       |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                                  Mark Word (64 bits)                           |    Klass Word (32 bits)     |                    |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* | unused:25 | identity_hashcode:31 | cms_free:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Normal       |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* | thread:54 |       epoch:2        | cms_free:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Biased       |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                         ptr_to_lock_record                            | lock:2 |    OOP to metadata object   | Lightweight Locked |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                     ptr_to_heavyweight_monitor                        | lock:2 |    OOP to metadata object   | Heavyweight Locked |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	* |                                                                       | lock:2 |    OOP to metadata object   |    Marked for GC   |<br>
-	* |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-	 */
-	// @formatter:on
-		@SuppressWarnings("unused")
-		private static final class __64_bit_with_UseCompressedOops extends __obj_header_base
-		{
-			// 64位JVM开启OOP指针压缩，JVM默认是开启的
-			public static final int HEADER_OFFSET = 0;
-			public static final int HEADER_LENGTH = 96;
-
-			public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-			public static final int MARKWORD_LENGTH = 64;
-			public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-			public static final int KLASS_LENGTH = 32;
-
-			public static final int UNUSED_1_NORMAL_OFFSET = MARKWORD_OFFSET;
-			public static final int UNUSED_1_NORMAL_LENGTH = 25;
-			public static final int IDENTITY_HASHCODE_OFFSET = UNUSED_1_NORMAL_OFFSET + UNUSED_1_NORMAL_LENGTH;
-			public static final int IDENTITY_HASHCODE_LENGTH = 31;
-			public static final int CMS_FREE_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-			public static final int CMS_FREE_LENGTH = 1;
-			public static final int AGE_OFFSET = CMS_FREE_OFFSET + CMS_FREE_LENGTH;
-			public static final int AGE_LENGTH = 4;
-			public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-			public static final int BIASED_LOCK_LENGTH = 1;
-			public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-			public static final int LOCK_LENGTH = 2;
-
-			public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-			public static final int THREAD_LENGTH = 54;
-			public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-			public static final int EPOCH_LENGTH = 2;
-
-			public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_LOCK_RECORD_LENGTH = 62;
-
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-			public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 62;
-
-		}
-
-		public static final int INVALID_OFFSET = -1;
-		public static final int INVALID_LENGTH = -1;
-
-		/**
-		 * Mark Word的长度，单位bit
-		 */
-		public static final int MARKWORD_LENGTH;
-
-		/**
-		 * Klass Word的偏移量，单位bit
-		 */
-		public static final int KLASS_WORD_OFFSET;
-
-		/**
-		 * Klass Word的长度，单位bit
-		 */
-		public static final int KLASS_WORD_LENGTH;
-
-		public static final int HEADER_LENGTH;
-
-		/**
-		 * Mark Word的长度，单位byte
-		 */
-		public static final int MARKWORD_BYTE_LENGTH;
-
-		/**
-		 * Klass Word的偏移量，单位byte
-		 */
-		public static final int KLASS_WORD_BYTE_OFFSET;
-
-		/**
-		 * Klass Word的长度，单位byte
-		 */
-		public static final int KLASS_WORD_BYTE_LENGTH;
-
-		/**
-		 * header总长度
-		 */
-		public static final int HEADER_BYTE_LENGTH;
-
-		static
-		{
-			if (virtual_machine.JVM_BIT_VERSION == 32)
-			{
-				MARKWORD_LENGTH = __32_bit.MARKWORD_LENGTH;
-				KLASS_WORD_OFFSET = __32_bit.KLASS_OFFSET;
-				KLASS_WORD_LENGTH = __32_bit.KLASS_LENGTH;
-				HEADER_LENGTH = __32_bit.HEADER_LENGTH;
-			}
-			else if (virtual_machine.JVM_BIT_VERSION == 64)
-			{
-				if (virtual_machine.UseCompressedOops)
-				{
-					MARKWORD_LENGTH = __64_bit_with_UseCompressedOops.MARKWORD_LENGTH;
-					KLASS_WORD_OFFSET = __64_bit_with_UseCompressedOops.KLASS_OFFSET;
-					KLASS_WORD_LENGTH = __64_bit_with_UseCompressedOops.KLASS_LENGTH;
-					HEADER_LENGTH = __64_bit_with_UseCompressedOops.HEADER_LENGTH;
-				}
-				else
-				{
-					MARKWORD_LENGTH = __64_bit_no_UseCompressedOops.MARKWORD_LENGTH;
-					KLASS_WORD_OFFSET = __64_bit_no_UseCompressedOops.KLASS_OFFSET;
-					KLASS_WORD_LENGTH = __64_bit_no_UseCompressedOops.KLASS_LENGTH;
-					HEADER_LENGTH = __64_bit_no_UseCompressedOops.HEADER_LENGTH;
-				}
-			}
-			else
-			{
-				throw new java.lang.InternalError("unknown native jvm bit-version '" + virtual_machine.JVM_BIT_VERSION + "'");
-			}
-			MARKWORD_BYTE_LENGTH = MARKWORD_LENGTH / 8;
-			KLASS_WORD_BYTE_OFFSET = KLASS_WORD_OFFSET / 8;
-			KLASS_WORD_BYTE_LENGTH = KLASS_WORD_LENGTH / 8;
-			HEADER_BYTE_LENGTH = HEADER_LENGTH / 8;
-		}
-
-		public static final long get_klass_word(Class<?> c)
-		{
-			return get_klass_word(unsafe.allocate(c));
-		}
-
-		/**
-		 * 获取对象头
-		 * 
-		 * @param obj
-		 * @return
-		 */
-		public static final long get_klass_word(Object obj)
-		{
-			if (KLASS_WORD_LENGTH == 32)
-				return unsafe.read_int(obj, KLASS_WORD_BYTE_OFFSET);
-			else if (KLASS_WORD_LENGTH == 64)
-				return unsafe.read_long(obj, KLASS_WORD_BYTE_OFFSET);
-			else
-				throw new java.lang.InternalError("get klass word of '" + obj + "' failed");
-		}
-
-		/**
-		 * 强制改写对象头
-		 * 
-		 * @param obj
-		 * @param klass_word
-		 * @return
-		 */
-		public static final void set_klass_word(Object obj, long klass_word)
-		{
-			if (KLASS_WORD_LENGTH == 32)
-			{
-				unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, (int) klass_word);
-			}
-			else if (KLASS_WORD_LENGTH == 64)
-			{
-				unsafe.write(obj, KLASS_WORD_BYTE_OFFSET, klass_word);
-			}
-			else
-				throw new java.lang.InternalError("set klass word of '" + obj + "' failed");
-		}
-
-		public static final void set_klass_word(long obj_base, long klass_word)
-		{
-			if (KLASS_WORD_LENGTH == 32)
-			{
-				unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, (int) klass_word);
-			}
-			else if (KLASS_WORD_LENGTH == 64)
-			{
-				unsafe.write(null, obj_base + KLASS_WORD_BYTE_OFFSET, klass_word);
-			}
-			else
-				throw new java.lang.InternalError("set klass word of '" + obj_base + "' to '" + klass_word + "' failed");
+			return virtual_machine.host.object_address_from_oop((int) oop_of(object));
 		}
 
 		public static final Object cast(Object obj, long cast_type_klass_word)
 		{
-			set_klass_word(obj, cast_type_klass_word);
+			virtual_machine.host.set_klass_word(obj, cast_type_klass_word);
 			return obj;
 		}
 
 		public static final Object cast(Object obj, Object cast_type_obj)
 		{
-			return cast(obj, get_klass_word(cast_type_obj));
+			return cast(obj, virtual_machine.host.get_klass_word(cast_type_obj));
 		}
 
 		public static final Object cast(Object obj, Class<?> cast_type)
 		{
-			return cast(obj, get_klass_word(cast_type));
+			return cast(obj, virtual_machine.host.get_klass_word(cast_type));
 		}
 
 		public static final Object cast(Object obj, String cast_type)
 		{
-			return cast(obj, get_klass_word(cast_type));
+			return cast(obj, virtual_machine.host.get_klass_word(cast_type));
 		}
 
 		@SuppressWarnings("unchecked")
@@ -2811,7 +2502,6 @@ public abstract class type<_T>
 
 		/**
 		 * 安全的强制转换，没有继承关系的独立类的转换会抛出Exception。<br>
-		 * 主要用于Mixin。<br>
 		 * 
 		 * @param obj
 		 * @param cast_type
@@ -2821,60 +2511,6 @@ public abstract class type<_T>
 		public static final <_T> _T safe_cast(Object obj, Class<_T> cast_type)
 		{
 			return (_T) (Object) obj;
-		}
-
-		/**
-		 * 对象layout类型
-		 */
-		public static enum object_layout
-		{
-			/**
-			 * JDK 24+<br>
-			 * 开启对象头压缩，包含压缩klass pointer，即+UseCompressedClassPointers<br>
-			 * +UseCompactObjectHeaders
-			 */
-			Compact,
-			/**
-			 * 压缩klass pointer，但不压缩对象头<br>
-			 * +UseCompressedClassPointers -UseCompactObjectHeaders
-			 */
-			Compressed,
-			/**
-			 * 未压缩klass pointer，也未压缩对象头<br>
-			 * -UseCompressedClassPointers -UseCompactObjectHeaders
-			 */
-			Uncompressed,
-			/**
-			 * 未定义
-			 */
-			Undefined
-		}
-
-		public static final object_layout _KLASS_MODE;
-		public static final long _OBJECT_HEADER_BASE_OFFSET;
-		public static final boolean _OOP_HAS_KLASS_GAP;
-
-		static
-		{
-			if (virtual_machine.UseCompactObjectHeaders)
-			{
-				_KLASS_MODE = object_layout.Compact;
-				_OOP_HAS_KLASS_GAP = false;
-			}
-			else
-			{
-				if (virtual_machine.UseCompressedClassPointers)
-				{
-					_KLASS_MODE = object_layout.Compressed;
-					_OOP_HAS_KLASS_GAP = true;
-				}
-				else
-				{
-					_KLASS_MODE = object_layout.Uncompressed;
-					_OOP_HAS_KLASS_GAP = false;
-				}
-			}
-			_OBJECT_HEADER_BASE_OFFSET = java_type.HEADER_BYTE_LENGTH;
 		}
 
 		/**
@@ -2914,18 +2550,6 @@ public abstract class type<_T>
 		public static final <T> T undefined(Object obj, String cast_type)
 		{
 			return (T) java_type.cast(new Object(), cast_type);
-		}
-
-		/**
-		 * 防止Object类型的static final变量初始null字面值被内联<br>
-		 * 当跨类修改目标类字段，且static final Object被初始化为null字面值时：如果不在修改之前在本类使用这个变量，那么这个值的修改就不会成功（会被内联）。
-		 * 
-		 * @param var
-		 * @return
-		 */
-		public static final void not_inlined(Object var)
-		{
-
 		}
 
 		/**

@@ -729,7 +729,7 @@ public class jni_native_interface
 		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto();)
 		{
 			pis_copy.dereference_assign(is_copy);
-			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), java_type.local_handle(jstr), pis_copy.address());
+			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), jni_handles.make_local(jstr), pis_copy.address());
 		}
 		catch (Throwable ex)
 		{
@@ -787,6 +787,24 @@ public class jni_native_interface
 		catch (Throwable ex)
 		{
 			throw new java.lang.InternalError("call JNINativeInterface_::FatalError() failed", ex);
+		}
+	}
+
+	/**
+	 * 获取JVM层面的静态方法的Method*指针
+	 * 
+	 * @param msg
+	 */
+	public final long get_static_method_id(Class<?> clazz, String name, String sig)
+	{
+		try (pointer cname = memory.c_str(name).auto();
+				pointer csig = memory.c_str(sig).auto())
+		{
+			return (long) GetStaticMethodID.invokeExact(JNINativeInterface_base.address(), jni_handles.make_local(clazz), cname.address(), csig.address());
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call JNINativeInterface_::GetStaticMethodID() failed", ex);
 		}
 	}
 }
