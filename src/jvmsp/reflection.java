@@ -1055,7 +1055,7 @@ public abstract class reflection
 	{
 		if (classpath == null)
 			return List.of();
-		else if (classpath.endsWith(file_system.JAR_EXTENSION_NAME))
+		else if (classpath.endsWith(file_system.jar_extension_name))
 			return file_system.class_names_in_jar(classpath, package_name, include_subpackage);
 		else
 			return file_system.class_names_local(classpath, package_name, include_subpackage);
@@ -1178,7 +1178,7 @@ public abstract class reflection
 		 */
 		public void operate(AnnotatedElement ae);
 
-		public static annotation_replace_operation NONE = (ae) ->
+		public static annotation_replace_operation none = (ae) ->
 		{
 		};
 	}

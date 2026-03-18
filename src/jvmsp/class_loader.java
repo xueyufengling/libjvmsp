@@ -18,7 +18,7 @@ public class class_loader
 	private static MethodHandle ClassLoader_defineClass;
 	private static MethodHandle ClassLoader_findClass;
 
-	public static final String DEFAULT_PARENT_CLASS_LOADER_NAME = "parent";
+	public static final String default_parent_class_loader_name = "parent";
 
 	static
 	{
@@ -93,12 +93,12 @@ public class class_loader
 
 		public proxy(ClassLoader dest, bytecode_source source)
 		{
-			this(dest, DEFAULT_PARENT_CLASS_LOADER_NAME, source);
+			this(dest, default_parent_class_loader_name, source);
 		}
 
 		public proxy(ClassLoader dest, HashMap<String, byte[]> undefined_class)
 		{
-			this(dest, DEFAULT_PARENT_CLASS_LOADER_NAME, undefined_class);
+			this(dest, default_parent_class_loader_name, undefined_class);
 		}
 
 		@Override
@@ -245,7 +245,7 @@ public class class_loader
 		as_bootstrap(e.getDeclaringClass());
 	}
 
-	private static final iterate_on_write_list<class_definition> class_defs = new iterate_on_write_list<>();
+	private static final instant_iterate_list<class_definition> class_defs = new instant_iterate_list<>();
 
 	public static final void define(Collection<class_definition> defs) throws Throwable
 	{
@@ -316,7 +316,7 @@ public class class_loader
 	 */
 	public static final ClassLoader parent(ClassLoader loader)
 	{
-		return parent(loader, ClassLoader.class, DEFAULT_PARENT_CLASS_LOADER_NAME);
+		return parent(loader, ClassLoader.class, default_parent_class_loader_name);
 	}
 
 	/**
@@ -347,7 +347,7 @@ public class class_loader
 	 */
 	public static final ClassLoader set_parent(ClassLoader target, ClassLoader parent)
 	{
-		return set_parent(target, ClassLoader.class, DEFAULT_PARENT_CLASS_LOADER_NAME, parent);
+		return set_parent(target, ClassLoader.class, default_parent_class_loader_name, parent);
 	}
 
 	public static final Class<?> define(ClassLoader loader, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, String source)
@@ -583,7 +583,7 @@ public class class_loader
 	 */
 	public static final ClassLoader load_jar(ClassLoader loader, InputStream... jars)
 	{
-		return class_loader.proxy.attach(loader, DEFAULT_PARENT_CLASS_LOADER_NAME, file_system.collect_class(jars));
+		return class_loader.proxy.attach(loader, default_parent_class_loader_name, file_system.collect_class(jars));
 	}
 
 	public static final ClassLoader load_jar(ClassLoader loader, byte[]... multi_jar_bytes)
@@ -601,7 +601,7 @@ public class class_loader
 	 */
 	public static final ClassLoader load_jar(ClassLoader loader, String package_name, boolean include_subpackage, InputStream... jars)
 	{
-		return class_loader.proxy.attach(loader, DEFAULT_PARENT_CLASS_LOADER_NAME, file_system.collect_class(package_name, include_subpackage, jars));
+		return class_loader.proxy.attach(loader, default_parent_class_loader_name, file_system.collect_class(package_name, include_subpackage, jars));
 	}
 
 	public static final ClassLoader load_jar(ClassLoader loader, String package_name, boolean include_subpackage, byte[]... multi_jar_bytes)

@@ -428,7 +428,7 @@ public class class_operation
 		 */
 		public boolean condition(AnnotatedElement scanned_ae);
 
-		public static final filter RESERVE_ALL = (AnnotatedElement scanned_ae) -> true;
+		public static final filter reserve_all = (AnnotatedElement scanned_ae) -> true;
 
 		@FunctionalInterface
 		public static interface _class
@@ -441,7 +441,7 @@ public class class_operation
 			 */
 			public boolean condition(Class<?> scanned_clazz);
 
-			public static final _class RESERVE_ALL = (Class<?> scanned_clazz) -> true;
+			public static final _class reserve_all = (Class<?> scanned_clazz) -> true;
 		}
 	}
 
@@ -478,7 +478,7 @@ public class class_operation
 
 	public static final ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader)
 	{
-		return scan_annotated_elements(loader, filter.RESERVE_ALL);
+		return scan_annotated_elements(loader, filter.reserve_all);
 	}
 
 	/**
@@ -517,7 +517,7 @@ public class class_operation
 
 	public static final <_T> ArrayList<AnnotatedElement> scan_annotated_elements(ClassLoader loader, Class<_T> annotation_clazz)
 	{
-		return scan_annotated_elements(loader, annotation_clazz, filter.RESERVE_ALL);
+		return scan_annotated_elements(loader, annotation_clazz, filter.reserve_all);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -544,6 +544,6 @@ public class class_operation
 
 	public static final <_T> ArrayList<AnnotatedElement> scan_annotated_classes(ClassLoader loader, Class<_T> annotation_clazz)
 	{
-		return scan_annotated_elements(loader, annotation_clazz, filter._class.RESERVE_ALL);
+		return scan_annotated_elements(loader, annotation_clazz, filter._class.reserve_all);
 	}
 }

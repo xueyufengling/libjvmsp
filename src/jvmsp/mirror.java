@@ -62,11 +62,11 @@ public interface mirror<_Mirror> extends java_type._crtp<_Mirror>
 		 * 该镜像注解的目标注解是否是系统注解，默认为true。<br>
 		 * 该接口的存在目的就是为了伪造并转换成系统注解。
 		 */
-		public static final boolean DEFAULT_IS_DEST_SYSTEM_ANNOTATION = true;
+		public static final boolean default_is_dest_system_annotation = true;
 
 		public default boolean is_system()
 		{
-			return DEFAULT_IS_DEST_SYSTEM_ANNOTATION;
+			return default_is_dest_system_annotation;
 		}
 
 		/**

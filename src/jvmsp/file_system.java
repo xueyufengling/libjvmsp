@@ -28,14 +28,14 @@ import java.util.stream.Stream;
 public class file_system
 {
 
-	public static final int DEFAULT_BUFFER_SIZE = 1024;
+	public static final int default_buffer_size = 1024;
 
 	public static final boolean is_root(String dir)
 	{
 		return dir == null || dir.equals("") || dir.equals("/");
 	}
 
-	public static final String CLASS_EXTENSION_NAME = ".class";
+	public static final String class_extension_name = ".class";
 
 	/**
 	 * 如果any_class打包在jar内，则获取jar文件的路径。<br>
@@ -296,7 +296,7 @@ public class file_system
 		}
 	}
 
-	public static final String JAR_EXTENSION_NAME = ".jar";
+	public static final String jar_extension_name = ".jar";
 
 	// ------------------------------------------------------------ Internal Utils ----------------------------------------------------------------------------
 
@@ -363,7 +363,7 @@ public class file_system
 			while ((entry = jar_stream.getNextJarEntry()) != null)
 			{
 				if (entry.getName().equals(path))
-					data = jar_entry_data.from(entry, get_jar_entry_bytes(jar_stream, file_system.DEFAULT_BUFFER_SIZE).toByteArray());
+					data = jar_entry_data.from(entry, get_jar_entry_bytes(jar_stream, file_system.default_buffer_size).toByteArray());
 			}
 		}
 		return data;
@@ -614,7 +614,7 @@ public class file_system
 			JarEntry entry = null;
 			while ((entry = jar_stream.getNextJarEntry()) != null)
 			{
-				op.operate(entry, get_jar_entry_bytes(jar_stream, DEFAULT_BUFFER_SIZE));
+				op.operate(entry, get_jar_entry_bytes(jar_stream, default_buffer_size));
 			}
 		}
 		catch (IOException ex)
@@ -989,10 +989,10 @@ public class file_system
 	// ----------------------------------------------------------------- Class --------------------------------------------------------------------------
 	public static final void filter_class(InputStream jar, jar_entry_operation._class op)
 	{
-		filter_type(jar, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		filter_type(jar, class_extension_name, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
 		{
 			String full_path = entry.getName();
-			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
+			op.operate(full_path.substring(0, full_path.length() - class_extension_name.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
@@ -1005,20 +1005,20 @@ public class file_system
 	// ------------
 	public static final void filter_class(InputStream jar, String start_path, boolean include_subpackage, jar_entry_operation._class op)
 	{
-		filter_type(jar, start_path, include_subpackage, CLASS_EXTENSION_NAME, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
+		filter_type(jar, start_path, include_subpackage, class_extension_name, (String file_dir, String file_name, JarEntry entry, ByteArrayOutputStream bytes) ->
 		{
 			String full_path = entry.getName();
-			op.operate(full_path.substring(0, full_path.length() - CLASS_EXTENSION_NAME.length()).replace('/', '.'), entry, bytes);
+			op.operate(full_path.substring(0, full_path.length() - class_extension_name.length()).replace('/', '.'), entry, bytes);
 			return true;
 		});
 	}
 
 	public static final void filter_class(String start_path, boolean include_subpackage, file_entry_operation._class op)
 	{
-		filter_type(start_path, include_subpackage, CLASS_EXTENSION_NAME, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
+		filter_type(start_path, include_subpackage, class_extension_name, (String start_root_path, String relative_file_dir, String file_name, Path entry) ->
 		{
 
-			String simple_name = file_name.substring(0, file_name.length() - CLASS_EXTENSION_NAME.length());
+			String simple_name = file_name.substring(0, file_name.length() - class_extension_name.length());
 			if (relative_file_dir == "")
 			{
 				op.operate(simple_name, entry);

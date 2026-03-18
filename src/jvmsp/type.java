@@ -1039,7 +1039,7 @@ public abstract class type<_T>
 
 		static
 		{
-			if (virtual_machine.ON_64_BIT_JVM)
+			if (virtual_machine.on_64bit_jvm)
 				WORD = cxx_type.define_primitive("WORD", false, 8, memory_layout_type.PRIMITIVE_INT);
 			else
 				WORD = cxx_type.define_primitive("WORD", false, 4, memory_layout_type.PRIMITIVE_INT);
@@ -1275,54 +1275,54 @@ public abstract class type<_T>
 		 * 用于将signed int类型储存的unsigned int值转换为unsigned long值。<br>
 		 * 用法：{@code uint64_t addr = (int32_t) & UINT32_T_MASK;}
 		 */
-		public static final long UINT32_T_MASK = 0xFFFFFFFFL;
+		public static final long uint32_t_mask = 0xFFFFFFFFL;
 
 		public static final long uint_ptr(int oop_addr)
 		{
-			return oop_addr & UINT32_T_MASK;
+			return oop_addr & uint32_t_mask;
 		}
 
-		public static final long UINT16_T_MASK = 0xFFFFL;
+		public static final long uint16_t_mask = 0xFFFFL;
 
 		public static final long uint_ptr(short s)
 		{
-			return s & UINT16_T_MASK;
+			return s & uint16_t_mask;
 		}
 
-		public static final long UINT8_T_MASK = 0xFFL;
+		public static final long uint8_t_mask = 0xFFL;
 
 		public static final long uint_ptr(byte b)
 		{
-			return b & UINT8_T_MASK;
+			return b & uint8_t_mask;
 		}
 
 		public static final long uint_ptr(char c)
 		{
-			return c & UINT8_T_MASK;
+			return c & uint8_t_mask;
 		}
 
-		public static final int UINT8_T_MASK_I = 0xFF;
+		public static final int uint8_t_mask_i = 0xFF;
 
 		public static final int uint8_t(byte b)
 		{
-			return b & UINT8_T_MASK_I;
+			return b & uint8_t_mask_i;
 		}
 
 		public static final int uint8_t(char c)
 		{
-			return c & UINT8_T_MASK_I;
+			return c & uint8_t_mask_i;
 		}
 
-		public static final int UINT16_T_MASK_I = 0xFFFF;
+		public static final int uint16_t_mask_i = 0xFFFF;
 
 		public static final int uint16_t(short s)
 		{
-			return s & UINT16_T_MASK_I;
+			return s & uint16_t_mask_i;
 		}
 
 		public static final long uint32_t(int i)
 		{
-			return i & UINT32_T_MASK;
+			return i & uint32_t_mask;
 		}
 
 		/**
@@ -1990,7 +1990,7 @@ public abstract class type<_T>
 
 			public static final pointer address_of(Object _jobject)
 			{
-				return pointer.to(java_type.uncompressed_oop_of(_jobject), jobject);
+				return pointer.to(virtual_machine.oop_of(_jobject), jobject);
 			}
 
 			public static final pointer address_of(cxx_type.object cxx_obj)
@@ -2008,9 +2008,9 @@ public abstract class type<_T>
 			public static final pointer address_of(Object jobject, Field field)
 			{
 				if (Modifier.isStatic(field.getModifiers()))// 静态字段
-					return pointer.to(java_type.uncompressed_oop_of(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(virtual_machine.oop_of(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
 				else
-					return pointer.to(java_type.uncompressed_oop_of(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(virtual_machine.oop_of(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
 			}
 
 			public static final pointer address_of(Object jobject, String field)
@@ -2091,7 +2091,7 @@ public abstract class type<_T>
 
 			public final long address()
 			{
-				return java_type.uncompressed_oop_of(base) + offset;
+				return virtual_machine.oop_of(base) + offset;
 			}
 
 			public Object value()
@@ -2114,7 +2114,7 @@ public abstract class type<_T>
 					return unsafe.read_double(offset);
 				else
 				{
-					Object deref_obj = java_type.object_from_oop(address());
+					Object deref_obj = virtual_machine.resolve_oop(address());
 					virtual_machine.host.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
@@ -2244,7 +2244,7 @@ public abstract class type<_T>
 
 		static
 		{
-			object_reference_size = unsafe.OOP_SIZE;
+			object_reference_size = unsafe.oop_size;
 		}
 
 		/**
@@ -2426,51 +2426,6 @@ public abstract class type<_T>
 			T o = unsafe.allocate(clazz);
 			unsafe.memcpy(object, virtual_machine.host.get_header_byte_length(), o, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 			return o;
-		}
-
-		/**
-		 * 获取对象（压缩后的）的oop，返回long<br>
-		 * 利用Object[]的元素为oop指针的事实来间接取oop。<br>
-		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址是未压缩的oop，直接指向Java对象本身的内存（对象头）。<br>
-		 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
-		 * 
-		 * @param object
-		 * @return
-		 */
-		public static final long oop_of(Object object)
-		{
-			return unsafe.pointed_to_address(new Object[]
-			{ object }, unsafe.ARRAY_OBJECT_BASE_OFFSET);
-		}
-
-		public static final long oop_of(long native_addr)
-		{
-			return virtual_machine.host.encode_oop(native_addr);
-		}
-
-		/**
-		 * 从（压缩后的）oop获取Java对象。<br>
-		 * 如果开启了oop压缩，则必须传入压缩后的oop。<br>
-		 * 
-		 * @param addr
-		 * @return
-		 */
-		public static final Object object_from_oop(long addr)
-		{
-			Object[] _jobjects = new Object[1];
-			unsafe.store_address(_jobjects, unsafe.ARRAY_OBJECT_BASE_OFFSET, addr);
-			return _jobjects[0];
-		}
-
-		/**
-		 * 获取未压缩的oop，该地址为Java对象的实际内存地址
-		 * 
-		 * @param object
-		 * @return
-		 */
-		public static final long uncompressed_oop_of(Object object)
-		{
-			return virtual_machine.host.object_address_from_oop((int) oop_of(object));
 		}
 
 		public static final Object cast(Object obj, long cast_type_klass_word)

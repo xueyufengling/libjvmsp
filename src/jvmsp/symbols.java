@@ -31,11 +31,11 @@ public class symbols
 
 	public static final int TRUSTED = -1;
 
-	static final MethodHandles.Lookup TRUSTED_LOOKUP;
+	static final MethodHandles.Lookup trusted_lookup;
 
 	static
 	{
-		TRUSTED_LOOKUP = allocate_trusted_lookup();
+		trusted_lookup = allocate_trusted_lookup();
 	}
 
 	/**
@@ -102,7 +102,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVarHandle(clazz, field_name, type);
+			return MethodHandles.privateLookupIn(clazz, trusted_lookup).findVarHandle(clazz, field_name, type);
 		}
 		catch (IllegalAccessException | NoSuchFieldException ex)
 		{
@@ -114,7 +114,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStaticVarHandle(clazz, field_name, type);
+			return MethodHandles.privateLookupIn(clazz, trusted_lookup).findStaticVarHandle(clazz, field_name, type);
 		}
 		catch (IllegalAccessException | NoSuchFieldException ex)
 		{
@@ -133,7 +133,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findConstructor(clazz, MethodType.methodType(void.class, arg_types));
+			return MethodHandles.privateLookupIn(clazz, trusted_lookup).findConstructor(clazz, MethodType.methodType(void.class, arg_types));
 		}
 		catch (IllegalAccessException | NoSuchMethodException ex)
 		{
@@ -169,7 +169,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(search_chain_start_subclazz, TRUSTED_LOOKUP).findSpecial(search_chain_end_superclazz, method_name, type, search_chain_start_subclazz);
+			return MethodHandles.privateLookupIn(search_chain_start_subclazz, trusted_lookup).findSpecial(search_chain_end_superclazz, method_name, type, search_chain_start_subclazz);
 		}
 		catch (IllegalAccessException | NoSuchMethodException ex)
 		{
@@ -196,7 +196,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findVirtual(clazz, method_name, type);
+			return MethodHandles.privateLookupIn(clazz, trusted_lookup).findVirtual(clazz, method_name, type);
 		}
 		catch (IllegalAccessException | NoSuchMethodException ex)
 		{
@@ -221,7 +221,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(clazz, TRUSTED_LOOKUP).findStatic(clazz, method_name, type);
+			return MethodHandles.privateLookupIn(clazz, trusted_lookup).findStatic(clazz, method_name, type);
 		}
 		catch (IllegalAccessException | NoSuchMethodException ex)
 		{
@@ -327,7 +327,7 @@ public class symbols
 	{
 		try
 		{
-			return MethodHandles.privateLookupIn(context_clazz, TRUSTED_LOOKUP).findClass(name);
+			return MethodHandles.privateLookupIn(context_clazz, trusted_lookup).findClass(name);
 		}
 		catch (IllegalAccessException | ClassNotFoundException ex)
 		{
@@ -382,19 +382,16 @@ public class symbols
 
 		static Class<?> java_lang_invoke_MethodHandleNatives_Constants;
 
-		public static final int MN_IS_METHOD, // method (not constructor)
-				MN_IS_CONSTRUCTOR, // constructor
-				MN_IS_FIELD, // field
-				MN_IS_TYPE, // nested type
-				MN_CALLER_SENSITIVE, // @CallerSensitive annotation detected
-				MN_TRUSTED_FINAL, // trusted final field
-				MN_REFERENCE_KIND_SHIFT, // ref_kind
+		public static final int MN_IS_METHOD,
+				MN_IS_CONSTRUCTOR,
+				MN_IS_FIELD,
+				MN_IS_TYPE,
+				MN_CALLER_SENSITIVE,
+				MN_TRUSTED_FINAL,
+				MN_REFERENCE_KIND_SHIFT,
 				MN_REFERENCE_KIND_MASK;
 
-		/**
-		 * Constant pool reference-kind codes, as used by CONSTANT_MethodHandle CP entries.
-		 */
-		public static final byte REF_NONE, // null value
+		public static final byte REF_NONE,
 				REF_getField,
 				REF_getStatic,
 				REF_putField,
@@ -406,17 +403,11 @@ public class symbols
 				REF_invokeInterface,
 				REF_LIMIT;
 
-		/**
-		 * Flags for Lookup.ClassOptions
-		 */
 		public static final int NESTMATE_CLASS,
 				HIDDEN_CLASS,
 				STRONG_LOADER_LINK,
 				ACCESS_VM_ANNOTATIONS;
 
-		/**
-		 * Lookup modes
-		 */
 		public static final int LM_MODULE,
 				LM_UNCONDITIONAL,
 				LM_TRUSTED;
@@ -920,7 +911,7 @@ public class symbols
 	{
 		try
 		{
-			return (MethodHandle) getDirectMethodCommon.invoke(TRUSTED_LOOKUP, ref_kind, refc, member_name, check_security, do_restrict, bound_caller);
+			return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, check_security, do_restrict, bound_caller);
 		}
 		catch (Throwable ex)
 		{
@@ -938,12 +929,12 @@ public class symbols
 	 */
 	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method)
 	{
-		return direct_method(ref_kind, refc, method, false, true, TRUSTED_LOOKUP);
+		return direct_method(ref_kind, refc, method, false, true, trusted_lookup);
 	}
 
 	public static final MethodHandle direct_method(Class<?> refc, Object method)
 	{
-		return direct_method(constants.REF_invokeSpecial, refc, method, false, false, TRUSTED_LOOKUP);
+		return direct_method(constants.REF_invokeSpecial, refc, method, false, false, trusted_lookup);
 	}
 
 	private static MethodHandle getReferenceKind;

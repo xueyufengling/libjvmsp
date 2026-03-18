@@ -20,7 +20,6 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
 import jvmsp.type.cxx_type;
-import jvmsp.type.java_type;
 
 /**
  * 管理JVM的相关功能
@@ -30,17 +29,17 @@ public class virtual_machine
 	/**
 	 * uint32_t的最大值，用于掩码和计算32位机器最大寻址地址。
 	 */
-	public static final long MAX_JUINT = 0xFFFFFFFFL;
+	public static final long juint_max = 0xFFFFFFFFL;
 
 	/**
 	 * 64或32位JVM
 	 */
-	public static final int JVM_BIT_VERSION;
+	public static final int jvm_bit_version;
 
 	/**
 	 * 是否运行在64位JVM，该变量为缓存值，用于指针的快速条件判断
 	 */
-	public static final boolean ON_64_BIT_JVM;
+	public static final boolean on_64bit_jvm;
 
 	/**
 	 * JVM中未压缩的32位oop时支持的最大堆内存大小，类型为uint，该值为常数，即固定为4G
@@ -70,15 +69,15 @@ public class virtual_machine
 		if (arch == null)
 			throw new java.lang.UnknownError("system property 'os.arch' found null, this property is guaranteed Java Specification");
 		if (arch.contains("64"))
-			JVM_BIT_VERSION = 64;
+			jvm_bit_version = 64;
 		else
-			JVM_BIT_VERSION = 32;
+			jvm_bit_version = 32;
 
-		if (JVM_BIT_VERSION == 64)
-			ON_64_BIT_JVM = true;
+		if (jvm_bit_version == 64)
+			on_64bit_jvm = true;
 		else
-			ON_64_BIT_JVM = false;
-		UnscaledOopHeapMax = MAX_JUINT + 1;// 2^32+1
+			on_64bit_jvm = false;
+		UnscaledOopHeapMax = juint_max + 1;// 2^32+1
 		// 获取HotSpotDiagnosticMXBean实例
 		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
 		if (instance_HotSpotDiagnosticMXBean == null)
@@ -288,34 +287,34 @@ public class virtual_machine
 	private static final class __32_bit
 	{
 		// 32位JVM无OOP指针压缩
-		public static final int HEADER_OFFSET = 0;
-		public static final int HEADER_LENGTH = 64;
+		public static final int header_offset = 0;
+		public static final int header_length = 64;
 
-		public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-		public static final int MARKWORD_LENGTH = 32;
-		public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-		public static final int KLASS_LENGTH = 32;
+		public static final int markword_offset = header_offset;
+		public static final int markword_length = 32;
+		public static final int klass_offset = markword_offset + markword_length;
+		public static final int klassword_length = 32;
 
-		public static final int IDENTITY_HASHCODE_OFFSET = MARKWORD_OFFSET;
-		public static final int IDENTITY_HASHCODE_LENGTH = 25;
-		public static final int AGE_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-		public static final int AGE_LENGTH = 4;
-		public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-		public static final int BIASED_LOCK_LENGTH = 1;
+		public static final int identity_hashcode_offset = markword_offset;
+		public static final int identity_hashcode_length = 25;
+		public static final int age_offset = identity_hashcode_offset + identity_hashcode_length;
+		public static final int age_length = 4;
+		public static final int biased_lock_offset = age_offset + age_length;
+		public static final int biased_lock_length = 1;
 
-		public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-		public static final int LOCK_LENGTH = 2;
+		public static final int lock_offset = biased_lock_offset + biased_lock_length;
+		public static final int lock_length = 2;
 
-		public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-		public static final int THREAD_LENGTH = 23;
-		public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-		public static final int EPOCH_LENGTH = 2;
+		public static final int thread_offset = markword_offset;
+		public static final int thread_length = 23;
+		public static final int epoch_offset = thread_offset + thread_length;
+		public static final int epoch_length = 2;
 
-		public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_LOCK_RECORD_LENGTH = 30;
+		public static final int ptr_to_lock_record_offset = markword_offset;
+		public static final int ptr_to_lock_record_length = 30;
 
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 30;
+		public static final int ptr_to_heavyweight_monitor_offset = markword_offset;
+		public static final int ptr_to_heavyweight_monitor_length = 30;
 	}
 
 // @formatter:off
@@ -342,39 +341,39 @@ public class virtual_machine
 	private static final class __64_bit
 	{
 		// 64位JVM无OOP指针压缩
-		public static final int HEADER_OFFSET = 0;
-		public static final int HEADER_LENGTH = 128;
+		public static final int header_offset = 0;
+		public static final int header_length = 128;
 
-		public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-		public static final int MARKWORD_LENGTH = 64;
-		public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-		public static final int KLASS_LENGTH = 64;
+		public static final int markword_offset = header_offset;
+		public static final int markword_length = 64;
+		public static final int klass_offset = markword_offset + markword_length;
+		public static final int klassword_length = 64;
 
-		public static final int UNUSED_1_NORMAL_OFFSET = MARKWORD_OFFSET;
-		public static final int UNUSED_1_NORMAL_LENGTH = 25;
-		public static final int IDENTITY_HASHCODE_OFFSET = UNUSED_1_NORMAL_OFFSET + UNUSED_1_NORMAL_LENGTH;
-		public static final int IDENTITY_HASHCODE_LENGTH = 31;
-		public static final int UNUSED_2_NORMAL_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-		public static final int UNUSED_2_NORMAL_LENGTH = 1;
-		public static final int AGE_OFFSET = UNUSED_2_NORMAL_OFFSET + UNUSED_2_NORMAL_LENGTH;
-		public static final int AGE_LENGTH = 4;
-		public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-		public static final int BIASED_LOCK_LENGTH = 1;
-		public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-		public static final int LOCK_LENGTH = 2;
+		public static final int unused_1_normal_offset = markword_offset;
+		public static final int unused_1_normal_length = 25;
+		public static final int identity_hashcode_offset = unused_1_normal_offset + unused_1_normal_length;
+		public static final int identity_hashcode_length = 31;
+		public static final int unused_2_normal_offset = identity_hashcode_offset + identity_hashcode_length;
+		public static final int unused_2_normal_length = 1;
+		public static final int age_offset = unused_2_normal_offset + unused_2_normal_length;
+		public static final int age_length = 4;
+		public static final int biased_lock_offset = age_offset + age_length;
+		public static final int biased_lock_length = 1;
+		public static final int lock_offset = biased_lock_offset + biased_lock_length;
+		public static final int lock_length = 2;
 
-		public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-		public static final int THREAD_LENGTH = 54;
-		public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-		public static final int EPOCH_LENGTH = 2;
-		public static final int UNUSED_1_BIASED_OFFSET = EPOCH_OFFSET + EPOCH_LENGTH;
-		public static final int UNUSED_1_BIASED_LENGTH = 1;
+		public static final int thread_offset = markword_offset;
+		public static final int thread_length = 54;
+		public static final int epoch_offset = thread_offset + thread_length;
+		public static final int epoch_length = 2;
+		public static final int unused_1_biased_offset = epoch_offset + epoch_length;
+		public static final int unused_1_biased_length = 1;
 
-		public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_LOCK_RECORD_LENGTH = 62;
+		public static final int ptr_to_lock_record_offset = markword_offset;
+		public static final int ptr_to_lock_record_length = 62;
 
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 62;
+		public static final int ptr_to_heavyweight_monitor_offset = markword_offset;
+		public static final int ptr_to_heavyweight_monitor_length = 62;
 	}
 
 // @formatter:off
@@ -401,37 +400,37 @@ public class virtual_machine
 	private static final class __64_bit_UseCompressedOops_UseCompressedClassPointers
 	{
 		// 64位JVM开启OOP指针压缩，JVM默认是开启的
-		public static final int HEADER_OFFSET = 0;
-		public static final int HEADER_LENGTH = 96;
+		public static final int header_offset = 0;
+		public static final int header_length = 96;
 
-		public static final int MARKWORD_OFFSET = HEADER_OFFSET;
-		public static final int MARKWORD_LENGTH = 64;
-		public static final int KLASS_OFFSET = MARKWORD_OFFSET + MARKWORD_LENGTH;
-		public static final int KLASS_LENGTH = 32;
+		public static final int markword_offset = header_offset;
+		public static final int markword_length = 64;
+		public static final int klass_offset = markword_offset + markword_length;
+		public static final int klassword_length = 32;
 
-		public static final int UNUSED_1_NORMAL_OFFSET = MARKWORD_OFFSET;
-		public static final int UNUSED_1_NORMAL_LENGTH = 25;
-		public static final int IDENTITY_HASHCODE_OFFSET = UNUSED_1_NORMAL_OFFSET + UNUSED_1_NORMAL_LENGTH;
-		public static final int IDENTITY_HASHCODE_LENGTH = 31;
-		public static final int CMS_FREE_OFFSET = IDENTITY_HASHCODE_OFFSET + IDENTITY_HASHCODE_LENGTH;
-		public static final int CMS_FREE_LENGTH = 1;
-		public static final int AGE_OFFSET = CMS_FREE_OFFSET + CMS_FREE_LENGTH;
-		public static final int AGE_LENGTH = 4;
-		public static final int BIASED_LOCK_OFFSET = AGE_OFFSET + AGE_LENGTH;
-		public static final int BIASED_LOCK_LENGTH = 1;
-		public static final int LOCK_OFFSET = BIASED_LOCK_OFFSET + BIASED_LOCK_LENGTH;
-		public static final int LOCK_LENGTH = 2;
+		public static final int unused_1_normal_offset = markword_offset;
+		public static final int unused_1_normal_length = 25;
+		public static final int identity_hashcode_offset = unused_1_normal_offset + unused_1_normal_length;
+		public static final int identity_hashcode_length = 31;
+		public static final int cmd_free_offset = identity_hashcode_offset + identity_hashcode_length;
+		public static final int cmd_free_length = 1;
+		public static final int age_offset = cmd_free_offset + cmd_free_length;
+		public static final int age_length = 4;
+		public static final int biased_lock_offset = age_offset + age_length;
+		public static final int biased_lock_length = 1;
+		public static final int lock_offset = biased_lock_offset + biased_lock_length;
+		public static final int lock_length = 2;
 
-		public static final int THREAD_OFFSET = MARKWORD_OFFSET;
-		public static final int THREAD_LENGTH = 54;
-		public static final int EPOCH_OFFSET = THREAD_OFFSET + THREAD_LENGTH;
-		public static final int EPOCH_LENGTH = 2;
+		public static final int thread_offset = markword_offset;
+		public static final int thread_length = 54;
+		public static final int epoch_offset = thread_offset + thread_length;
+		public static final int epoch_length = 2;
 
-		public static final int PTR_TO_LOCK_RECORD_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_LOCK_RECORD_LENGTH = 62;
+		public static final int ptr_to_lock_record_offset = markword_offset;
+		public static final int ptr_to_lock_record_length = 62;
 
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_OFFSET = MARKWORD_OFFSET;
-		public static final int PTR_TO_HEAVYWEIGHT_MONITOR_LENGTH = 62;
+		public static final int ptr_to_heavyweight_monitor_offset = markword_offset;
+		public static final int ptr_to_heavyweight_monitor_length = 62;
 
 	}
 
@@ -549,25 +548,25 @@ public class virtual_machine
 			@Override
 			public int get_markword_length()
 			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.MARKWORD_LENGTH;
+				return __64_bit_UseCompressedOops_UseCompressedClassPointers.markword_length;
 			}
 
 			@Override
 			public int get_klass_word_offset()
 			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.KLASS_OFFSET;
+				return __64_bit_UseCompressedOops_UseCompressedClassPointers.klass_offset;
 			}
 
 			@Override
 			public int get_klass_word_length()
 			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.KLASS_LENGTH;
+				return __64_bit_UseCompressedOops_UseCompressedClassPointers.klassword_length;
 			}
 
 			@Override
 			public int get_header_length()
 			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.HEADER_LENGTH;
+				return __64_bit_UseCompressedOops_UseCompressedClassPointers.header_length;
 			}
 		},
 		/**
@@ -584,25 +583,25 @@ public class virtual_machine
 			@Override
 			public int get_markword_length()
 			{
-				return __32_bit.MARKWORD_LENGTH;
+				return __32_bit.markword_length;
 			}
 
 			@Override
 			public int get_klass_word_offset()
 			{
-				return __32_bit.KLASS_OFFSET;
+				return __32_bit.klass_offset;
 			}
 
 			@Override
 			public int get_klass_word_length()
 			{
-				return __32_bit.KLASS_LENGTH;
+				return __32_bit.klassword_length;
 			}
 
 			@Override
 			public int get_header_length()
 			{
-				return __32_bit.HEADER_LENGTH;
+				return __32_bit.header_length;
 			}
 		},
 		Uncompressed64
@@ -616,25 +615,25 @@ public class virtual_machine
 			@Override
 			public int get_markword_length()
 			{
-				return __64_bit.MARKWORD_LENGTH;
+				return __64_bit.markword_length;
 			}
 
 			@Override
 			public int get_klass_word_offset()
 			{
-				return __64_bit.KLASS_OFFSET;
+				return __64_bit.klass_offset;
 			}
 
 			@Override
 			public int get_klass_word_length()
 			{
-				return __64_bit.KLASS_LENGTH;
+				return __64_bit.klassword_length;
 			}
 
 			@Override
 			public int get_header_length()
 			{
-				return __64_bit.HEADER_LENGTH;
+				return __64_bit.header_length;
 			}
 		};
 
@@ -728,12 +727,12 @@ public class virtual_machine
 	 */
 	public final long heap_base()
 	{
-		return java_type.oop_of(null);
+		return oop_of(null);
 	}
 
 	public final void update_vm_info()
 	{
-		if (ON_64_BIT_JVM)
+		if (on_64bit_jvm)
 		{
 			// 64位JVM需要检查是否启用了指针压缩
 			UseCompressedOops = get_bool_option("UseCompressedOops");
@@ -792,7 +791,7 @@ public class virtual_machine
 		}
 		heap_address_range = heap_end_address - heap_base_address;
 		// 对象头信息内存布局
-		switch (JVM_BIT_VERSION)
+		switch (jvm_bit_version)
 		{
 		case 32:
 		{
@@ -817,7 +816,7 @@ public class virtual_machine
 		}
 		default:
 		{
-			throw new java.lang.InternalError("unknown native jvm bit-version '" + JVM_BIT_VERSION + "'");
+			throw new java.lang.InternalError("unknown native jvm bit-version '" + jvm_bit_version + "'");
 		}
 		}
 	}
@@ -883,7 +882,7 @@ public class virtual_machine
 	 */
 	public final long decode_oop(int oop)
 	{
-		return heap_base_address + ((oop & cxx_type.UINT32_T_MASK) << oops_shift);
+		return heap_base_address + ((oop & cxx_type.uint32_t_mask) << oops_shift);
 	}
 
 	/**
@@ -892,7 +891,7 @@ public class virtual_machine
 	 * @param oop
 	 * @return
 	 */
-	public final long object_address_from_oop(long oop)
+	public final long address_of_oop(long oop)
 	{
 		if (UseCompressedOops)
 		{
@@ -902,6 +901,61 @@ public class virtual_machine
 		{
 			return oop;
 		}
+	}
+
+	/**
+	 * 获取对象（压缩后的）的oop，返回long<br>
+	 * 利用Object[]的元素为oop指针的事实来间接取oop。<br>
+	 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址是未压缩的oop，直接指向Java对象本身的内存（对象头）。<br>
+	 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
+	 * 
+	 * @param object
+	 * @return
+	 */
+	public static final long oop_of(Object object)
+	{
+		Object[] _a = new Object[]
+		{ object };
+		switch (unsafe.array_object_index_scale)
+		{
+		case 4:
+			return unsafe.read_int(_a, unsafe.array_object_base_offset);
+		case 8:
+			return unsafe.read_long(_a, unsafe.array_object_base_offset);
+		default:
+			return 0;
+		}
+	}
+
+	/**
+	 * 从（压缩后的）oop获取Java对象。<br>
+	 * 如果开启了oop压缩，则必须传入压缩后的oop。<br>
+	 * 
+	 * @param addr
+	 * @return
+	 */
+	public static final Object resolve_oop(long addr)
+	{
+		Object[] _a = new Object[1];
+		switch (unsafe.array_object_index_scale)
+		{
+		case 4:
+			unsafe.write(_a, unsafe.array_object_base_offset, (int) addr);
+		case 8:
+			unsafe.write(_a, unsafe.array_object_base_offset, addr);
+		}
+		return _a[0];
+	}
+
+	/**
+	 * 获取未压缩的oop，该地址为Java对象的实际内存地址
+	 * 
+	 * @param object
+	 * @return
+	 */
+	public final long address_of(Object object)
+	{
+		return address_of_oop((int) oop_of(object));
 	}
 
 	/**
@@ -923,7 +977,7 @@ public class virtual_machine
 	 */
 	public final long decode_narrow_klass(int narrow_klass)
 	{
-		return heap_base_address + ((narrow_klass & cxx_type.UINT32_T_MASK) << oops_shift);
+		return heap_base_address + ((narrow_klass & cxx_type.uint32_t_mask) << oops_shift);
 	}
 
 	/**
@@ -933,7 +987,7 @@ public class virtual_machine
 	 * @param oop
 	 * @return
 	 */
-	public final long klass_pointer_from_klass_word(long klass_word)
+	public final long klass_pointer_of_klass_word(long klass_word)
 	{
 		if (UseCompressedClassPointers)
 		{
@@ -945,9 +999,15 @@ public class virtual_machine
 		}
 	}
 
-	public final long klass_pointer_from_klass_word(Class<?> clazz)
+	/**
+	 * 获取Klass*指针
+	 * 
+	 * @param clazz
+	 * @return
+	 */
+	public final long klass_pointer_of(Class<?> clazz)
 	{
-		return klass_pointer_from_klass_word(get_klass_word(clazz));
+		return klass_pointer_of_klass_word(get_klass_word(clazz));
 	}
 
 	/**

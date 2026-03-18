@@ -99,21 +99,19 @@ public final class unsafe
 	private static MethodHandle shouldBeInitialized0;
 	private static MethodHandle ensureClassInitialized0;
 
-	public static final long INVALID_FIELD_OFFSET = -1;
+	public static final int address_size;
 
-	public static final int ADDRESS_SIZE;
+	public static final int array_object_base_offset;
+	public static final int array_object_index_scale;
 
-	public static final int ARRAY_OBJECT_BASE_OFFSET;
-	public static final int ARRAY_OBJECT_INDEX_SCALE;
-
-	public static final int ARRAY_BYTE_BASE_OFFSET;
-	public static final int ARRAY_BYTE_INDEX_SCALE;
+	public static final int array_byte_base_offset;
+	public static final int array_byte_index_scale;
 
 	/**
 	 * OOP大小，只会是4或8.<br>
 	 * 32位JVM和开启压缩OOP的64位JVM上为4，未开启压缩OOP的64位JVM上为8.<br>
 	 */
-	public static final long OOP_SIZE;
+	public static final long oop_size;
 
 	static
 	{
@@ -214,12 +212,12 @@ public final class unsafe
 		shouldBeInitialized0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "shouldBeInitialized0", boolean.class, Class.class);
 		ensureClassInitialized0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "ensureClassInitialized0", void.class, Class.class);
 
-		ADDRESS_SIZE = address_size();
-		ARRAY_OBJECT_BASE_OFFSET = array_base_offset(Object[].class);
-		ARRAY_OBJECT_INDEX_SCALE = array_index_scale(Object[].class);
-		ARRAY_BYTE_BASE_OFFSET = array_base_offset(byte[].class);
-		ARRAY_BYTE_INDEX_SCALE = array_index_scale(byte[].class);
-		OOP_SIZE = ARRAY_OBJECT_INDEX_SCALE;
+		address_size = address_size();
+		array_object_base_offset = array_base_offset(Object[].class);
+		array_object_index_scale = array_index_scale(Object[].class);
+		array_byte_base_offset = array_base_offset(byte[].class);
+		array_byte_index_scale = array_index_scale(byte[].class);
+		oop_size = array_object_index_scale;
 	}
 
 	public static final class methods
@@ -441,22 +439,22 @@ public final class unsafe
 
 	public static final void memcpy(Object[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
 	{
-		memcpy((Object) src_arr, ARRAY_OBJECT_BASE_OFFSET + src_idx * java_type.object_reference_size, dest_base, dest_offset, num * java_type.object_reference_size);
+		memcpy((Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, dest_base, dest_offset, num * java_type.object_reference_size);
 	}
 
 	public static final void memcpy(Object[] src_arr, long src_idx, Object[] dest_arr, long dest_idx, long num)
 	{
-		memcpy((Object) src_arr, ARRAY_OBJECT_BASE_OFFSET + src_idx * java_type.object_reference_size, (Object) dest_arr, ARRAY_OBJECT_BASE_OFFSET + dest_idx * java_type.object_reference_size, num * java_type.object_reference_size);
+		memcpy((Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, (Object) dest_arr, array_object_base_offset + dest_idx * java_type.object_reference_size, num * java_type.object_reference_size);
 	}
 
 	public static final void memcpy(byte[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
 	{
-		memcpy((Object) src_arr, ARRAY_BYTE_BASE_OFFSET + src_idx * java_type.byte_size, dest_base, dest_offset, num * java_type.byte_size);
+		memcpy((Object) src_arr, array_byte_base_offset + src_idx * java_type.byte_size, dest_base, dest_offset, num * java_type.byte_size);
 	}
 
 	public static final void memcpy(Object src_base, long src_offset, byte[] dest_arr, long dest_idx, long num)
 	{
-		memcpy(src_base, src_offset, (Object) dest_arr, ARRAY_BYTE_BASE_OFFSET + dest_idx * java_type.byte_size, num * java_type.byte_size);
+		memcpy(src_base, src_offset, (Object) dest_arr, array_byte_base_offset + dest_idx * java_type.byte_size, num * java_type.byte_size);
 	}
 
 	/**
@@ -1153,27 +1151,27 @@ public final class unsafe
 	 */
 	public static final void write_array(byte[] byte_arr, long arr_idx, float x)
 	{
-		write(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx, x);
+		write(byte_arr, array_byte_base_offset + arr_idx, x);
 	}
 
 	public static final void write_array(byte[] byte_arr, long arr_idx, int x)
 	{
-		write(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx, x);
+		write(byte_arr, array_byte_base_offset + arr_idx, x);
 	}
 
 	public static final void write_array(byte[] byte_arr, long arr_idx, short x)
 	{
-		write(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx, x);
+		write(byte_arr, array_byte_base_offset + arr_idx, x);
 	}
 
 	public static final void write_array(byte[] byte_arr, long arr_idx, long x)
 	{
-		write(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx, x);
+		write(byte_arr, array_byte_base_offset + arr_idx, x);
 	}
 
 	public static final void write_array(byte[] byte_arr, long arr_idx, double x)
 	{
-		write(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx, x);
+		write(byte_arr, array_byte_base_offset + arr_idx, x);
 	}
 
 	/**
@@ -1187,27 +1185,27 @@ public final class unsafe
 	 */
 	public static final float read_array_float(byte[] byte_arr, long arr_idx)
 	{
-		return read_float(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx);
+		return read_float(byte_arr, array_byte_base_offset + arr_idx);
 	}
 
 	public static final int read_array_int(byte[] byte_arr, long arr_idx)
 	{
-		return read_int(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx);
+		return read_int(byte_arr, array_byte_base_offset + arr_idx);
 	}
 
 	public static final short read_array_short(byte[] byte_arr, long arr_idx)
 	{
-		return read_short(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx);
+		return read_short(byte_arr, array_byte_base_offset + arr_idx);
 	}
 
 	public static final long read_array_long(byte[] byte_arr, long arr_idx)
 	{
-		return read_long(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx);
+		return read_long(byte_arr, array_byte_base_offset + arr_idx);
 	}
 
 	public static final double read_array_double(byte[] byte_arr, long arr_idx)
 	{
-		return read_double(byte_arr, ARRAY_BYTE_BASE_OFFSET + arr_idx);
+		return read_double(byte_arr, array_byte_base_offset + arr_idx);
 	}
 
 	/**

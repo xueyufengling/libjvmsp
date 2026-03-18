@@ -12,20 +12,20 @@ import java.util.function.Consumer;
  * 而本类则会忽略a的异常，继续处理后续的元素b、c，待后续元素全部处理完成后，再重新遍历操作失败的元素，即a，此时对a的操作就能成功.<br>
  * 典型的应用场景是定义一系列具有互相依赖关系的class。<br>
  * 
- * @param <T>
+ * @param <_T>
  */
-public class iterate_on_write_list<T>
+public class instant_iterate_list<_T>
 {
 	/**
 	 * 未处理
 	 */
-	private ConcurrentLinkedDeque<T> unprocessed = new ConcurrentLinkedDeque<>();
+	private ConcurrentLinkedDeque<_T> unprocessed = new ConcurrentLinkedDeque<>();
 	/**
 	 * 已处理列表
 	 */
-	private ConcurrentLinkedDeque<T> processed = new ConcurrentLinkedDeque<>();
+	private ConcurrentLinkedDeque<_T> processed = new ConcurrentLinkedDeque<>();
 
-	public void foreach(Consumer<T> op, BiConsumer<T, Throwable> ex_op) throws Throwable
+	public void foreach(Consumer<_T> op, BiConsumer<_T, Throwable> ex_op) throws Throwable
 	{
 		int last_unprocessed_count = unprocessed.size();
 		Throwable last_ex = null;
@@ -37,7 +37,7 @@ public class iterate_on_write_list<T>
 			if (last_unprocessed_count == unprocessed.size())
 				if (last_ex != null)// 第一次进入不会抛出错误
 					throw last_ex;
-			for (T e : unprocessed)
+			for (_T e : unprocessed)
 			{
 				try
 				{
@@ -53,33 +53,33 @@ public class iterate_on_write_list<T>
 			} // 重新迭代时新加入的元素已经同步到unprocessed
 			unprocessed.removeAll(processed);
 		}
-		ConcurrentLinkedDeque<T> tmp = processed;
+		ConcurrentLinkedDeque<_T> tmp = processed;
 		processed = unprocessed;
 		unprocessed = tmp;
 	}
 
-	public static final BiConsumer<Object, Throwable> IGNORE_RUNTIME_EXCEPTION = (Object e, Throwable ex) ->
+	public static final BiConsumer<Object, Throwable> ignore_runtime_exception = (Object e, Throwable ex) ->
 	{
 	};
 
-	public static final BiConsumer<Object, Throwable> PRINT_RUNTIME_EXCEPTION = (Object e, Throwable ex) ->
+	public static final BiConsumer<Object, Throwable> print_runtime_exception = (Object e, Throwable ex) ->
 	{
 		System.err.println("iterating element " + e);
 		ex.printStackTrace();
 	};
 
 	@SuppressWarnings("unchecked")
-	public void foreach(Consumer<T> op) throws Throwable
+	public void foreach(Consumer<_T> op) throws Throwable
 	{
-		foreach(op, (BiConsumer<T, Throwable>) IGNORE_RUNTIME_EXCEPTION);
+		foreach(op, (BiConsumer<_T, Throwable>) ignore_runtime_exception);
 	}
 
-	public void add(T e)
+	public void add(_T e)
 	{
 		unprocessed.add(e);
 	}
 
-	public void add(Collection<? extends T> c)
+	public void add(Collection<? extends _T> c)
 	{
 		unprocessed.addAll(c);
 	}
