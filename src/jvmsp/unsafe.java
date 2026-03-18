@@ -1778,4 +1778,86 @@ public final class unsafe
 	{
 		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
 	}
+
+	/**
+	 * 大端bit掩码。<br>
+	 * bit_mask[0]对应0b10000000，bit_mask[7]对应0b00000001.<br>
+	 */
+	public static final int[] be_bit_mask = new int[8];
+
+	public static final int[] le_bit_mask = new int[8];
+
+	static
+	{
+		for (int bit = 0; bit < 8; ++bit)
+		{
+			be_bit_mask[bit] = (0b1 << (7 - bit));
+			le_bit_mask[bit] = (0b1 << bit);
+		}
+	}
+
+	/**
+	 * 读取bit索引区间内的值
+	 * 
+	 * @param bit_masks 必须是be_bit_mask或le_bit_mask
+	 * @param base      起始地址
+	 * @param offset    起始地址算起的字节索引
+	 * @param bit_begin 从offset开始算的起始bit位
+	 * @param num       要读取的bit位数量
+	 * @return
+	 */
+	private static final long read_bits(final int[] bit_masks, Object base, long offset, int bit_begin, int num)
+	{
+		long value = 0;
+		byte b = 0;
+		for (int bit = 0; bit < num; ++bit)
+		{
+			int bit_pos = bit_begin + bit;
+			int bit_in_byte_pos = bit_pos % 8;
+			if (bit_in_byte_pos == 0 || bit == 0)// 第一个bit所在字节无论如何都要读取
+			{
+				// 仅在该bit位于新byte时读取一次字节值，读取后将缓存
+				b = read_byte(base, offset + (bit_pos / 8));
+			}
+			if ((b & bit_masks[bit_in_byte_pos]) != 0)
+			{
+				value |= (0b1L << bit);
+			}
+		}
+		return value;
+	}
+
+	public static final long le_read_bits(Object base, long offset, int bit_begin, int num)
+	{
+		return read_bits(le_bit_mask, base, offset, bit_begin, num);
+	}
+
+	private static final void write_bits(final int[] bit_masks, Object base, long offset, int bit_begin, long bits, int num)
+	{
+		byte b = 0;
+		long byte_offset;
+		for (int bit = 0; bit < num; ++bit)
+		{
+			int bit_pos = bit_begin + bit;
+			int bit_in_byte_pos = bit_pos % 8;
+			if (bit_in_byte_pos == 0 || bit == 0)
+			{
+				byte_offset = offset + (bit_pos / 8);
+				b = read_byte(base, byte_offset);
+			}
+			b = (byte) ((b & ~bit_masks[bit_in_byte_pos])
+					| (((bits >> bit) & 0b1L) * bit_masks[bit_in_byte_pos]));
+			if (bit_in_byte_pos == 7 || bit == num - 1)
+			{
+				// 最后一个bit时或不足一个字节的剩余部分写入字节
+				byte_offset = offset + (bit_pos / 8);
+				write(base, byte_offset, b);
+			}
+		}
+	}
+
+	public static final void le_write_bits(Object base, long offset, int bit_begin, long bits, int num)
+	{
+		write_bits(le_bit_mask, base, offset, bit_begin, bits, num);
+	}
 }

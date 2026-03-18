@@ -497,219 +497,158 @@ public class virtual_machine
 		 * 开启对象头压缩，包含压缩klass pointer，即+UseCompressedClassPointers<br>
 		 * +UseCompactObjectHeaders
 		 */
-		Compact
-		{
-			@Override
-			public boolean has_klass_gap()
-			{
-				return false;
-			}
+		Compact(false,
+				10,
+				0,
+				0,
+				0,
+				0),
 
-			@Override
-			public int get_markword_length()
-			{
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public int get_klass_word_offset()
-			{
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public int get_klass_word_length()
-			{
-				// TODO Auto-generated method stub
-				return 0;
-			}
-
-			@Override
-			public int get_header_length()
-			{
-				// TODO Auto-generated method stub
-				return 0;
-			}
-		},
 		/**
 		 * 压缩klass pointer。<br>
 		 * +UseCompressedClassPointers，如果开启了+UseCompressedOops则该选项默认就是开启的
 		 */
-		Compressed
-		{
-			@Override
-			public boolean has_klass_gap()
-			{
-				return true;
-			}
-
-			@Override
-			public int get_markword_length()
-			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.markword_length;
-			}
-
-			@Override
-			public int get_klass_word_offset()
-			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.klass_offset;
-			}
-
-			@Override
-			public int get_klass_word_length()
-			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.klassword_length;
-			}
-
-			@Override
-			public int get_header_length()
-			{
-				return __64_bit_UseCompressedOops_UseCompressedClassPointers.header_length;
-			}
-		},
+		Compressed(
+				true,
+				3, // static constexpr int max_shift_noncoh = 3;
+				__64_bit_UseCompressedOops_UseCompressedClassPointers.markword_length,
+				__64_bit_UseCompressedOops_UseCompressedClassPointers.klass_offset,
+				__64_bit_UseCompressedOops_UseCompressedClassPointers.klassword_length,
+				__64_bit_UseCompressedOops_UseCompressedClassPointers.header_length),
 		/**
 		 * 32位未压缩klass pointer，也未压缩对象头<br>
 		 */
-		Uncompressed32
-		{
-			@Override
-			public boolean has_klass_gap()
-			{
-				return false;
-			}
+		Uncompressed32(
+				false,
+				0,
+				__32_bit.markword_length,
+				__32_bit.klass_offset,
+				__32_bit.klassword_length,
+				__32_bit.header_length),
+		Uncompressed64(
+				false,
+				0,
+				__64_bit.markword_length,
+				__64_bit.klass_offset,
+				__64_bit.klassword_length,
+				__64_bit.header_length);
 
-			@Override
-			public int get_markword_length()
-			{
-				return __32_bit.markword_length;
-			}
-
-			@Override
-			public int get_klass_word_offset()
-			{
-				return __32_bit.klass_offset;
-			}
-
-			@Override
-			public int get_klass_word_length()
-			{
-				return __32_bit.klassword_length;
-			}
-
-			@Override
-			public int get_header_length()
-			{
-				return __32_bit.header_length;
-			}
-		},
-		Uncompressed64
-		{
-			@Override
-			public boolean has_klass_gap()
-			{
-				return false;
-			}
-
-			@Override
-			public int get_markword_length()
-			{
-				return __64_bit.markword_length;
-			}
-
-			@Override
-			public int get_klass_word_offset()
-			{
-				return __64_bit.klass_offset;
-			}
-
-			@Override
-			public int get_klass_word_length()
-			{
-				return __64_bit.klassword_length;
-			}
-
-			@Override
-			public int get_header_length()
-			{
-				return __64_bit.header_length;
-			}
-		};
+		public final boolean has_klass_gap;
 
 		/**
-		 * Mark Word的长度，单位byte
+		 * Klass Pointer位移多少位才能得到对象头的narrow klass。<br>
+		 * 开启+UseCompressedClassPointers后该值为3，开启+UseCompactObjectHeaders后该值为10.<br>
+		 * 此值为OpenJDk中硬编码的固定值，与OOP压缩的位移位数可能不同。<br>
 		 */
-		private int markword_byte_length;
-
-		/**
-		 * Klass Word的偏移量，单位byte
-		 */
-		private int klass_word_byte_offset;
-
-		/**
-		 * Klass Word的长度，单位byte
-		 */
-		private int klass_word_byte_length;
-
-		/**
-		 * header总长度
-		 */
-		private int header_byte_length;
-
-		public abstract boolean has_klass_gap();
+		public final int narrow_klass_shift;
 
 		/**
 		 * Mark Word的长度，单位bit
 		 */
-		public abstract int get_markword_length();
+		public final int markword_length;
 
 		/**
 		 * Klass Word的偏移量，单位bit
 		 */
-		public abstract int get_klass_word_offset();
+		public final int klass_word_offset;
 
 		/**
 		 * Klass Word的长度，单位bit
 		 */
-		public abstract int get_klass_word_length();
+		public final int klass_word_length;
 
 		/**
 		 * 对象头总长度，单位bit
 		 */
-		public abstract int get_header_length();
+		public final int header_length;
 
-		public static final int bit_to_byte(int bit)
+		public final int header_byte_length;
+
+		public long decode_narrow_klass(long heap_base, int narrow_klass)
 		{
-			return bit / 8;
+			return heap_base + ((narrow_klass & cxx_type.uint32_t_mask) << narrow_klass_shift);
 		}
 
-		private object_layout()
+		public final long encode_narrow_klass(long heap_base, long klass_ptr)
 		{
-			this.markword_byte_length = bit_to_byte(get_markword_length());
-			this.klass_word_byte_offset = bit_to_byte(get_klass_word_offset());
-			this.klass_word_byte_length = bit_to_byte(get_klass_word_length());
-			this.header_byte_length = bit_to_byte(get_header_length());
+			return (int) ((klass_ptr - heap_base) >> narrow_klass_shift);
 		}
 
-		public int get_markword_byte_length()
+		/**
+		 * bit索引为8对齐的时使用的读取klass word的字节索引
+		 */
+		private int aligned_klass_word_byte_offset;
+
+		private object_layout(boolean has_klass_gap, int narrow_klass_shift, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
 		{
-			return this.markword_byte_length;
+			this.has_klass_gap = has_klass_gap;
+			this.narrow_klass_shift = narrow_klass_shift;
+			this.markword_length = markword_length;
+			this.klass_word_offset = klass_word_offset;
+			this.klass_word_length = klass_word_length;
+			this.header_length = header_length;
+			this.aligned_klass_word_byte_offset = klass_word_offset / 8;
+			this.header_byte_length = header_length / 8;
 		}
 
-		public int get_klass_word_byte_offset()
+		/**
+		 * 获取对象头
+		 * 
+		 * @param obj
+		 * @return
+		 */
+		public final long get_klass_word(Object obj)
 		{
-			return this.klass_word_byte_offset;
+			switch (klass_word_length)
+			{
+			case 32:
+				return unsafe.read_int(obj, aligned_klass_word_byte_offset);
+			case 22:
+				return unsafe.le_read_bits(obj, 0, klass_word_offset, klass_word_length);
+			case 64:
+				return unsafe.read_long(obj, aligned_klass_word_byte_offset);
+			default:
+				throw new java.lang.InternalError("get klass word of '" + obj + "' failed");
+			}
 		}
 
-		public int get_klass_word_byte_length()
+		/**
+		 * 强制改写对象头
+		 * 
+		 * @param obj
+		 * @param klass_word
+		 * @return
+		 */
+		public final void set_klass_word(Object obj, long klass_word)
 		{
-			return this.klass_word_byte_length;
+			switch (klass_word_length)
+			{
+			case 32:
+				unsafe.write(obj, aligned_klass_word_byte_offset, (int) klass_word);
+				break;
+			case 22:
+				unsafe.le_write_bits(obj, 0, klass_word_offset, klass_word, klass_word_length);
+			case 64:
+				unsafe.write(obj, aligned_klass_word_byte_offset, klass_word);
+				break;
+			default:
+				throw new java.lang.InternalError("set klass word of '" + obj + "' failed");
+			}
 		}
 
-		public int get_header_byte_length()
+		public final void set_klass_word(long oop, long klass_word)
 		{
-			return this.header_byte_length;
+			switch (klass_word_length)
+			{
+			case 32:
+				unsafe.write(null, oop + aligned_klass_word_byte_offset, (int) klass_word);
+				break;
+			case 64:
+				unsafe.write(null, oop + aligned_klass_word_byte_offset, klass_word);
+				break;
+			default:
+				throw new java.lang.InternalError("set klass word of oop '" + oop + "' to '" + klass_word + "' failed");
+			}
 		}
 	}
 
@@ -721,6 +660,11 @@ public class virtual_machine
 	}
 
 	public static final virtual_machine host = new virtual_machine();
+
+	public long get_header_byte_length()
+	{
+		return object_layout_type.header_byte_length;
+	}
 
 	/**
 	 * Java的null地址，对应堆内存的基地址0偏移处。堆内存起始地址并不一定是0.
@@ -821,26 +765,6 @@ public class virtual_machine
 		}
 	}
 
-	public final int get_markword_byte_length()
-	{
-		return object_layout_type.markword_byte_length;
-	}
-
-	public final int get_klass_word_byte_offset()
-	{
-		return object_layout_type.klass_word_byte_offset;
-	}
-
-	public final int get_klass_word_byte_length()
-	{
-		return object_layout_type.klass_word_byte_length;
-	}
-
-	public final int get_header_byte_length()
-	{
-		return object_layout_type.header_byte_length;
-	}
-
 	public final long get_heap_address_range()
 	{
 		return heap_address_range;
@@ -927,22 +851,34 @@ public class virtual_machine
 		}
 	}
 
+	public final int oop_of_address(long addr)
+	{
+		if (UseCompressedOops)
+		{
+			return encode_oop(addr);
+		}
+		else
+		{
+			return (int) addr;
+		}
+	}
+
 	/**
 	 * 从（压缩后的）oop获取Java对象。<br>
 	 * 如果开启了oop压缩，则必须传入压缩后的oop。<br>
 	 * 
-	 * @param addr
+	 * @param oop
 	 * @return
 	 */
-	public static final Object resolve_oop(long addr)
+	public static final Object resolve_oop(long oop)
 	{
 		Object[] _a = new Object[1];
 		switch (unsafe.array_object_index_scale)
 		{
 		case 4:
-			unsafe.write(_a, unsafe.array_object_base_offset, (int) addr);
+			unsafe.write(_a, unsafe.array_object_base_offset, (int) oop);
 		case 8:
-			unsafe.write(_a, unsafe.array_object_base_offset, addr);
+			unsafe.write(_a, unsafe.array_object_base_offset, oop);
 		}
 		return _a[0];
 	}
@@ -958,6 +894,11 @@ public class virtual_machine
 		return address_of_oop((int) oop_of(object));
 	}
 
+	public final Object resolve_address(long addr)
+	{
+		return resolve_oop(oop_of_address(addr));
+	}
+
 	/**
 	 * 压缩Klass Pointer，实际上压缩方式和OOP一致
 	 * 
@@ -966,18 +907,20 @@ public class virtual_machine
 	 */
 	public final long encode_narrow_klass(long klass_ptr)
 	{
-		return (int) (address_on_heap(klass_ptr) >> oops_shift);
+		return object_layout_type.encode_narrow_klass(heap_base_address, klass_ptr);
 	}
 
 	/**
-	 * 如果开启了UseCompressedClassPointers，则需要用此方法解压缩对象头的Klass Word才能得到Klass*指针。
+	 * 如果开启了UseCompressedClassPointers或+UseCompactObjectHeaders，则需要用此方法解压缩对象头的Klass Word才能得到Klass*指针。
+	 * 从压缩或未压缩的KlassWord获取Klass*地址。<br>
+	 * 该地址位于metaspace，地址是不变的，可以长期使用。<br>
 	 * 
 	 * @param narrow_klass
 	 * @return
 	 */
 	public final long decode_narrow_klass(int narrow_klass)
 	{
-		return heap_base_address + ((narrow_klass & cxx_type.uint32_t_mask) << oops_shift);
+		return object_layout_type.decode_narrow_klass(heap_base_address, narrow_klass);
 	}
 
 	/**
@@ -989,14 +932,12 @@ public class virtual_machine
 	 */
 	public final long klass_pointer_of_klass_word(long klass_word)
 	{
-		if (UseCompressedClassPointers)
-		{
-			return decode_narrow_klass((int) klass_word);
-		}
-		else
-		{
-			return klass_word;
-		}
+		return decode_narrow_klass((int) klass_word);
+	}
+
+	public final long klass_word_of_klass_pointer(long klass_ptr)
+	{
+		return encode_narrow_klass(klass_ptr);
 	}
 
 	/**
@@ -1020,60 +961,19 @@ public class virtual_machine
 		return klass_word_cache.computeIfAbsent(clazz, (c) -> get_klass_word(unsafe.allocate(c)));
 	}
 
-	/**
-	 * 获取对象头
-	 * 
-	 * @param obj
-	 * @return
-	 */
 	public final long get_klass_word(Object obj)
 	{
-		switch (object_layout_type.klass_word_byte_length)
-		{
-		case 4:
-			return unsafe.read_int(obj, object_layout_type.klass_word_byte_offset);
-		case 8:
-			return unsafe.read_long(obj, object_layout_type.klass_word_byte_offset);
-		default:
-			throw new java.lang.InternalError("get klass word of '" + obj + "' failed");
-		}
+		return object_layout_type.get_klass_word(obj);
 	}
 
-	/**
-	 * 强制改写对象头
-	 * 
-	 * @param obj
-	 * @param klass_word
-	 * @return
-	 */
 	public final void set_klass_word(Object obj, long klass_word)
 	{
-		switch (object_layout_type.klass_word_byte_length)
-		{
-		case 4:
-			unsafe.write(obj, object_layout_type.klass_word_byte_offset, (int) klass_word);
-			break;
-		case 8:
-			unsafe.write(obj, object_layout_type.klass_word_byte_offset, klass_word);
-			break;
-		default:
-			throw new java.lang.InternalError("set klass word of '" + obj + "' failed");
-		}
+		object_layout_type.set_klass_word(obj, klass_word);
 	}
 
 	public final void set_klass_word(long oop, long klass_word)
 	{
-		switch (object_layout_type.klass_word_byte_length)
-		{
-		case 4:
-			unsafe.write(null, oop + object_layout_type.klass_word_byte_offset, (int) klass_word);
-			break;
-		case 8:
-			unsafe.write(null, oop + object_layout_type.klass_word_byte_offset, klass_word);
-			break;
-		default:
-			throw new java.lang.InternalError("set klass word of oop '" + oop + "' to '" + klass_word + "' failed");
-		}
+		object_layout_type.set_klass_word(oop, klass_word);
 	}
 
 	/**
