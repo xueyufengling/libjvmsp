@@ -636,18 +636,20 @@ public class virtual_machine
 			}
 		}
 
-		public final void set_klass_word(long oop, long klass_word)
+		public final void set_klass_word(long addr, long klass_word)
 		{
 			switch (klass_word_length)
 			{
 			case 32:
-				unsafe.write(null, oop + aligned_klass_word_byte_offset, (int) klass_word);
+				unsafe.write(null, addr + aligned_klass_word_byte_offset, (int) klass_word);
 				break;
+			case 22:
+				unsafe.le_write_bits(null, addr, klass_word_offset, klass_word, klass_word_length);
 			case 64:
-				unsafe.write(null, oop + aligned_klass_word_byte_offset, klass_word);
+				unsafe.write(null, addr + aligned_klass_word_byte_offset, klass_word);
 				break;
 			default:
-				throw new java.lang.InternalError("set klass word of oop '" + oop + "' to '" + klass_word + "' failed");
+				throw new java.lang.InternalError("set klass word of oop '" + addr + "' to '" + klass_word + "' failed");
 			}
 		}
 	}
