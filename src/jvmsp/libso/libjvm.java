@@ -104,15 +104,21 @@ public abstract class libjvm
 	public static final int JNI_VERSION_21 = 0x00150000;
 	public static final int JNI_VERSION_24 = 0x00180000;
 
-	private static final long _libjvm;
+	public static final long _libjvm;
 
 	private static final MethodHandle JNI_GetCreatedJavaVMs;
+	private static final MethodHandle universe;
+	private static final MethodHandle ps;
+	private static final MethodHandle pfl;
 
 	static
 	{
 		// 加载JNI，本类所有涉及JVM相关的函数都必须在加载libjvm.so以后才能调用
 		_libjvm = shared_object.dlopen("jvm");
 		JNI_GetCreatedJavaVMs = shared_object.dlsym(_libjvm, function_signature.of("JNI_GetCreatedJavaVMs", cxx_type.jint, cxx_type.pvoid, cxx_type.jsize, cxx_type.pjsize));
+		universe = shared_object.dlsym(_libjvm, function_signature.of("universe", cxx_type._void));
+		ps = shared_object.dlsym(_libjvm, function_signature.of("ps", cxx_type._void));
+		pfl = shared_object.dlsym(_libjvm, function_signature.of("pfl", cxx_type._void));
 	}
 
 	/**
@@ -174,5 +180,41 @@ public abstract class libjvm
 	public static final jni_native_interface jni_native_interface()
 	{
 		return jni_native_interface(jni_invoke_interfaces());
+	}
+
+	public static final void universe()
+	{
+		try
+		{
+			universe.invokeExact();
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call universe() failed", ex);
+		}
+	}
+
+	public static final void ps()
+	{
+		try
+		{
+			ps.invokeExact();
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call ps() failed", ex);
+		}
+	}
+
+	public static final void pfl()
+	{
+		try
+		{
+			pfl.invokeExact();
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("call pfl() failed", ex);
+		}
 	}
 }

@@ -61,6 +61,8 @@ public abstract class memory
 	 */
 	public static final pointer c_str(String str, Charset cs)
 	{
+		if (str == null)
+			return pointer.nullptr;
 		byte[] bytes = str.getBytes(cs);
 		long cstr_addr = unsafe.malloc(bytes.length + 1);
 		unsafe.memcpy(bytes, 0, cstr_addr, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
@@ -82,10 +84,17 @@ public abstract class memory
 	 */
 	public static final String string(long cstr_addr, Charset cs)
 	{
-		long len = libc.strlen(cstr_addr);
-		byte[] bytes = new byte[(int) len];// 不包含结尾的'\0'
-		unsafe.memcpy(cstr_addr, bytes, 0, bytes.length);
-		return new String(bytes, cs);
+		if (cstr_addr == 0)// 空指针
+		{
+			return null;
+		}
+		else
+		{
+			long len = libc.strlen(cstr_addr);
+			byte[] bytes = new byte[(int) len];// 不包含结尾的'\0'
+			unsafe.memcpy(cstr_addr, bytes, 0, bytes.length);
+			return new String(bytes, cs);
+		}
 	}
 
 	public static final String string(pointer cstr, Charset cs)

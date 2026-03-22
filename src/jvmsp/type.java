@@ -1055,17 +1055,39 @@ public abstract class type<_T>
 		public static final cxx_type uint64_t = cxx_type.define_primitive("uint64_t", false, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type size_t = cxx_type.define_primitive("size_t", false, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
 
+		/**
+		 * 定长数组类型
+		 */
 		public static class array_type extends cxx_type
 		{
-			protected array_type(String array_type_name, cxx_type type, int size)
+			private final cxx_type element_type;
+
+			protected array_type(String array_type_name, cxx_type element_type, int size)
 			{
-				super(array_type_name, false, size * type.size(), MemoryLayout.sequenceLayout(size, type.memory_layout()));
+				super(array_type_name, element_type.signed(), size * element_type.size(), MemoryLayout.sequenceLayout(size, element_type.memory_layout()));
+				this.element_type = element_type;
 			}
 
-			protected array_type(cxx_type type, int size)
+			protected array_type(cxx_type element_type, int size)
 			{
-				this(type.typename() + '[' + size + ']', type, size);
+				this(element_type.typename() + '[' + size + ']', element_type, size);
 			}
+
+			public final cxx_type element_type()
+			{
+				return element_type;
+			}
+		}
+
+		/**
+		 * 为当前类型创建一个定长数组类型
+		 * 
+		 * @param size
+		 * @return
+		 */
+		public final array_type array(int size)
+		{
+			return new array_type(this, size);
 		}
 
 		/**
@@ -1136,7 +1158,7 @@ public abstract class type<_T>
 
 			protected pointer_type(cxx_type type)
 			{
-				this(type.typename() + "*", type);
+				this(type.typename() + '*', type);
 			}
 
 			protected pointer_type(String ptr_type_name, String pointed_to_type_name)
@@ -1148,7 +1170,7 @@ public abstract class type<_T>
 
 			protected pointer_type(String pointed_to_type_name)
 			{
-				this(pointed_to_type_name + "*", pointed_to_type_name);
+				this(pointed_to_type_name + '*', pointed_to_type_name);
 			}
 
 			public cxx_type pointed_to_type()

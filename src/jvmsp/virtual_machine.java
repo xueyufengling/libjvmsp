@@ -269,17 +269,17 @@ public class virtual_machine
 * |----------------------------------------------------------------------------------------|--------------------|<br>
 * |                                    Object Header (64 bits)                             |        State       |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* |                  Mark Word (32 bits)                  |      Klass Word (32 bits)      |                    |<br>
+* |                  Mark Word (32 bits)                  |       Klass Word (32 bits)     |                    |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* | identity_hashcode:25 | age:4 | biased_lock:1 | lock:2 |      OOP to metadata object    |       Normal       |<br>
+* | identity_hashcode:25 | age:4 | biased_lock:1 | lock:2 |          Klass pointer         |       Normal       |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* |  thread:23 | epoch:2 | age:4 | biased_lock:1 | lock:2 |      OOP to metadata object    |       Biased       |<br>
+* |  thread:23 | epoch:2 | age:4 | biased_lock:1 | lock:2 |          Klass pointer         |       Biased       |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* |               ptr_to_lock_record:30          | lock:2 |      OOP to metadata object    | Lightweight Locked |<br>
+* |               ptr_to_lock_record:30          | lock:2 |          Klass pointer         | Lightweight Locked |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* |               ptr_to_heavyweight_monitor:30  | lock:2 |      OOP to metadata object    | Heavyweight Locked |<br>
+* |               ptr_to_heavyweight_monitor:30  | lock:2 |          Klass pointer         | Heavyweight Locked |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
-* |                                              | lock:2 |      OOP to metadata object    |    Marked for GC   |<br>
+* |                                              | lock:2 |          Klass pointer         |    Marked for GC   |<br>
 * |-------------------------------------------------------|--------------------------------|--------------------|<br>
 */
 // @formatter:on 
@@ -323,17 +323,17 @@ public class virtual_machine
 * |------------------------------------------------------------------------------------------------------------|--------------------|<br>
 * |                                            Object Header (128 bits)                                        |        State       |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                                  Mark Word (64 bits)                         |    Klass Word (64 bits)     |                    |<br>
+* |                                  Mark Word (64 bits)                         |     Klass Word (64 bits)    |                    |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* | unused:25 | identity_hashcode:31 | unused:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Normal       |<br>
+* | unused:25 | identity_hashcode:31 | unused:1 | age:4 | biased_lock:1 | lock:2 |        Klass pointer        |       Normal       |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* | thread:54 |       epoch:2        | unused:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Biased       |<br>
+* | thread:54 |       epoch:2        | unused:1 | age:4 | biased_lock:1 | lock:2 |        Klass pointer        |       Biased       |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                       ptr_to_lock_record:62                         | lock:2 |    OOP to metadata object   | Lightweight Locked |<br>
+* |                       ptr_to_lock_record:62                         | lock:2 |        Klass pointer        | Lightweight Locked |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                     ptr_to_heavyweight_monitor:62                   | lock:2 |    OOP to metadata object   | Heavyweight Locked |<br>
+* |                     ptr_to_heavyweight_monitor:62                   | lock:2 |        Klass pointer        | Heavyweight Locked |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                                                                     | lock:2 |    OOP to metadata object   |    Marked for GC   |<br>
+* |                                                                     | lock:2 |        Klass pointer        |    Marked for GC   |<br>
 * |------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
 */
 // @formatter:on 
@@ -378,21 +378,21 @@ public class virtual_machine
 
 // @formatter:off
 /** <br>
-* ObjectHeader 64-bit JVM UseCompressedOops=true<br>
+* ObjectHeader 64-bit JVM +UseCompressedOops +UseCompressedClassPointers<br>
 * |--------------------------------------------------------------------------------------------------------------|--------------------|<br>
 * |                                            Object Header (96 bits)                                           |        State       |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                                  Mark Word (64 bits)                           |    Klass Word (32 bits)     |                    |<br>
+* |                                  Mark Word (64 bits)                           |     Klass Word (32 bits)    |                    |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* | unused:25 | identity_hashcode:31 | cms_free:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Normal       |<br>
+* | unused:25 | identity_hashcode:31 | cms_free:1 | age:4 | biased_lock:1 | lock:2 |   Compressed Klass pointer  |       Normal       |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* | thread:54 |       epoch:2        | cms_free:1 | age:4 | biased_lock:1 | lock:2 |    OOP to metadata object   |       Biased       |<br>
+* | thread:54 |       epoch:2        | cms_free:1 | age:4 | biased_lock:1 | lock:2 |   Compressed Klass pointer  |       Biased       |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                         ptr_to_lock_record                            | lock:2 |    OOP to metadata object   | Lightweight Locked |<br>
+* |                         ptr_to_lock_record                            | lock:2 |   Compressed Klass pointer  | Lightweight Locked |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                     ptr_to_heavyweight_monitor                        | lock:2 |    OOP to metadata object   | Heavyweight Locked |<br>
+* |                     ptr_to_heavyweight_monitor                        | lock:2 |   Compressed Klass pointer  | Heavyweight Locked |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
-* |                                                                       | lock:2 |    OOP to metadata object   |    Marked for GC   |<br>
+* |                                                                       | lock:2 |   Compressed Klass pointer  |    Marked for GC   |<br>
 * |--------------------------------------------------------------------------------|-----------------------------|--------------------|<br>
  */
 // @formatter:on 
@@ -449,7 +449,7 @@ public class virtual_machine
 	private long ObjectAlignmentInBytes;
 
 	/**
-	 * 堆内存base的最小地址。即堆的基地址
+	 * 堆内存base的最小地址。堆的实际基地址大于等于此值
 	 */
 	private long HeapBaseMinAddress;
 	/**
@@ -577,7 +577,7 @@ public class virtual_machine
 		/**
 		 * bit索引为8对齐的时使用的读取klass word的字节索引
 		 */
-		private int aligned_klass_word_byte_offset;
+		private final int klass_word_begin_byte_offset;
 
 		private object_layout(boolean has_klass_gap, int narrow_klass_shift, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
 		{
@@ -587,8 +587,8 @@ public class virtual_machine
 			this.klass_word_offset = klass_word_offset;
 			this.klass_word_length = klass_word_length;
 			this.header_length = header_length;
-			this.aligned_klass_word_byte_offset = klass_word_offset / 8;
-			this.header_byte_length = header_length / 8;
+			this.klass_word_begin_byte_offset = (int) Math.floor(klass_word_offset / 8.0);
+			this.header_byte_length = (int) Math.ceil(header_length / 8.0);
 		}
 
 		/**
@@ -602,11 +602,11 @@ public class virtual_machine
 			switch (klass_word_length)
 			{
 			case 32:
-				return unsafe.read_int(obj, aligned_klass_word_byte_offset);
+				return unsafe.read_int(obj, klass_word_begin_byte_offset);
 			case 22:
 				return unsafe.le_read_bits(obj, 0, klass_word_offset, klass_word_length);
 			case 64:
-				return unsafe.read_long(obj, aligned_klass_word_byte_offset);
+				return unsafe.read_long(obj, klass_word_begin_byte_offset);
 			default:
 				throw new java.lang.InternalError("get klass word of '" + obj + "' failed");
 			}
@@ -624,12 +624,12 @@ public class virtual_machine
 			switch (klass_word_length)
 			{
 			case 32:
-				unsafe.write(obj, aligned_klass_word_byte_offset, (int) klass_word);
+				unsafe.write(obj, klass_word_begin_byte_offset, (int) klass_word);
 				break;
 			case 22:
 				unsafe.le_write_bits(obj, 0, klass_word_offset, klass_word, klass_word_length);
 			case 64:
-				unsafe.write(obj, aligned_klass_word_byte_offset, klass_word);
+				unsafe.write(obj, klass_word_begin_byte_offset, klass_word);
 				break;
 			default:
 				throw new java.lang.InternalError("set klass word of '" + obj + "' failed");
@@ -641,12 +641,12 @@ public class virtual_machine
 			switch (klass_word_length)
 			{
 			case 32:
-				unsafe.write(null, addr + aligned_klass_word_byte_offset, (int) klass_word);
+				unsafe.write(null, addr + klass_word_begin_byte_offset, (int) klass_word);
 				break;
 			case 22:
 				unsafe.le_write_bits(null, addr, klass_word_offset, klass_word, klass_word_length);
 			case 64:
-				unsafe.write(null, addr + aligned_klass_word_byte_offset, klass_word);
+				unsafe.write(null, addr + klass_word_begin_byte_offset, klass_word);
 				break;
 			default:
 				throw new java.lang.InternalError("set klass word of oop '" + addr + "' to '" + klass_word + "' failed");
@@ -673,7 +673,7 @@ public class virtual_machine
 	 */
 	public final long heap_base()
 	{
-		return oop_of(null);
+		return 0;
 	}
 
 	public final void update_vm_info()

@@ -346,7 +346,7 @@ public final class unsafe
 	 * @param offset
 	 * @return
 	 */
-	public static final long pointed_to_address(Object base, long offset)
+	public static final long read_pointer(Object base, long offset)
 	{
 		try
 		{
@@ -356,6 +356,11 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("get pointed-to address of '" + base + "' + '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final long read_pointer(long offset)
+	{
+		return read_pointer(null, offset);
 	}
 
 	public static final int address_size()
@@ -732,6 +737,30 @@ public final class unsafe
 		return read_int(null, native_addr);
 	}
 
+	/**
+	 * 读取C/C++的bool值
+	 * 
+	 * @param base
+	 * @param offset
+	 * @return
+	 */
+	public static final boolean read_cbool(Object base, long offset)
+	{
+		try
+		{
+			return ((int) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset)) == 0 ? false : true;// 严格讲必须是C/C++的int类型，不一定是32位。
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get c bool at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final boolean read_cbool(long native_addr)
+	{
+		return read_cbool(null, native_addr);
+	}
+
 	public static final void write(Object base, long offset, long x)
 	{
 		try
@@ -764,6 +793,23 @@ public final class unsafe
 	public static final long read_long(long native_addr)
 	{
 		return read_long(null, native_addr);
+	}
+
+	public static final boolean read_u64bool(Object base, long offset)
+	{
+		try
+		{
+			return ((long) getLong.invoke(instance_jdk_internal_misc_Unsafe, base, offset)) == 0 ? false : true;
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get uint64_t bool at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final boolean read_u64bool(long native_addr)
+	{
+		return read_u64bool(null, native_addr);
 	}
 
 	public static final void write(Object base, long offset, double x)

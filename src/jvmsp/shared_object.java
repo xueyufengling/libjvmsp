@@ -1114,6 +1114,18 @@ public class shared_object
 	}
 
 	/**
+	 * 将指定地址解析为函数指针
+	 * 
+	 * @param fun_addr
+	 * @param signature
+	 * @return
+	 */
+	public static final MethodHandle func(long fun_addr, function_signature signature)
+	{
+		return symbols.bind(stub_function(signature.func_type), 0, fun_addr);
+	}
+
+	/**
 	 * 查找指定签名的函数
 	 * 
 	 * @param handle
@@ -1126,6 +1138,7 @@ public class shared_object
 		if (addr == 0)
 			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
 		else
-			return symbols.bind(stub_function(signature.func_type), 0, addr);
+			return func(addr, signature);
 	}
+
 }
