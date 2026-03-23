@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 
+import jvmsp.structs.instant_iterate_list;
+
 public class class_loader
 {
 	private static MethodHandle ClassLoader_defineClass0;

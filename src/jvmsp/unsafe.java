@@ -107,6 +107,9 @@ public final class unsafe
 	public static final int array_byte_base_offset;
 	public static final int array_byte_index_scale;
 
+	public static final int array_long_base_offset;
+	public static final int array_long_index_scale;
+
 	/**
 	 * OOP大小，只会是4或8.<br>
 	 * 32位JVM和开启压缩OOP的64位JVM上为4，未开启压缩OOP的64位JVM上为8.<br>
@@ -218,6 +221,8 @@ public final class unsafe
 		array_byte_base_offset = array_base_offset(byte[].class);
 		array_byte_index_scale = array_index_scale(byte[].class);
 		oop_size = array_object_index_scale;
+		array_long_base_offset = array_base_offset(long[].class);
+		array_long_index_scale = array_index_scale(long[].class);
 	}
 
 	public static final class methods
@@ -430,6 +435,11 @@ public final class unsafe
 		}
 	}
 
+	public static final void memset(long addr, long num, byte value)
+	{
+		memset(null, addr, num, value);
+	}
+
 	public static final void memcpy(Object src_base, long src_offset, Object dest_base, long dest_offset, long num)
 	{
 		try
@@ -486,6 +496,11 @@ public final class unsafe
 	public static final void memcpy(long src_addr, byte[] dest_arr, long dest_idx, long num)
 	{
 		memcpy((Object) null, src_addr, dest_arr, dest_idx, num);
+	}
+
+	public static final void memcpy(long[] src_arr, long src_idx, long[] dest_arr, long dest_idx, long num)
+	{
+		memcpy(src_arr, array_long_base_offset + src_idx * java_type.long_size, dest_arr, array_long_base_offset + dest_idx * java_type.long_size, num);
 	}
 
 	/**

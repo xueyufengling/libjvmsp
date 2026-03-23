@@ -6,7 +6,6 @@ import jvmsp.memory;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_pointer_type;
 import jvmsp.type.cxx_type.pointer;
-import jvmsp.type.java_type;
 
 /**
  * JNINativeInterface_的函数封装
@@ -724,7 +723,7 @@ public class jni_native_interface
 		this.GetStringUTFLengthAsLong = JNINativeInterface_base.callable("GetStringUTFLengthAsLong");
 	}
 
-	public final long get_string_utf_chars(String jstr, boolean is_copy)
+	public final long GetStringUTFChars(String jstr, boolean is_copy)
 	{
 		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto();)
 		{
@@ -737,7 +736,7 @@ public class jni_native_interface
 		}
 	}
 
-	public final void release_string_utf_chars(String jstr, long cstr)
+	public final void ReleaseStringUTFChars(String jstr, long cstr)
 	{
 		try
 		{
@@ -754,7 +753,7 @@ public class jni_native_interface
 	 * 
 	 * @return
 	 */
-	public final int get_version()
+	public final int GetVersion()
 	{
 		try
 		{
@@ -766,7 +765,7 @@ public class jni_native_interface
 		}
 	}
 
-	public final long find_class(String bin_name)
+	public final long FindClass(String bin_name)
 	{
 		try (pointer cstr = memory.c_str(bin_name).auto())
 		{
@@ -778,7 +777,7 @@ public class jni_native_interface
 		}
 	}
 
-	public final void fatal_error(String msg)
+	public final void FatalError(String msg)
 	{
 		try (pointer cstr = memory.c_str(msg).auto())
 		{
@@ -795,7 +794,7 @@ public class jni_native_interface
 	 * 
 	 * @param msg
 	 */
-	public final long get_static_method_id(Class<?> clazz, String name, String sig)
+	public final long GetStaticMethodID(Class<?> clazz, String name, String sig)
 	{
 		try (pointer cname = memory.c_str(name).auto();
 				pointer csig = memory.c_str(sig).auto())

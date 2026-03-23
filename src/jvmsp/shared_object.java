@@ -12,7 +12,6 @@ import java.util.Set;
 
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
-import jvmsp.type.java_type;
 
 /**
  * 加载so库以及符号查找
@@ -891,6 +890,7 @@ public class shared_object
 		{
 			private static Class<?> jdk_internal_foreign_abi_CallingSequence;
 			private static Class<?> jdk_internal_foreign_abi_Binding$Move;
+			private static Class<?> jdk_internal_foreign_abi_aarch64_CallArranger$Bindings;// 虽然此处是aarch64 ABI的，但实际上各自架构的CallArranger$Bindings定义都一样
 
 			private static VarHandle CallingSequence_calleeMethodType;
 			private static VarHandle CallingSequence_needsReturnBuffer;
@@ -905,12 +905,16 @@ public class shared_object
 
 			private static MethodHandle Binding$Move_storage;
 
+			private static long Bindings_callingSequence;
+			private static long Bindings_isInMemoryReturn;
+
 			static
 			{
 				try
 				{
 					jdk_internal_foreign_abi_CallingSequence = Class.forName("jdk.internal.foreign.abi.CallingSequence");
 					jdk_internal_foreign_abi_Binding$Move = Class.forName("jdk.internal.foreign.abi.Binding$Move");
+					jdk_internal_foreign_abi_aarch64_CallArranger$Bindings = Class.forName("jdk.internal.foreign.abi.aarch64.CallArranger$Bindings");
 				}
 				catch (ClassNotFoundException ex)
 				{
@@ -928,6 +932,9 @@ public class shared_object
 				CallingSequence_argumentBindings = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "argumentBindings", List.class);
 
 				Binding$Move_storage = symbols.find_virtual_method(jdk_internal_foreign_abi_Binding$Move, "storage", jdk_internal_foreign_abi_VMStorage);
+
+				Bindings_callingSequence = unsafe.object_field_offset(jdk_internal_foreign_abi_aarch64_CallArranger$Bindings, "callingSequence");
+				Bindings_isInMemoryReturn = unsafe.object_field_offset(jdk_internal_foreign_abi_aarch64_CallArranger$Bindings, "isInMemoryReturn");
 			}
 
 			/**
@@ -951,14 +958,10 @@ public class shared_object
 			private Object calling_sequence;
 			private boolean is_in_memory_return;
 
-			private constraint()
+			private constraint(Object calling_sequence, boolean is_in_memory_return)
 			{
-				throw new java.lang.InstantiationError("constraint should not be instantiated");
-			}
-
-			public String toString()
-			{
-				return calling_sequence.toString();
+				this.calling_sequence = calling_sequence;
+				this.is_in_memory_return = is_in_memory_return;
 			}
 
 			/**
@@ -967,9 +970,14 @@ public class shared_object
 			 * @param bindings
 			 * @return
 			 */
-			public static constraint __from(Object bindings)
+			private constraint(Object bindings)
 			{
-				return (constraint) java_type.cast(bindings, virtual_machine.host.get_klass_word(constraint.class));
+				this(unsafe.read_reference(bindings, Bindings_callingSequence), (boolean) unsafe.read_bool(bindings, Bindings_isInMemoryReturn));
+			}
+
+			public String toString()
+			{
+				return calling_sequence.toString();
 			}
 
 			public final Object calling_sequence()
@@ -1065,7 +1073,7 @@ public class shared_object
 		 */
 		public final constraint resolve_constraints(FunctionDescriptor fd, boolean for_upcall, Object options)
 		{
-			return constraint.__from(_get_bindings.call(fd, for_upcall, options));
+			return new constraint(_get_bindings.call(fd, for_upcall, options));
 
 		}
 

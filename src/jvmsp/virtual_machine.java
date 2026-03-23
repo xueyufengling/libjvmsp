@@ -20,6 +20,7 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
 import jvmsp.type.cxx_type;
+import jvmsp.hotspot.vm_struct;
 
 /**
  * 管理JVM的相关功能
@@ -444,18 +445,9 @@ public class virtual_machine
 	private boolean UseCompressedClassPointers;
 
 	/**
-	 * 对象字节对齐，默认为8,必须是2的幂，一般来说是机器的数据字大小，即int类型大小。
-	 */
-	private long ObjectAlignmentInBytes;
-
-	/**
 	 * 堆内存base的最小地址。堆的实际基地址大于等于此值
 	 */
 	private long HeapBaseMinAddress;
-	/**
-	 * 64位JVM开启UseCompressedOops的情况下，如果oop被压缩时，指向的地址有按位偏移。数值为log2(ObjectAlignmentInBytes)
-	 */
-	private int oop_encode_address_shift;
 
 	/**
 	 * JVM中压缩了oop时支持的最大堆内存大小，类型为ulong，实际上是32G
@@ -477,10 +469,12 @@ public class virtual_machine
 	 */
 	private long heap_base_address;
 
+	private long narrow_oop_base_address;
+
 	/**
 	 * 压缩oop时的位移
 	 */
-	private long oops_shift;
+	private long narrow_oop_address_shift;
 
 	/**
 	 * 堆内存相对地址范围
@@ -498,7 +492,6 @@ public class virtual_machine
 		 * +UseCompactObjectHeaders
 		 */
 		Compact(false,
-				10,
 				0,
 				0,
 				0,
@@ -510,7 +503,6 @@ public class virtual_machine
 		 */
 		Compressed(
 				true,
-				3, // static constexpr int max_shift_noncoh = 3;
 				__64_bit_UseCompressedOops_UseCompressedClassPointers.markword_length,
 				__64_bit_UseCompressedOops_UseCompressedClassPointers.klass_offset,
 				__64_bit_UseCompressedOops_UseCompressedClassPointers.klassword_length,
@@ -520,27 +512,18 @@ public class virtual_machine
 		 */
 		Uncompressed32(
 				false,
-				0,
 				__32_bit.markword_length,
 				__32_bit.klass_offset,
 				__32_bit.klassword_length,
 				__32_bit.header_length),
 		Uncompressed64(
 				false,
-				0,
 				__64_bit.markword_length,
 				__64_bit.klass_offset,
 				__64_bit.klassword_length,
 				__64_bit.header_length);
 
 		public final boolean has_klass_gap;
-
-		/**
-		 * Klass Pointer位移多少位才能得到对象头的narrow klass。<br>
-		 * 开启+UseCompressedClassPointers后该值为3，开启+UseCompactObjectHeaders后该值为10.<br>
-		 * 此值为OpenJDk中硬编码的固定值，与OOP压缩的位移位数可能不同。<br>
-		 */
-		public final int narrow_klass_shift;
 
 		/**
 		 * Mark Word的长度，单位bit
@@ -564,14 +547,15 @@ public class virtual_machine
 
 		public final int header_byte_length;
 
-		public long decode_narrow_klass(long heap_base, int narrow_klass)
+		public long decode_narrow_klass(int narrow_klass)
 		{
-			return heap_base + ((narrow_klass & cxx_type.uint32_t_mask) << narrow_klass_shift);
+			// https://github.com/openjdk/jdk/blob/8e906ddad6e8019718a916e02082b2badf0c0ff2/src/hotspot/share/oops/compressedKlass.inline.hpp#L59
+			return narrow_klass_address_base + ((narrow_klass & cxx_type.uint32_t_mask) << narrow_klass_address_shift);
 		}
 
-		public final long encode_narrow_klass(long heap_base, long klass_ptr)
+		public final long encode_narrow_klass(long klass_ptr)
 		{
-			return (int) ((klass_ptr - heap_base) >> narrow_klass_shift);
+			return (int) ((klass_ptr - narrow_klass_address_base) >> narrow_klass_address_shift);
 		}
 
 		/**
@@ -579,16 +563,31 @@ public class virtual_machine
 		 */
 		private final int klass_word_begin_byte_offset;
 
-		private object_layout(boolean has_klass_gap, int narrow_klass_shift, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
+		private long narrow_klass_address_base;
+
+		/**
+		 * Klass Pointer位移多少位才能得到对象头的narrow klass。<br>
+		 * 开启+UseCompressedClassPointers后该值为3，开启+UseCompactObjectHeaders后该值为10.<br>
+		 * 此值为OpenJDk中硬编码的固定值，与OOP压缩的位移位数可能不同。<br>
+		 */
+		private int narrow_klass_address_shift;
+
+		private object_layout(boolean has_klass_gap, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
 		{
 			this.has_klass_gap = has_klass_gap;
-			this.narrow_klass_shift = narrow_klass_shift;
 			this.markword_length = markword_length;
 			this.klass_word_offset = klass_word_offset;
 			this.klass_word_length = klass_word_length;
 			this.header_length = header_length;
 			this.klass_word_begin_byte_offset = (int) Math.floor(klass_word_offset / 8.0);
 			this.header_byte_length = (int) Math.ceil(header_length / 8.0);
+			this.update_klass_mode_info();
+		}
+
+		public final void update_klass_mode_info()
+		{
+			this.narrow_klass_address_base = narrow_klass_base();
+			this.narrow_klass_address_shift = narrow_klass_shift();
 		}
 
 		/**
@@ -668,12 +667,42 @@ public class virtual_machine
 		return object_layout_type.header_byte_length;
 	}
 
-	/**
-	 * Java的null地址，对应堆内存的基地址0偏移处。堆内存起始地址并不一定是0.
-	 */
-	public final long heap_base()
+	public static final long heap_base()
 	{
 		return 0;
+	}
+
+	/**
+	 * 压缩OOP的基地址
+	 * 
+	 * @return
+	 */
+	public static final long narrow_oop_base()
+	{
+		return unsafe.read_pointer(vm_struct.CompressedOops._narrow_oop__base);
+	}
+
+	/**
+	 * 64位JVM开启UseCompressedOops的情况下，如果oop被压缩时，指向的地址有按位偏移。数值为log2(ObjectAlignmentInBytes)
+	 */
+	public static final int narrow_oop_shift()
+	{
+		return unsafe.read_int(vm_struct.CompressedOops._narrow_oop__shift);
+	}
+
+	/**
+	 * 压缩narrow klass的基地址
+	 * 
+	 * @return
+	 */
+	public static final long narrow_klass_base()
+	{
+		return unsafe.read_pointer(vm_struct.CompressedKlassPointers._narrow_klass__base);
+	}
+
+	public static final int narrow_klass_shift()
+	{
+		return unsafe.read_int(vm_struct.CompressedKlassPointers._narrow_klass__shift);
 	}
 
 	public final void update_vm_info()
@@ -698,7 +727,6 @@ public class virtual_machine
 				}
 			}
 		}
-		ObjectAlignmentInBytes = get_long_option("ObjectAlignmentInBytes");
 		HeapBaseMinAddress = get_long_option("HeapBaseMinAddress");
 		try
 		{
@@ -708,8 +736,9 @@ public class virtual_machine
 		{
 			// 获取不存在的Flag时会抛出异常，为了适配低版本JVM可能没有相应的标志，需要捕获错误但不操作
 		}
-		oop_encode_address_shift = uint64_log2(ObjectAlignmentInBytes);
-		OopEncodingHeapMax = UnscaledOopHeapMax << oop_encode_address_shift;// 使用OOP压缩编码后支持的最大的堆内存
+		narrow_oop_base_address = narrow_oop_base();
+		narrow_oop_address_shift = narrow_oop_shift();
+		OopEncodingHeapMax = UnscaledOopHeapMax << narrow_oop_shift();// 使用OOP压缩编码后支持的最大的堆内存
 		// 堆相关信息
 		max_heap_size = virtual_machine.max_heap_size();
 		heap_end_address = HeapBaseMinAddress + max_heap_size;// 这是最大的范围，实际范围可能只是其中一段区间。
@@ -717,25 +746,9 @@ public class virtual_machine
 		{
 			// 实际堆内存终止地址大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
 			// 指定了UseCompressedOops后则必定压缩。
-			oops_shift = oop_encode_address_shift;
+			// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
 			UseCompressedOops = true;
 		}
-		else
-		{
-			// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
-			oops_shift = 0;
-		}
-		if (heap_end_address <= OopEncodingHeapMax)
-		{
-			// 只要未压缩或者压缩后的指针的最大地址仍然小于堆的OOP编码地址范围(ObjectAlignmentInBytes为8时，此值为32G)，就可以将堆的基地址设置为0
-			heap_base_address = 0;
-		}
-		else
-		{
-			// 当堆的终止地址大于OOP编码范围后，堆的起始地址必须加上偏移量，不能从0开始。同时，Java中null的地址就是堆地址的起始地址，其相对于堆的地址为0.
-			heap_base_address = heap_base();
-		}
-		heap_address_range = heap_end_address - heap_base_address;
 		// 对象头信息内存布局
 		switch (jvm_bit_version)
 		{
@@ -765,6 +778,7 @@ public class virtual_machine
 			throw new java.lang.InternalError("unknown native jvm bit-version '" + jvm_bit_version + "'");
 		}
 		}
+		this.object_layout_type.update_klass_mode_info();// 更新klass pointer相关信息
 	}
 
 	public final long get_heap_address_range()
@@ -797,7 +811,7 @@ public class virtual_machine
 	 */
 	public final int encode_oop(long native_addr)
 	{
-		return (int) (address_on_heap(native_addr) >> oops_shift);
+		return (int) ((native_addr - narrow_oop_base_address) >> narrow_oop_address_shift);
 	}
 
 	/**
@@ -808,7 +822,7 @@ public class virtual_machine
 	 */
 	public final long decode_oop(int oop)
 	{
-		return heap_base_address + ((oop & cxx_type.uint32_t_mask) << oops_shift);
+		return narrow_oop_base_address + ((oop & cxx_type.uint32_t_mask) << narrow_oop_address_shift);
 	}
 
 	/**
@@ -909,7 +923,7 @@ public class virtual_machine
 	 */
 	public final long encode_narrow_klass(long klass_ptr)
 	{
-		return object_layout_type.encode_narrow_klass(heap_base_address, klass_ptr);
+		return object_layout_type.encode_narrow_klass(klass_ptr);
 	}
 
 	/**
@@ -922,7 +936,7 @@ public class virtual_machine
 	 */
 	public final long decode_narrow_klass(int narrow_klass)
 	{
-		return object_layout_type.decode_narrow_klass(heap_base_address, narrow_klass);
+		return object_layout_type.decode_narrow_klass(narrow_klass);
 	}
 
 	/**
@@ -1150,6 +1164,11 @@ public class virtual_machine
 	public static final void attach(String agent_path)
 	{
 		attach(agent_path, null);
+	}
+
+	public final long oop_encoding_heap_max()
+	{
+		return OopEncodingHeapMax;
 	}
 
 	/**

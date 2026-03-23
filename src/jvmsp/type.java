@@ -1032,19 +1032,6 @@ public abstract class type<_T>
 
 		public static final cxx_type _enum = typedef(_int, "_enum");
 
-		/**
-		 * 无符号机器数据字
-		 */
-		public static final cxx_type WORD;
-
-		static
-		{
-			if (virtual_machine.on_64bit_jvm)
-				WORD = cxx_type.define_primitive("WORD", false, 8, memory_layout_type.PRIMITIVE_INT);
-			else
-				WORD = cxx_type.define_primitive("WORD", false, 4, memory_layout_type.PRIMITIVE_INT);
-		}
-
 		public static final cxx_type int8_t = cxx_type.define_primitive("int8_t", true, 1, memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type uint8_t = cxx_type.define_primitive("uint8_t", false, type.sizeof(int8_t), memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type int16_t = cxx_type.define_primitive("int16_t", true, 2, memory_layout_type.PRIMITIVE_INT);
@@ -1152,7 +1139,7 @@ public abstract class type<_T>
 
 			protected pointer_type(String ptr_type_name, cxx_type pointed_to_type)
 			{
-				super(ptr_type_name, false, WORD.size(), ValueLayout.ADDRESS);
+				super(ptr_type_name, false, unsafe.address_size, ValueLayout.ADDRESS);
 				this.pointed_to_type = pointed_to_type;
 			}
 
@@ -1163,7 +1150,7 @@ public abstract class type<_T>
 
 			protected pointer_type(String ptr_type_name, String pointed_to_type_name)
 			{
-				super(ptr_type_name, false, WORD.size(), ValueLayout.ADDRESS);
+				super(ptr_type_name, false, unsafe.address_size, ValueLayout.ADDRESS);
 				this.pointed_to_type_name = pointed_to_type_name;
 				this.pointed_to_type = cxx_type.of(pointed_to_type_name);
 			}

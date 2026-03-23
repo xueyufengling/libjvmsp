@@ -1,12 +1,18 @@
 package jvmsp.hotspot;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jvmsp.memory;
 import jvmsp.shared_object;
+import jvmsp.structs.long_array;
+import jvmsp.symbols;
 import jvmsp.unsafe;
+import jvmsp.virtual_machine;
 import jvmsp.libso.libjvm;
+import jvmsp.type.cxx_type;
 
 /**
  * hotspot虚拟机内部实现结构体访问
@@ -14,6 +20,26 @@ import jvmsp.libso.libjvm;
 @SuppressWarnings("unused")
 public class vm_struct
 {
+	public static final boolean get_flag(int flags, int flag)
+	{
+		return (flags & flag) != 0;
+	}
+
+	/**
+	 * 
+	 * @param flags
+	 * @param flag  只能有一个bit为1，其他为0
+	 * @param value
+	 * @return
+	 */
+	public static final int set_flag(int flags, int flag, boolean value)
+	{
+		if (value)
+			return flags |= flag;
+		else
+			return flags &= ~flag;
+	}
+
 	public static class entry
 	{
 		// VMStructs信息的起始地址
@@ -94,6 +120,80 @@ public class vm_struct
 			else
 				return fields.get(field_name);
 		}
+	}
+
+	protected final long address;
+
+	public vm_struct(long address)
+	{
+		this.address = address;
+	}
+
+	public final long address()
+	{
+		return this.address;
+	}
+
+	protected final byte read_byte(long offset)
+	{
+		return unsafe.read_byte(address + offset);
+	}
+
+	protected final void write(long offset, byte value)
+	{
+		unsafe.write(address + offset, value);
+	}
+
+	protected final short read_short(long offset)
+	{
+		return unsafe.read_short(address + offset);
+	}
+
+	protected final void write(long offset, short value)
+	{
+		unsafe.write(address + offset, value);
+	}
+
+	protected final int read_int(long offset)
+	{
+		return unsafe.read_int(address + offset);
+	}
+
+	protected final void write(long offset, int value)
+	{
+		unsafe.write(address + offset, value);
+	}
+
+	protected final long read_long(long offset)
+	{
+		return unsafe.read_long(address + offset);
+	}
+
+	protected final long read_pointer(long offset)
+	{
+		return unsafe.read_pointer(address + offset);
+	}
+
+	protected final void write(long offset, long value)
+	{
+		unsafe.write(address + offset, value);
+	}
+
+	protected static final <_Struct extends vm_struct> _Struct read_vm_struct(Class<_Struct> clazz, long addr)
+	{
+		try
+		{
+			return (_Struct) symbols.find_constructor(clazz, long.class).invoke(addr);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("read vm struct at '" + addr + "' faield", ex);
+		}
+	}
+
+	protected final <_Struct extends vm_struct> _Struct read_vm_struct_ptr(Class<_Struct> clazz, long offset)
+	{
+		return read_vm_struct(clazz, read_pointer(offset));
 	}
 
 	public static class ContiguousSpace
@@ -225,14 +325,22 @@ public class vm_struct
 		private static final long _annotations = vm_struct.entry.get("InstanceKlass", "_annotations").offset;
 		private static final long _method_ordering = vm_struct.entry.get("InstanceKlass", "_method_ordering").offset;
 		private static final long _default_vtable_indices = vm_struct.entry.get("InstanceKlass", "_default_vtable_indices").offset;
+
+		private static final long _nest_members = _inner_classes + cxx_type.pvoid.size();
+		private static final long _nest_host = _nest_members + cxx_type.pvoid.size();
+		private static final long _permitted_subclasses = _nest_host + cxx_type.pvoid.size();
+		private static final long _record_components = _permitted_subclasses + cxx_type.pvoid.size();
 	}
 
-	public static class Klass
+	public static final cxx_type KlassFlags = cxx_type.define("KlassFlags")
+			.decl_field("_flags", cxx_type.uint8_t);
+
+	public static class Klass extends vm_struct
 	{
-		private static final long _super_check_offset = vm_struct.entry.get("Klass", "_super_check_offset").offset;
+		public static final long _super_check_offset = vm_struct.entry.get("Klass", "_super_check_offset").offset;
 		private static final long _secondary_super_cache = vm_struct.entry.get("Klass", "_secondary_super_cache").offset;
 		private static final long _secondary_supers = vm_struct.entry.get("Klass", "_secondary_supers").offset;
-		private static final long _primary_supers_0 = vm_struct.entry.get("Klass", "_primary_supers[0]").offset;
+		public static final long _primary_supers_0 = vm_struct.entry.get("Klass", "_primary_supers[0]").offset;
 		private static final long _java_mirror = vm_struct.entry.get("Klass", "_java_mirror").offset;
 		private static final long _modifier_flags = vm_struct.entry.get("Klass", "_modifier_flags").offset;
 		private static final long _super = vm_struct.entry.get("Klass", "_super").offset;
@@ -244,6 +352,265 @@ public class vm_struct
 		private static final long _next_link = vm_struct.entry.get("Klass", "_next_link").offset;
 		private static final long _vtable_len = vm_struct.entry.get("Klass", "_vtable_len").offset;
 		private static final long _class_loader_data = vm_struct.entry.get("Klass", "_class_loader_data").offset;
+
+		// 计算相对偏移量
+		private static final long _misc_flags = _super_check_offset - 2;
+		private static final long _kind = _misc_flags - 2;
+
+		public static final int _primary_super_limit = 8;
+
+		public static final short InstanceKlassKind = 0;
+		public static final short InstanceRefKlassKind = 1;
+		public static final short InstanceMirrorKlassKind = 2;
+		public static final short InstanceClassLoaderKlassKind = 3;
+		public static final short InstanceStackChunkKlassKind = 4;
+		public static final short TypeArrayKlassKind = 5;
+		public static final short ObjArrayKlassKind = 6;
+		public static final short UnknownKlassKind = 7;
+
+		public static final byte misc_flag_is_hidden_class = 1 << 0;
+		public static final byte misc_flag_is_value_based_class = 1 << 1;
+		public static final byte misc_flag_has_finalizer = 1 << 2;
+		public static final byte misc_flag_is_cloneable_fast = 1 << 3;
+
+		public Klass(long klass_ptr)
+		{
+			super(klass_ptr);
+		}
+
+		/**
+		 * 获取指定的clazz的Klass*指针
+		 * 
+		 * @param clazz
+		 * @return
+		 */
+		public static final Klass of(Class<?> clazz)
+		{
+			return new Klass(virtual_machine.host.klass_pointer_of(clazz));
+		}
+
+		public static final Klass java_lang_Object = of(Object.class);
+
+		/**
+		 * 如果没有超类，则超类为空指针。<br>
+		 * 该类实际上是Object的超类。<br>
+		 */
+		private static final class null_klass extends Klass
+		{
+			private null_klass(int _super_check_offset)
+			{
+				super(0);
+			}
+
+			@Override
+			public int _super_check_offset()
+			{
+				return java_lang_Object._super_check_offset();
+			}
+
+			@Override
+			public Klass _secondary_super_cache()
+			{
+				return this;// 0
+			}
+		}
+
+		public static final Klass nullptr = new null_klass(1);
+
+		/**
+		 * instanceof判断超类时使用，该值为当前的首要选项，即首先判断是否是该offset对应的Klass*。<br>
+		 * 如果首要选项与_secondary_super_cache相同，则从_primary_supers按照继承关系依次查找。<br>
+		 * 此偏移量实际对应_primary_supers中的元素偏移量.<br>
+		 * 通常来说，此项数值必须是本Klass*所在的元素地址。<br>
+		 * 
+		 * @return
+		 */
+		public int _super_check_offset()
+		{
+			return super.read_int(_super_check_offset);
+		}
+
+		public void set_super_check_offset(int super_check_offset)
+		{
+			super.write(_super_check_offset, super_check_offset);
+		}
+
+		/**
+		 * Object的klass返回0。<br>
+		 * 
+		 * @return
+		 */
+		public Klass _super()
+		{
+			return super.read_vm_struct_ptr(Klass.class, _super);
+		}
+
+		public void set_super(Klass super_klass)
+		{
+			super.write(_super, super_klass.address());
+		}
+
+		public Klass _secondary_super_cache()
+		{
+			return super.read_vm_struct_ptr(Klass.class, _secondary_super_cache);
+		}
+
+		public void set_secondary_super_cache(Klass secondary_super_cache)
+		{
+			super.write(_secondary_super_cache, secondary_super_cache.address());
+		}
+
+		private long _primary_supers_offset(int idx)
+		{
+			return _primary_supers_0 + idx * unsafe.address_size;
+		}
+
+		private long _primary_supers_ptr(int idx)
+		{
+			return super.read_pointer(_primary_supers_offset(idx));
+		}
+
+		/**
+		 * 设置instanceof判断使用的超类继承链缓存值，继承链包含自己，即最后一个非nullptr的元素总是自己.<br>
+		 * 只保留从本类起上面最多8个超类，且越顶级的超类索引越靠前。<br>
+		 * 
+		 * @param idx 缓存的Klass*索引，最多缓存8个。
+		 * @return
+		 */
+		public Klass _primary_supers(int idx)
+		{
+			return super.read_vm_struct_ptr(Klass.class, _primary_supers_offset(idx));
+		}
+
+		/**
+		 * 设置特定索引缓存的超类Klass*，如果缓存中找不到才重新决议继承链继续向上查找超类。
+		 * 
+		 * @param idx           索引
+		 * @param primary_super 超类
+		 */
+		public void set_primary_supers(int idx, long primary_super)
+		{
+			super.write(_primary_supers_offset(idx), primary_super);
+		}
+
+		public void set_primary_supers(int idx, Klass primary_super)
+		{
+			this.set_primary_supers(idx, primary_super.address());
+		}
+
+		public int cached_self_klass_idx()
+		{
+			int direct_super_idx = _primary_super_limit - 1;// 从后往前查找
+			for (int idx = direct_super_idx; idx >= 0; --idx)
+			{
+				if (_primary_supers_ptr(idx) == 0)
+				{
+					continue;
+				}
+				else
+				{
+					direct_super_idx = idx;
+					break;
+				}
+			}
+			return direct_super_idx;
+		}
+
+		public int cached_direct_super_klass_idx()
+		{
+			return cached_self_klass_idx() - 1;
+		}
+
+		/**
+		 * 决议所有的超类，其中顶级超类的Klass* _super为nullptr。<br>
+		 * 返回数组至少有一个元素，即该Klass*本身。<br>
+		 * 不能使用Object[]数组，否则如果设置了Object的超类后调用此函数更新会引发数组存储类型不匹配。<br>
+		 * 
+		 * @return
+		 */
+		public long_array resolve_supers()
+		{
+			long_array klass_chain = new long_array();
+			Klass _current = this;
+			while (true)
+			{
+				klass_chain.add(_current.address);
+				Klass _super = _current._super();
+				if (_super.address == 0)
+				{
+					break;
+				}
+				else
+				{
+					_current = _super;
+				}
+			}
+			return klass_chain;
+		}
+
+		/**
+		 * 清空继承链超类缓存
+		 */
+		public void clear_primary_supers()
+		{
+			unsafe.memset(this.address + _primary_supers_0, _primary_super_limit * unsafe.address_size, (byte) 0);
+		}
+
+		/**
+		 * 该类本身或其任意超类修改了Klass* _super字段后，需要使用此方法手动更新该类的继承链。<br>
+		 */
+		public void resolve_primary_supers()
+		{
+			long_array supers = resolve_supers();
+			int num = Math.min(_primary_super_limit, supers.size());
+			this.clear_primary_supers();
+			for (int idx = 0; idx < num; ++idx)
+			{
+				this.set_primary_supers(idx, supers.get(supers.size() - 1 - idx));
+			}
+			this.set_super_check_offset((int) _primary_supers_offset(num - 1));// 设置为本Klass*所在偏移量。
+		}
+
+		public Symbol _name()
+		{
+			return super.read_vm_struct_ptr(Symbol.class, _name);
+		}
+
+		public void set_name(Symbol name)
+		{
+			super.write(_name, name.address());
+		}
+
+		/**
+		 * 设置直接超类
+		 * 
+		 * @param super_klass
+		 */
+		public void set_super_klass(Klass super_klass)
+		{
+			this.set_super(super_klass);
+			this.resolve_primary_supers();
+		}
+
+		public short _kind()
+		{
+			return super.read_short(_kind);
+		}
+
+		public void set_kind(short kind)
+		{
+			super.write(_kind, kind);
+		}
+
+		public byte _misc_flags()
+		{
+			return super.read_byte(_misc_flags);
+		}
+
+		public void set_misc_flags(byte misc_flags)
+		{
+			super.write(_misc_flags, misc_flags);
+		}
 	}
 
 	public static class vtableEntry
@@ -327,13 +694,33 @@ public class vm_struct
 		private static final long _bottom_klass = vm_struct.entry.get("ObjArrayKlass", "_bottom_klass").offset;
 	}
 
-	public static class Symbol
+	public static class Symbol extends vm_struct
 	{
 		private static final long _hash_and_refcount = vm_struct.entry.get("Symbol", "_hash_and_refcount").offset;
 		private static final long _length = vm_struct.entry.get("Symbol", "_length").offset;
 		private static final long _body = vm_struct.entry.get("Symbol", "_body").offset;
 		private static final long _body_0 = vm_struct.entry.get("Symbol", "_body[0]").offset;
-		private static final long _vm_symbols_0 = vm_struct.entry.get("Symbol", "_vm_symbols[0]").address;
+		private static final long _vm_symbols_0 = vm_struct.entry.get("Symbol", "_vm_symbols[0]").address;// static Symbol* _vm_symbols[];起始地址
+
+		public Symbol(long address)
+		{
+			super(address);
+		}
+
+		public int _hash_and_refcount()
+		{
+			return super.read_int(_hash_and_refcount);
+		}
+
+		public short _length()
+		{
+			return super.read_short(_length);
+		}
+
+		public byte _body(int idx)
+		{
+			return super.read_byte(_body + idx);
+		}
 	}
 
 	public static class TypeArrayKlass
@@ -395,26 +782,26 @@ public class vm_struct
 
 	public static class Universe
 	{
-		private static final long _collectedHeap = vm_struct.entry.get("Universe", "_collectedHeap").address;
+		private static final long _collectedHeap = vm_struct.entry.get("Universe", "_collectedHeap").address;// 静态，堆的基地址
 	}
 
 	public static class CompressedOops
 	{
-		private static final long _narrow_oop__base = vm_struct.entry.get("CompressedOops", "_narrow_oop._base").address;
-		private static final long _narrow_oop__shift = vm_struct.entry.get("CompressedOops", "_narrow_oop._shift").address;
-		private static final long _narrow_oop__use_implicit_null_checks = vm_struct.entry.get("CompressedOops", "_narrow_oop._use_implicit_null_checks").address;
+		public static final long _narrow_oop__base = vm_struct.entry.get("CompressedOops", "_narrow_oop._base").address;
+		public static final long _narrow_oop__shift = vm_struct.entry.get("CompressedOops", "_narrow_oop._shift").address;
+		public static final long _narrow_oop__use_implicit_null_checks = vm_struct.entry.get("CompressedOops", "_narrow_oop._use_implicit_null_checks").address;
 	}
 
 	public static class CompressedKlassPointers
 	{
-		private static final long _narrow_klass__base = vm_struct.entry.get("CompressedKlassPointers", "_narrow_klass._base").address;
-		private static final long _narrow_klass__shift = vm_struct.entry.get("CompressedKlassPointers", "_narrow_klass._shift").address;
+		public static final long _narrow_klass__base = vm_struct.entry.get("CompressedKlassPointers", "_narrow_klass._base").address;
+		public static final long _narrow_klass__shift = vm_struct.entry.get("CompressedKlassPointers", "_narrow_klass._shift").address;
 	}
 
 	public static class MetaspaceObj
 	{
-		private static final long _shared_metaspace_base = vm_struct.entry.get("MetaspaceObj", "_shared_metaspace_base").address;
-		private static final long _shared_metaspace_top = vm_struct.entry.get("MetaspaceObj", "_shared_metaspace_top").address;
+		public static final long _shared_metaspace_base = vm_struct.entry.get("MetaspaceObj", "_shared_metaspace_base").address;
+		public static final long _shared_metaspace_top = vm_struct.entry.get("MetaspaceObj", "_shared_metaspace_top").address;
 	}
 
 	public static class ThreadLocalAllocBuffer

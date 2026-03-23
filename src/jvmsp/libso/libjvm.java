@@ -8,6 +8,7 @@ import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.unsafe;
+import jvmsp.hotspot.vm_struct;
 
 /**
  * libjvm.so库中的函数封装
@@ -26,14 +27,11 @@ public abstract class libjvm
 
 	public static final cxx_type pJNIEnv = cxx_type.pointer_type.of("JNINativeInterface_");
 
-	public static final cxx_type KlassFlags = cxx_type.define("KlassFlags")
-			.decl_field("_flags", cxx_type.uint8_t);
-
 	public static final cxx_type Klass = cxx_type.define("Klass")
 			.decl_field("_primary_super_limit", cxx_type._enum)// 其值固定为8
 			.decl_field("_layout_helper", cxx_type.jint)
 			.decl_field("_kind", cxx_type.uint16_t)
-			.decl_field("_misc_flags", KlassFlags)
+			.decl_field("_misc_flags", vm_struct.KlassFlags)
 			.decl_field("_super_check_offset", cxx_type.juint)
 			.decl_field("_name", cxx_type.pvoid)
 			.decl_field("_secondary_super_cache", cxx_type.pvoid)
