@@ -261,22 +261,9 @@ public class symbols
 
 	private static VarHandle Class_classData;
 
-	private static Class<?> java_lang_invoke_MethodHandles$Lookup$ClassFile;
-
-	private static MethodHandle ClassFile_readClassFile;
-
 	static
 	{
 		Class_classData = find_var(Class.class, "classData", Object.class);
-		try
-		{
-			java_lang_invoke_MethodHandles$Lookup$ClassFile = Class.forName("java.lang.invoke.MethodHandles$Lookup$ClassFile");
-			ClassFile_readClassFile = find_static_method(java_lang_invoke_MethodHandles$Lookup$ClassFile, "readClassFile", java_lang_invoke_MethodHandles$Lookup$ClassFile, byte[].class);
-		}
-		catch (ClassNotFoundException ex)
-		{
-			ex.printStackTrace();
-		}
 	}
 
 	/**
@@ -289,24 +276,6 @@ public class symbols
 	public static final Object get_class_data(Class<?> clazz)
 	{
 		return Class_classData.get(clazz);
-	}
-
-	/**
-	 * 读取ClassFile，隐藏类定义时使用
-	 * 
-	 * @param bytes
-	 * @return
-	 */
-	public static final Object read_class_file(byte[] bytes)
-	{
-		try
-		{
-			return ClassFile_readClassFile.invoke(bytes);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("read class file of '" + bytes + "' failed", ex);
-		}
 	}
 
 	public static final Class<?> define_hidden_class(Class<?> context_clazz, String name, byte[] bytes, ProtectionDomain pd, boolean initialize)
@@ -901,17 +870,30 @@ public class symbols
 	}
 
 	private static MethodHandle getDirectMethodCommon;
+	private static boolean removedSecurityManager;// 是否已经移除了SecurityManager，JDK21未移除，JDK25已经移除
 
 	static
 	{
-		getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, boolean.class, MethodHandles.Lookup.class);
+		try
+		{
+			getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, boolean.class, MethodHandles.Lookup.class);
+			removedSecurityManager = false;
+		}
+		catch (Throwable ex)
+		{
+			getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, MethodHandles.Lookup.class);
+			removedSecurityManager = true;
+		}
 	}
 
-	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object member_name, boolean check_security, boolean do_restrict, MethodHandles.Lookup bound_caller)
+	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object member_name, boolean do_restrict, MethodHandles.Lookup bound_caller)
 	{
 		try
 		{
-			return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, check_security, do_restrict, bound_caller);
+			if (removedSecurityManager)
+				return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, do_restrict, bound_caller);
+			else
+				return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, false, do_restrict, bound_caller);
 		}
 		catch (Throwable ex)
 		{
@@ -929,12 +911,12 @@ public class symbols
 	 */
 	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object method)
 	{
-		return direct_method(ref_kind, refc, method, false, true, trusted_lookup);
+		return direct_method(ref_kind, refc, method, true, trusted_lookup);
 	}
 
 	public static final MethodHandle direct_method(Class<?> refc, Object method)
 	{
-		return direct_method(constants.REF_invokeSpecial, refc, method, false, false, trusted_lookup);
+		return direct_method(constants.REF_invokeSpecial, refc, method, false, trusted_lookup);
 	}
 
 	private static MethodHandle getReferenceKind;

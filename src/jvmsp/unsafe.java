@@ -6,6 +6,8 @@ import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
 import jvmsp.type.java_type;
+import jvmsp.hotspot.vm_struct.AccessFlags;
+import jvmsp.hotspot.vm_struct.java_lang_Class;
 
 /**
  * jdk.internal.misc.Unsafe的相关操作。 无空指针及参数检查，需要自行确保参数正确性确保不会引发JVM崩溃 注：对于final修饰的变量，基本类型和String会内联，因此修改变量内存无效
@@ -306,16 +308,17 @@ public final class unsafe
 	}
 
 	/**
-	 * 不调用构造函数创建一个对象
+	 * 不调用构造函数创建一个对象。<br>
+	 * 只能分配非abstract的类。<br>
 	 * 
 	 * @param clazz 对象类
 	 * @return 分配的对象
 	 */
-	public static final <T> T allocate(Class<T> clazz)
+	public static final <_T> _T allocate(Class<_T> clazz)
 	{
 		try
 		{
-			return (T) allocateInstance.invoke(instance_jdk_internal_misc_Unsafe, clazz);
+			return (_T) allocateInstance.invoke(instance_jdk_internal_misc_Unsafe, clazz);
 		}
 		catch (Throwable ex)
 		{
@@ -324,23 +327,47 @@ public final class unsafe
 	}
 
 	/**
+	 * 无视abstract修饰符强制分配一个对象。<br>
+	 * interface无法分配，其没有内存空间，只有方法表。<br>
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @return
+	 */
+	public static final <_T> _T force_allocate(Class<_T> clazz)
+	{
+		AccessFlags acc = java_lang_Class.as_Klass(clazz)._access_flags();
+		boolean is_abstract = acc.is_abstract();
+		acc.set_abstract(false);
+		_T o = allocate(clazz);
+		acc.set_abstract(is_abstract);
+		return o;
+	}
+
+	/**
+	 * 写指针值，不同位数的操作系统指针大小不同。<br>
 	 * Unsafe的putAddress()方法.<br>
 	 * 在base基地址+offset处储存一个地址值。<br>
 	 * 
 	 * @param base
 	 * @param offset
-	 * @param x
+	 * @param ptr
 	 */
-	public static final void store_address(Object base, long offset, long addr)
+	public static final void write_pointer(Object base, long offset, long ptr)
 	{
 		try
 		{
-			putAddress.invoke(instance_jdk_internal_misc_Unsafe, base, offset, addr);
+			putAddress.invoke(instance_jdk_internal_misc_Unsafe, base, offset, ptr);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("store address of '" + base + "' + '" + offset + "' failed", ex);
+			throw new java.lang.InternalError("write pointer of '" + base + "' + '" + offset + "' failed", ex);
 		}
+	}
+
+	public static final void write_pointer(long addr, long ptr)
+	{
+		write_pointer(null, addr, ptr);
 	}
 
 	/**
@@ -359,13 +386,13 @@ public final class unsafe
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("get pointed-to address of '" + base + "' + '" + offset + "' failed", ex);
+			throw new java.lang.InternalError("read pointer of '" + base + "' + '" + offset + "' failed", ex);
 		}
 	}
 
-	public static final long read_pointer(long offset)
+	public static final long read_pointer(long addr)
 	{
-		return read_pointer(null, offset);
+		return read_pointer(null, addr);
 	}
 
 	public static final int address_size()

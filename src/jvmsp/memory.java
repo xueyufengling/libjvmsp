@@ -155,4 +155,241 @@ public abstract class memory
 	{
 		return reflection.first_generic_class(list_field);
 	}
+
+	public static final boolean flag_bit(int flags, int flag)
+	{
+		return (flags & flag) != 0;
+	}
+
+	public static final boolean flag_bit(short flags, short flag)
+	{
+		return (flags & flag) != 0;
+	}
+
+	public static final boolean flag_bit(byte flags, byte flag)
+	{
+		return (flags & flag) != 0;
+	}
+
+	/**
+	 * 
+	 * @param flags
+	 * @param flag  只能有一个bit为1，其他为0
+	 * @param value
+	 * @return
+	 */
+	public static final int set_flag_bit(int flags, int flag, boolean value)
+	{
+		if (value)
+			return flags |= flag;
+		else
+			return flags &= ~flag;
+	}
+
+	public static final short set_flag_bit(short flags, short flag, boolean value)
+	{
+		if (value)
+			return flags |= flag;
+		else
+			return flags &= ~flag;
+	}
+
+	public static final byte set_flag_bit(byte flags, byte flag, boolean value)
+	{
+		if (value)
+			return flags |= flag;
+		else
+			return flags &= ~flag;
+	}
+
+	public static final String bits_str(byte value)
+	{
+		return String.format("%8s", Integer.toBinaryString(value & 0xFF)).replace(' ', '0');
+	}
+
+	public static final String bits_str(short value)
+	{
+		return String.format("%16s", Integer.toBinaryString(value & 0xFFFF)).replace(' ', '0');
+	}
+
+	public static final String bits_str(int value)
+	{
+		return String.format("%32s", Integer.toBinaryString(value & 0xFFFFFFFF)).replace(' ', '0');
+	}
+
+	public static final String bits_str(long value)
+	{
+		return String.format("%64s", Long.toBinaryString(value)).replace(' ', '0');
+	}
+
+	/**
+	 * 内存操作封装。<br>
+	 * 可用于Java层访问C++对象的接口。<br>
+	 */
+	public static class memory_operator
+	{
+		protected final long address;
+		protected final long idx_base;// 使用索引访问时的前置偏移量
+
+		public memory_operator(long address, long idx_base)
+		{
+			this.address = address;
+			this.idx_base = idx_base;
+		}
+
+		public memory_operator(long address)
+		{
+			this(address, 0);
+		}
+
+		public final long address()
+		{
+			return this.address;
+		}
+
+		public final cxx_type.object read(long offset, cxx_type type)
+		{
+			return type.new object(address + offset);
+		}
+
+		/*
+		 * 依照偏移量访问
+		 */
+
+		public final byte read_byte(long offset)
+		{
+			return unsafe.read_byte(address + offset);
+		}
+
+		public final void write(long offset, byte value)
+		{
+			unsafe.write(address + offset, value);
+		}
+
+		public final short read_short(long offset)
+		{
+			return unsafe.read_short(address + offset);
+		}
+
+		public final void write(long offset, short value)
+		{
+			unsafe.write(address + offset, value);
+		}
+
+		public final int read_int(long offset)
+		{
+			return unsafe.read_int(address + offset);
+		}
+
+		public final void write(long offset, int value)
+		{
+			unsafe.write(address + offset, value);
+		}
+
+		public final long read_long(long offset)
+		{
+			return unsafe.read_long(address + offset);
+		}
+
+		public final void write(long offset, long value)
+		{
+			unsafe.write(address + offset, value);
+		}
+
+		public final long read_pointer(long offset)
+		{
+			return unsafe.read_pointer(address + offset);
+		}
+
+		public final void write_pointer(long offset, long ptr)
+		{
+			unsafe.write_pointer(address + offset, ptr);
+		}
+
+		public static final <_Struct extends memory_operator> _Struct as_memory_operator(Class<_Struct> clazz, long addr)
+		{
+			try
+			{
+				return (_Struct) symbols.find_constructor(clazz, long.class).invoke(addr);
+			}
+			catch (Throwable ex)
+			{
+				throw new java.lang.InternalError("read '" + clazz + "' at '" + addr + "' faield", ex);
+			}
+		}
+
+		public final <_Struct extends memory_operator> _Struct read_memory_operator_ptr(Class<_Struct> clazz, long offset)
+		{
+			return as_memory_operator(clazz, read_pointer(offset));
+		}
+
+		public final <_Struct extends memory_operator> _Struct read_memory_operator(Class<_Struct> clazz, long offset)
+		{
+			return as_memory_operator(clazz, address + offset);
+		}
+
+		public final void write(long offset, memory_operator struct)
+		{
+			write_pointer(offset, struct.address);
+		}
+
+		/*
+		 * 依照索引访问
+		 */
+
+		public final byte read_byte_idx(int idx)
+		{
+			return read_byte(idx_base + idx * cxx_type.unsigned_char.size());
+		}
+
+		public final short read_short_idx(int idx)
+		{
+			return read_short(idx_base + idx * cxx_type._short.size());
+		}
+
+		public final int read_int_idx(int idx)
+		{
+			return read_int(idx_base + idx * cxx_type._int.size());
+		}
+
+		public final long read_pointer_idx(int idx)
+		{
+			return read_pointer(idx_base + idx * cxx_type.pvoid.size());
+		}
+
+		public final <_Struct extends memory_operator> _Struct read_memory_operator_ptr_idx(Class<_Struct> clazz, int idx)
+		{
+			return read_memory_operator_ptr(clazz, idx_base + idx * cxx_type.pvoid.size());
+		}
+
+		public final void write_idx(int idx, byte value)
+		{
+			write(idx_base + idx * cxx_type.unsigned_char.size(), value);
+		}
+
+		public final void write_idx(int idx, short value)
+		{
+			write(idx_base + idx * cxx_type._short.size(), value);
+		}
+
+		public final void write_idx(int idx, int value)
+		{
+			write(idx_base + idx * cxx_type._int.size(), value);
+		}
+
+		public final void write_idx(int idx, long value)
+		{
+			write(idx_base + idx * cxx_type._long_long.size(), value);
+		}
+
+		public final void write_pointer_idx(int idx, long ptr)
+		{
+			write_pointer(idx_base + idx * cxx_type.pvoid.size(), ptr);
+		}
+
+		public final void write_idx(int idx, memory_operator struct)
+		{
+			write(idx_base + idx * cxx_type.pvoid.size(), struct);
+		}
+	}
 }

@@ -3,6 +3,7 @@ package jvmsp.libso;
 import jvmsp.unsafe;
 import jvmsp.virtual_machine;
 import jvmsp.type.cxx_type;
+import jvmsp.type.java_type;
 
 /**
  * JNI层的OOP包装
@@ -25,7 +26,7 @@ public class jni_handles
 
 	public static final long make_local(Object object)
 	{
-		return make_local(virtual_machine.oop_of(object));
+		return make_local(java_type.oop_of(object));
 	}
 
 	public static final long resolve_oop_from_local_handle(long local_handle)

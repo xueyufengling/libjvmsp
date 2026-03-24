@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
+import jvmsp.memory.memory_operator;
+
 public abstract class type<_T>
 {
 	public static enum lang
@@ -1337,18 +1339,16 @@ public abstract class type<_T>
 		/**
 		 * C++对象操作
 		 */
-		public class object
+		public class object extends memory_operator
 		{
-			private final long addr;
-
 			public object(pointer ptr)
 			{
-				this.addr = ptr.address();
+				super(ptr.address());
 			}
 
 			public object(long addr)
 			{
-				this.addr = addr;
+				super(addr);
 			}
 
 			/**
@@ -1361,11 +1361,6 @@ public abstract class type<_T>
 				return cxx_type.this;
 			}
 
-			public final long address()
-			{
-				return addr;
-			}
-
 			public final field get_field(String field_name)
 			{
 				return type().field(field_name);
@@ -1373,7 +1368,7 @@ public abstract class type<_T>
 
 			public final Object read(field f)
 			{
-				return f.read(addr);
+				return f.read(address);
 			}
 
 			public final Object read(String field_name)
@@ -1383,52 +1378,52 @@ public abstract class type<_T>
 
 			public final void write(field f, Object x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, byte x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, boolean x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, char x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, short x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, int x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, long x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, float x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, double x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(field f, pointer x)
 			{
-				f.write(addr, x);
+				f.write(address, x);
 			}
 
 			public final void write(String field_name, Object x)
@@ -1483,7 +1478,7 @@ public abstract class type<_T>
 
 			public final MethodHandle callable(field f)
 			{
-				return f.callable(addr);
+				return f.callable(address);
 			}
 
 			public final MethodHandle callable(String field_name)
@@ -1999,12 +1994,12 @@ public abstract class type<_T>
 
 			public static final pointer address_of(Object _jobject)
 			{
-				return pointer.to(virtual_machine.oop_of(_jobject), jobject);
+				return pointer.to(java_type.oop_of(_jobject), jobject);
 			}
 
 			public static final pointer address_of(cxx_type.object cxx_obj)
 			{
-				return pointer.to(cxx_obj.addr);
+				return pointer.to(cxx_obj.address);
 			}
 
 			/**
@@ -2017,9 +2012,9 @@ public abstract class type<_T>
 			public static final pointer address_of(Object jobject, Field field)
 			{
 				if (Modifier.isStatic(field.getModifiers()))// 静态字段
-					return pointer.to(virtual_machine.oop_of(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(java_type.oop_of(unsafe.static_field_base(field)) + unsafe.static_field_offset(field), cxx_type.of(field.getType()));
 				else
-					return pointer.to(virtual_machine.oop_of(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
+					return pointer.to(java_type.oop_of(jobject) + unsafe.object_field_offset(field), cxx_type.of(field.getType()));
 			}
 
 			public static final pointer address_of(Object jobject, String field)
@@ -2100,7 +2095,7 @@ public abstract class type<_T>
 
 			public final long address()
 			{
-				return virtual_machine.oop_of(base) + offset;
+				return java_type.oop_of(base) + offset;
 			}
 
 			public Object value()
@@ -2254,6 +2249,30 @@ public abstract class type<_T>
 		static
 		{
 			object_reference_size = unsafe.oop_size;
+		}
+
+		/**
+		 * 获取对象（压缩后的）的oop，返回long<br>
+		 * 利用Object[]的元素为oop指针的事实来间接取oop。<br>
+		 * 在32位和未启用UseCompressedOops的64位JVM上，取的地址是未压缩的oop，直接指向Java对象本身的内存（对象头）。<br>
+		 * 在开启UseCompressedOops的64位JVM上，取的oop是压缩后的，需要乘以字节对齐量（字节对齐默认为8）或者左移（3位）+堆的基地址（即Java中null的绝对地址）才是绝对地址。
+		 * 
+		 * @param object
+		 * @return
+		 */
+		public static final long oop_of(Object object)
+		{
+			Object[] _a = new Object[]
+			{ object };
+			switch (unsafe.array_object_index_scale)
+			{
+			case 4:
+				return unsafe.read_int(_a, unsafe.array_object_base_offset);
+			case 8:
+				return unsafe.read_long(_a, unsafe.array_object_base_offset);
+			default:
+				return 0;
+			}
 		}
 
 		/**
