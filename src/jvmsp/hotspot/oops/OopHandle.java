@@ -1,0 +1,35 @@
+package jvmsp.hotspot.oops;
+
+import jvmsp.hotspot.vm_struct;
+
+public class OopHandle extends vm_struct
+{
+	private static final long _obj = vm_struct.entry.find("OopHandle", "_obj").offset;
+
+	public OopHandle(long address)
+	{
+		super(address);
+	}
+
+	public long _obj()
+	{
+		return super.read_int(_obj);
+	}
+
+	/**
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/oopHandle.inline.hpp#L33
+	 * 解析OOP
+	 * 
+	 * @return
+	 */
+	public long resolve()
+	{
+		long obj = _obj();
+		if (obj != 0)
+		{
+			// long oop = NativeAccess<>::oop_load(_obj);
+			// return oop;
+		}
+		return 0;
+	}
+}

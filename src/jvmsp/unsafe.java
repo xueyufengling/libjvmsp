@@ -6,9 +6,9 @@ import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
 import jvmsp.type.java_type;
-import jvmsp.hotspot.vm_struct.AccessFlags;
-import jvmsp.hotspot.vm_struct.Klass;
-import jvmsp.hotspot.vm_struct.java_lang_Class;
+import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.oops.Klass;
+import jvmsp.hotspot.utilities.AccessFlags;
 
 /**
  * jdk.internal.misc.Unsafe的相关操作。 无空指针及参数检查，需要自行确保参数正确性确保不会引发JVM崩溃 注：对于final修饰的变量，基本类型和String会内联，因此修改变量内存无效
@@ -859,6 +859,23 @@ public final class unsafe
 	public static final boolean read_cbool(long native_addr)
 	{
 		return read_cbool(null, native_addr);
+	}
+
+	public static final void write_cbool(Object base, long offset, boolean value)
+	{
+		try
+		{
+			putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, value ? 1 : 0);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("put c bool at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final void write_cbool(long native_addr, boolean value)
+	{
+		write_cbool(null, native_addr, value);
 	}
 
 	public static final void write(Object base, long offset, long x)

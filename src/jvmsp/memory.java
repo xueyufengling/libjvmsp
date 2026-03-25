@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.function.Function;
 
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.pointer;
@@ -217,18 +218,18 @@ public abstract class memory
 	 * 内存操作封装。<br>
 	 * 可用于Java层访问C++对象的接口。<br>
 	 */
-	public static class memory_operator
+	public static class memory_object
 	{
 		protected final long address;
 		protected final long idx_base;// 使用索引访问时的前置偏移量
 
-		public memory_operator(long address, long idx_base)
+		public memory_object(long address, long idx_base)
 		{
 			this.address = address;
 			this.idx_base = idx_base;
 		}
 
-		public memory_operator(long address)
+		public memory_object(long address)
 		{
 			this(address, 0);
 		}
@@ -236,6 +237,11 @@ public abstract class memory
 		public final long address()
 		{
 			return this.address;
+		}
+
+		public final long offset_addr(long offset)
+		{
+			return this.address + offset;
 		}
 
 		public final cxx_type.object read(long offset, cxx_type type)
@@ -297,11 +303,21 @@ public abstract class memory
 			unsafe.write_pointer(address + offset, ptr);
 		}
 
-		public static final <_Struct extends memory_operator> _Struct as_memory_operator(Class<_Struct> clazz, long addr)
+		public final boolean read_cbool(long offset)
+		{
+			return unsafe.read_cbool(address + offset);
+		}
+
+		public final void write_cbool(long offset, boolean value)
+		{
+			unsafe.write_cbool(address + offset, value);
+		}
+
+		public static final <_MemObject extends memory_object> _MemObject as_memory_object(Class<_MemObject> clazz, long addr)
 		{
 			try
 			{
-				return (_Struct) symbols.find_constructor(clazz, long.class).invoke(addr);
+				return (_MemObject) symbols.find_constructor(clazz, long.class).invoke(addr);
 			}
 			catch (Throwable ex)
 			{
@@ -309,17 +325,32 @@ public abstract class memory
 			}
 		}
 
-		public final <_Struct extends memory_operator> _Struct read_memory_operator_ptr(Class<_Struct> clazz, long offset)
+		public static final <_MemObject extends memory_object> _MemObject as_memory_object(Function<Long, _MemObject> ctor, long addr)
 		{
-			return as_memory_operator(clazz, read_pointer(offset));
+			return ctor.apply(addr);
 		}
 
-		public final <_Struct extends memory_operator> _Struct read_memory_operator(Class<_Struct> clazz, long offset)
+		public final <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Class<_MemObject> clazz, long offset)
 		{
-			return as_memory_operator(clazz, address + offset);
+			return as_memory_object(clazz, read_pointer(offset));
 		}
 
-		public final void write(long offset, memory_operator struct)
+		public final <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Function<Long, _MemObject> ctor, long offset)
+		{
+			return as_memory_object(ctor, read_pointer(offset));
+		}
+
+		public final <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
+		{
+			return as_memory_object(clazz, address + offset);
+		}
+
+		public final <_MemObject extends memory_object> _MemObject read_memory_object(Function<Long, _MemObject> ctor, long offset)
+		{
+			return as_memory_object(ctor, address + offset);
+		}
+
+		public final void write_pointer(long offset, memory_object struct)
 		{
 			write_pointer(offset, struct.address);
 		}
@@ -348,9 +379,9 @@ public abstract class memory
 			return read_pointer(idx_base + idx * cxx_type.pvoid.size());
 		}
 
-		public final <_Struct extends memory_operator> _Struct read_memory_operator_ptr_idx(Class<_Struct> clazz, int idx)
+		public final <_MemObject extends memory_object> _MemObject read_memory_operator_ptr_idx(Class<_MemObject> clazz, int idx)
 		{
-			return read_memory_operator_ptr(clazz, idx_base + idx * cxx_type.pvoid.size());
+			return read_memory_object_ptr(clazz, idx_base + idx * cxx_type.pvoid.size());
 		}
 
 		public final void write_idx(int idx, byte value)
@@ -378,9 +409,9 @@ public abstract class memory
 			write_pointer(idx_base + idx * cxx_type.pvoid.size(), ptr);
 		}
 
-		public final void write_idx(int idx, memory_operator struct)
+		public final void write_pointer_idx(int idx, memory_object struct)
 		{
-			write(idx_base + idx * cxx_type.pvoid.size(), struct);
+			write_pointer(idx_base + idx * cxx_type.pvoid.size(), struct);
 		}
 	}
 }

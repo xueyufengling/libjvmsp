@@ -1,6 +1,6 @@
 package jvmsp;
 
-import jvmsp.hotspot.vm_struct.CompressedKlassPointers;
+import jvmsp.hotspot.oops.CompressedKlassPointers;
 
 /**
  * ------------------------ Java内存模型 --------------------------

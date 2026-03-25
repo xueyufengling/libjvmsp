@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
-import jvmsp.memory.memory_operator;
+import jvmsp.memory.memory_object;
 
 public abstract class type<_T>
 {
@@ -1339,7 +1339,7 @@ public abstract class type<_T>
 		/**
 		 * C++对象操作
 		 */
-		public class object extends memory_operator
+		public class object extends memory_object
 		{
 			public object(pointer ptr)
 			{

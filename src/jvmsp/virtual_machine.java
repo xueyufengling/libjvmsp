@@ -22,7 +22,10 @@ import jvmsp.object_layout.object_header_layout;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
 import jvmsp.hotspot.vm_struct;
-import jvmsp.hotspot.vm_struct.java_lang_Class;
+import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.memory.Universe;
+import jvmsp.hotspot.oops.CompressedKlassPointers;
+import jvmsp.hotspot.oops.CompressedOops;
 
 /**
  * 管理JVM的相关功能
@@ -300,9 +303,14 @@ public class virtual_machine
 		return header_layout.header_byte_length;
 	}
 
+	/**
+	 * 获取JVM堆的基地址
+	 * 
+	 * @return
+	 */
 	public static final long heap_base()
 	{
-		return 0;
+		return Universe.heap().reserved().start();
 	}
 
 	/**
@@ -312,7 +320,7 @@ public class virtual_machine
 	 */
 	public static final long narrow_oop_base()
 	{
-		return vm_struct.CompressedOops._narrow_oop_base();
+		return CompressedOops.base();
 	}
 
 	/**
@@ -320,7 +328,7 @@ public class virtual_machine
 	 */
 	public static final int narrow_oop_shift()
 	{
-		return vm_struct.CompressedOops._narrow_oop_shift();
+		return CompressedOops.shift();
 	}
 
 	/**
@@ -330,12 +338,12 @@ public class virtual_machine
 	 */
 	public static final long narrow_klass_base()
 	{
-		return vm_struct.CompressedKlassPointers._narrow_klass_base();
+		return CompressedKlassPointers.base();
 	}
 
 	public static final int narrow_klass_shift()
 	{
-		return vm_struct.CompressedKlassPointers._narrow_klass_shift();
+		return CompressedKlassPointers.shift();
 	}
 
 	public final void update_vm_info()
