@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import jvmsp.memory;
 import jvmsp.shared_object;
 import jvmsp.unsafe;
 import jvmsp.libso.libjvm;
@@ -44,8 +43,8 @@ public class vm_type
 
 	private vm_type(long type_addr)
 	{
-		this.type_name = memory.string(unsafe.read_pointer(type_addr + gHotSpotVMTypeEntryTypeNameOffset));
-		this.super_class_name = memory.string(unsafe.read_pointer(type_addr + gHotSpotVMTypeEntrySuperclassNameOffset));
+		this.type_name = unsafe.read_cstr(type_addr + gHotSpotVMTypeEntryTypeNameOffset);
+		this.super_class_name = unsafe.read_cstr(type_addr + gHotSpotVMTypeEntrySuperclassNameOffset);
 		this.is_oop_type = unsafe.read_cbool(type_addr + gHotSpotVMTypeEntryIsOopTypeOffset);
 		this.is_integer_type = unsafe.read_cbool(type_addr + gHotSpotVMTypeEntryIsIntegerTypeOffset);
 		this.is_unsigned = unsafe.read_cbool(type_addr + gHotSpotVMTypeEntryIsUnsignedOffset);

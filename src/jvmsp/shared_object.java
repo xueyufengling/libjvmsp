@@ -13,6 +13,8 @@ import java.util.Set;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
 
+import static jvmsp.versions.jdk_versions;
+
 /**
  * 加载so库以及符号查找
  */
@@ -257,8 +259,6 @@ public class shared_object
 	private static MethodHandle NativeEntryPoint_make;
 	private static MethodHandle NativeMethodHandle_make;
 
-	private static boolean NativeMethodHandle_make_usingAddressPairs;// JDK25+新增参数
-
 	static
 	{
 		try
@@ -276,18 +276,14 @@ public class shared_object
 		NativeEntryPoint_makeDowncallStub = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "makeDowncallStub", long.class,
 				MethodType.class, jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), boolean.class, int.class, boolean.class);
 		NativeEntryPoint_freeDowncallStub0 = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "freeDowncallStub0", boolean.class, long.class);
-		try
-		{
-			NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
-					jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class);
-			NativeMethodHandle_make_usingAddressPairs = false;
-		}
-		catch (Throwable ex)
-		{
-			NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
-					jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class, boolean.class);
-			NativeMethodHandle_make_usingAddressPairs = true;
-		}
+
+		NativeEntryPoint_make = jdk_versions.switch_execute_nonnull(
+				// JDK21
+				() -> NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
+						jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class),
+				// JDK25 新增参数 usingAddressPairs
+				() -> NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
+						jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class, boolean.class));
 		NativeMethodHandle_make = symbols.find_static_method(java_lang_invoke_NativeMethodHandle, "make", MethodHandle.class, jdk_internal_foreign_abi_NativeEntryPoint);
 	}
 
@@ -629,17 +625,31 @@ public class shared_object
 	 */
 	public static final Object native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition, boolean using_address_pairs)
 	{
-		try
-		{
-			if (NativeMethodHandle_make_usingAddressPairs)
-				return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition, using_address_pairs);
-			else
-				return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("wrap native entry point of type '" + method_type.toString() + "' failed", ex);
-		}
+		return jdk_versions.switch_execute_nonnull(
+				() ->
+				{
+					try
+					{
+						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("wrap native entry point of type '" + method_type.toString() + "' failed [jdk21]", ex);
+					}
+				}, // JDK21
+				() ->
+				{
+					try
+					{
+						// 新增参数using_address_pairs
+						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition, using_address_pairs);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("wrap native entry point of type '" + method_type.toString() + "' failed [jdk25]", ex);
+					}
+				}// JDK25
+		);
 	}
 
 	public static final Object native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)

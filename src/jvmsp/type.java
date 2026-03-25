@@ -2155,7 +2155,7 @@ public abstract class type<_T>
 				if (!java_type.is_primitive(dest_type))
 				{
 					// 每次cast()的时候更新目标对象的类型
-					ref_type_klass_word = virtual_machine.host.get_klass_word(dest_type);
+					ref_type_klass_word = virtual_machine.get_klass_word(dest_type);
 				}
 				return this;
 			}
@@ -2432,13 +2432,13 @@ public abstract class type<_T>
 		 * @param args
 		 * @return
 		 */
-		public static final <T> T placement_new(T object, Class<?>[] arg_types, Object... args)
+		public static final <_T> _T placement_new(_T object, Class<?>[] arg_types, Object... args)
 		{
 			Class<?> target_type = object.getClass();
 			MethodHandle constructor = symbols.constructor_method(target_type, arg_types);
 			try
 			{
-				constructor.invoke(memory.cat(object, args));
+				constructor.invokeWithArguments(memory.cat(object, args));
 			}
 			catch (Throwable ex)
 			{
@@ -2448,10 +2448,10 @@ public abstract class type<_T>
 		}
 
 		@SuppressWarnings("unchecked")
-		public static final <T> T copy(T object)
+		public static final <_T> _T copy(_T object)
 		{
-			Class<T> clazz = (Class<T>) object.getClass();
-			T o = unsafe.allocate(clazz);
+			Class<_T> clazz = (Class<_T>) object.getClass();
+			_T o = unsafe.allocate(clazz);
 			unsafe.memcpy(object, virtual_machine.host.get_header_byte_length(), o, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 			return o;
 		}
@@ -2469,7 +2469,7 @@ public abstract class type<_T>
 
 		public static final Object cast(Object obj, Class<?> cast_type)
 		{
-			return cast(obj, virtual_machine.host.get_klass_word(cast_type));
+			return cast(obj, virtual_machine.get_klass_word(cast_type));
 		}
 
 		public static final Object cast(Object obj, String cast_type)

@@ -7,6 +7,7 @@ import java.security.ProtectionDomain;
 
 import jvmsp.type.java_type;
 import jvmsp.hotspot.vm_struct.AccessFlags;
+import jvmsp.hotspot.vm_struct.Klass;
 import jvmsp.hotspot.vm_struct.java_lang_Class;
 
 /**
@@ -130,7 +131,7 @@ public final class unsafe
 			ex.printStackTrace();
 		}
 		if (instance_jdk_internal_misc_Unsafe == null)
-			throw new java.lang.InternalError("get jdk.internal.misc.Unsafe instance failed! library will be broken");
+			throw new java.lang.InternalError("retrieve jdk.internal.misc.Unsafe instance failed");
 
 		objectFieldOffset0 = symbols.find_special_method(jdk_internal_misc_Unsafe, "objectFieldOffset0", long.class, Field.class);
 		objectFieldOffset1 = symbols.find_special_method(jdk_internal_misc_Unsafe, "objectFieldOffset1", long.class, Class.class, String.class);
@@ -327,8 +328,8 @@ public final class unsafe
 	}
 
 	/**
-	 * 无视abstract修饰符强制分配一个对象。<br>
-	 * interface无法分配，其没有内存空间，只有方法表。<br>
+	 * 无视abstract、interface修饰符强制分配一个对象。<br>
+	 * interface没有内存空间，只有方法表，故此处临时将interface的内存布局改为Object。<br>
 	 * 
 	 * @param <_T>
 	 * @param clazz
@@ -336,12 +337,58 @@ public final class unsafe
 	 */
 	public static final <_T> _T force_allocate(Class<_T> clazz)
 	{
-		AccessFlags acc = java_lang_Class.as_Klass(clazz)._access_flags();
+		_T o = null;
+		Klass k = java_lang_Class.as_Klass(clazz);
+		AccessFlags acc = k._access_flags();
 		boolean is_abstract = acc.is_abstract();
-		acc.set_abstract(false);
-		_T o = allocate(clazz);
-		acc.set_abstract(is_abstract);
+		boolean is_interface = acc.is_interface();// 接口同时具有is_abstract标志位，因此要先判断is_interface
+		if (is_interface)
+		{
+			acc.set_interface(false);
+			acc.set_abstract(false);
+			int interface_layout = k._layout_helper();// 接口的内存布局为空
+			k.set_layout_helper(Klass.java_lang_Object_layout_helper);// 将接口的内存布局改为Object才能进行对象分配
+			/*
+			 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klassVtable.cpp#L1151
+			 * 分配内存时需要计算vtable和itable，接口没有itable。
+			 */
+			o = allocate(clazz);
+			k.set_layout_helper(interface_layout);
+			acc.set_abstract(is_abstract);
+			acc.set_interface(is_interface);
+		}
+		else if (is_abstract)
+		{
+			acc.set_abstract(false);
+			o = allocate(clazz);
+			acc.set_abstract(is_abstract);
+		}
+		else
+		{
+			o = allocate(clazz);
+		}
 		return o;
+	}
+
+	/**
+	 * 无视abstract修饰符强制使用构造函数实例化一个对象。<br>
+	 * 
+	 * @param <_T>
+	 * @param clazz
+	 * @param arg_types
+	 * @param args
+	 * @return
+	 */
+	public static final <_T> _T force_construct(Class<_T> clazz, Class<?>[] arg_types, Object... args)
+	{
+		try
+		{
+			return java_type.placement_new(force_allocate(clazz), arg_types, args);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("force construct '" + clazz + "' failed", ex);
+		}
 	}
 
 	/**
@@ -393,6 +440,17 @@ public final class unsafe
 	public static final long read_pointer(long addr)
 	{
 		return read_pointer(null, addr);
+	}
+
+	/**
+	 * 读取const char*字段并将其转为Java String。<br>
+	 * 
+	 * @param cstr
+	 * @return
+	 */
+	public static final String read_cstr(long cstr)
+	{
+		return memory.string(read_pointer(cstr));
 	}
 
 	public static final int address_size()

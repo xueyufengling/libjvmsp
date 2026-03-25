@@ -11,9 +11,12 @@ import jvmsp.shared_object;
 import jvmsp.structs.long_array;
 import jvmsp.symbols;
 import jvmsp.unsafe;
+import jvmsp.versions;
 import jvmsp.libso.libjvm;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
+
+import static jvmsp.versions.jdk_versions;
 
 /**
  * hotspot虚拟机内部实现结构体访问
@@ -56,9 +59,9 @@ public abstract class vm_struct extends memory_operator
 
 		private entry(long struct_addr)
 		{
-			this.type_name = memory.string(unsafe.read_pointer(struct_addr + gHotSpotVMStructEntryTypeNameOffset));
-			this.field_name = memory.string(unsafe.read_pointer(struct_addr + gHotSpotVMStructEntryFieldNameOffset));
-			this.type_string = memory.string(unsafe.read_pointer(struct_addr + gHotSpotVMStructEntryTypeStringOffset));
+			this.type_name = unsafe.read_cstr(struct_addr + gHotSpotVMStructEntryTypeNameOffset);
+			this.field_name = unsafe.read_cstr(struct_addr + gHotSpotVMStructEntryFieldNameOffset);
+			this.type_string = unsafe.read_cstr(struct_addr + gHotSpotVMStructEntryTypeStringOffset);
 			this.is_static = unsafe.read_cbool(struct_addr + gHotSpotVMStructEntryIsStaticOffset);
 			this.offset = unsafe.read_long(struct_addr + gHotSpotVMStructEntryOffsetOffset);
 			this.address = unsafe.read_pointer(struct_addr + gHotSpotVMStructEntryAddressOffset);
@@ -78,6 +81,16 @@ public abstract class vm_struct extends memory_operator
 			return sb.toString();
 		}
 
+		/**
+		 * 静态成员则获取其指针，非静态成员获取内存排布的偏移量。<br>
+		 * 
+		 * @return
+		 */
+		public final long address_offset()
+		{
+			return is_static ? address : offset;
+		}
+
 		private static final Map<String, Map<String, entry>> vm_struct_entries = new HashMap<>();
 
 		static
@@ -86,7 +99,6 @@ public abstract class vm_struct extends memory_operator
 			{
 				entry entry = new entry(gHotSpotVMStructs + idx * gHotSpotVMStructEntryArrayStride);
 				vm_struct_entries.computeIfAbsent(entry.type_name, (n) -> new HashMap<>()).put(entry.field_name, entry);
-				System.out.println(entry);
 				if (entry.field_name == null)
 				{
 					break;// 最后一个vm struct为null
@@ -94,7 +106,7 @@ public abstract class vm_struct extends memory_operator
 			}
 		}
 
-		public static final entry get(String type_name, String field_name)
+		public static final entry find(String type_name, String field_name)
 		{
 			Map<String, entry> fields = vm_struct_entries.get(type_name);
 			if (fields == null)
@@ -110,7 +122,7 @@ public abstract class vm_struct extends memory_operator
 		 * @param field_name_alias
 		 * @return
 		 */
-		public static final entry find(String type_name, String... field_name_alias)
+		public static final entry find_alias(String type_name, String... field_name_alias)
 		{
 			Map<String, entry> fields = vm_struct_entries.get(type_name);
 			if (fields == null)
@@ -252,8 +264,8 @@ public abstract class vm_struct extends memory_operator
 	public static class oopDesc
 	{
 		private static final long _mark = vm_struct.entry.find("oopDesc", "_mark").offset;
-		private static final long _metadata__klass = vm_struct.entry.find("oopDesc", "_metadata._klass").offset;
-		private static final long _metadata__compressed_klass = vm_struct.entry.find("oopDesc", "_metadata._compressed_klass").offset;
+		private static final long _metadata_klass = vm_struct.entry.find("oopDesc", "_metadata._klass").offset;
+		private static final long _metadata_compressed_klass = vm_struct.entry.find("oopDesc", "_metadata._compressed_klass").offset;
 
 		/**
 		 * 计算oopDesc字段偏移量
@@ -264,7 +276,7 @@ public abstract class vm_struct extends memory_operator
 		 */
 		public static final long field_addr(long oop, int offset)
 		{
-			// https://github.com/openjdk/jdk/blob/cc29010ae29c65964b44e9f472ad0c1d9f848f0a/src/hotspot/share/oops/oop.inline.hpp#L246
+			// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/oop.inline.hpp#L239
 			return oop + offset;
 		}
 
@@ -289,7 +301,7 @@ public abstract class vm_struct extends memory_operator
 		 */
 		public static final long metadata_field(long oop, int offset)
 		{
-			// https://github.com/openjdk/jdk/blob/cc29010ae29c65964b44e9f472ad0c1d9f848f0a/src/hotspot/share/oops/oop.cpp#L184
+			// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/oop.cpp#L186
 			return ptr_field(oop, offset);
 		}
 	}
@@ -385,6 +397,10 @@ public abstract class vm_struct extends memory_operator
 		}
 	}
 
+	/**
+	 * JVM运行时Klass内部使用标志。<br>
+	 * JDK21尚不存在。<br>
+	 */
 	public static class KlassFlags extends vm_struct
 	{
 		public static final cxx_type KlassFlags = cxx_type.define("KlassFlags")
@@ -461,6 +477,10 @@ public abstract class vm_struct extends memory_operator
 
 	public static class Klass extends MetaspaceObj
 	{
+		/**
+		 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/instanceKlass.hpp#944
+		 * 对象布局信息，包括对象的大小，此值将用于JVM分配对象。
+		 */
 		private static final long _layout_helper = vm_struct.entry.find("Klass", "_layout_helper").offset;// 8
 		private static final long _super_check_offset = vm_struct.entry.find("Klass", "_super_check_offset").offset;// 20
 		private static final long _name = vm_struct.entry.find("Klass", "_name").offset;// 24
@@ -477,10 +497,21 @@ public abstract class vm_struct extends memory_operator
 		private static final long _access_flags = vm_struct.entry.find("Klass", "_access_flags").offset;// 164
 
 		// 计算相对偏移量，4字节对齐
+		/**
+		 * 在JDK21中(https://github.com/openjdk/jdk/blob/jdk-21%2B35/src/hotspot/share/oops/klass.hpp#L126)，该字段还是
+		 * // Processed access flags, for use by Class.getModifiers.
+		 * jint _modifier_flags;
+		 * 但在JDK25中(https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L126)，该字段已经改为
+		 * // Some flags created by the JVM, not in the class file itself,
+		 * // are in _misc_flags below.
+		 * KlassFlags _misc_flags;
+		 */
 		private static final long _misc_flags = _super_check_offset - cxx_type._int.size();// 16
+
 		private static final long _kind = _misc_flags - cxx_type._int.size();// 12
 
-		public static final int _primary_super_limit = 8;
+		// 继承链缓存的最大Klass数目
+		public static final int _primary_super_limit = vm_constant.Klass_primary_super_limit;
 
 		public static final short InstanceKlassKind = 0;
 		public static final short InstanceRefKlassKind = 1;
@@ -497,18 +528,15 @@ public abstract class vm_struct extends memory_operator
 		}
 
 		public static final Klass java_lang_Object = java_lang_Class.as_Klass(Object.class);
+		// java.lang.Object的对象布局
+		public static final int java_lang_Object_layout_helper = java_lang_Object._layout_helper();
 
 		/**
 		 * 如果没有超类，则超类为空指针。<br>
-		 * 该类实际上是Object的超类。<br>
+		 * 此对象实际上是Object的超类。<br>
 		 */
-		private static final class null_klass extends Klass
+		public static final Klass nullptr = new Klass(0)
 		{
-			private null_klass(int _super_check_offset)
-			{
-				super(0);
-			}
-
 			@Override
 			public int _super_check_offset()
 			{
@@ -520,9 +548,28 @@ public abstract class vm_struct extends memory_operator
 			{
 				return this;// 0
 			}
+		};
+
+		public int _layout_helper()
+		{
+			return super.read_int(_layout_helper);
 		}
 
-		public static final Klass nullptr = new null_klass(1);
+		public void set_layout_helper(int layout_helper)
+		{
+			super.write(_layout_helper, layout_helper);
+		}
+
+		public static int layout_helper_to_size_helper(int layout_helper)
+		{
+			return 0;
+			// return layout_helper >> LogBytesPerWord;
+		}
+
+		public int size_helper()
+		{
+			return layout_helper_to_size_helper(_layout_helper());
+		}
 
 		/**
 		 * instanceof判断超类时使用，该值为当前的首要选项，即首先判断是否是该offset对应的Klass*。<br>
@@ -714,10 +761,47 @@ public abstract class vm_struct extends memory_operator
 			super.write(_kind, kind);
 		}
 
+		public boolean is_instance_klass()
+		{
+			short kind = _kind();
+			return kind >= Klass.InstanceKlassKind && kind < Klass.TypeArrayKlassKind;
+		}
+
 		public KlassFlags _misc_flags()
 		{
 			return super.read_memory_operator(KlassFlags.class, _misc_flags);
 		}
+	}
+
+	/**
+	 * 继承的超类虚方法表
+	 */
+	public static class klassVtable extends vm_struct
+	{
+		public klassVtable(long address)
+		{
+			super(address);
+		}
+	}
+
+	/**
+	 * 接口方法表
+	 */
+	public static class klassItable extends vm_struct
+	{
+
+		public static final cxx_type klassItable = cxx_type.define("klassItable")
+				.decl_field("_klass", cxx_type.pvoid)
+				.decl_field("_table_offset", cxx_type._int)
+				.decl_field("_size_offset_table", cxx_type._int)
+				.decl_field("_size_method_table", cxx_type._int)
+				.resolve();
+
+		public klassItable(long address)
+		{
+			super(address);
+		}
+
 	}
 
 	public static class vtableEntry
@@ -732,10 +816,10 @@ public abstract class vm_struct extends memory_operator
 		private static final long _data_size = vm_struct.entry.find("MethodData", "_data_size").offset;
 		private static final long _data_0 = vm_struct.entry.find("MethodData", "_data[0]").offset;
 		private static final long _parameters_type_data_di = vm_struct.entry.find("MethodData", "_parameters_type_data_di").offset;
-		private static final long _compiler_counters__nof_decompiles = vm_struct.entry.find("MethodData", "_compiler_counters._nof_decompiles").offset;
-		private static final long _compiler_counters__nof_overflow_recompiles = vm_struct.entry.find("MethodData", "_compiler_counters._nof_overflow_recompiles").offset;
-		private static final long _compiler_counters__nof_overflow_traps = vm_struct.entry.find("MethodData", "_compiler_counters._nof_overflow_traps").offset;
-		private static final long _compiler_counters__trap_hist__array_0 = vm_struct.entry.find("MethodData", "_compiler_counters._trap_hist._array[0]").offset;
+		private static final long _compiler_counters_nof_decompiles = vm_struct.entry.find("MethodData", "_compiler_counters._nof_decompiles").offset;
+		private static final long _compiler_counters_nof_overflow_recompiles = vm_struct.entry.find("MethodData", "_compiler_counters._nof_overflow_recompiles").offset;
+		private static final long _compiler_counters_nof_overflow_traps = vm_struct.entry.find("MethodData", "_compiler_counters._nof_overflow_traps").offset;
+		private static final long _compiler_counters_trap_hist_array_0 = vm_struct.entry.find("MethodData", "_compiler_counters._trap_hist._array[0]").offset;
 		private static final long _eflags = vm_struct.entry.find("MethodData", "_eflags").offset;
 		private static final long _arg_local = vm_struct.entry.find("MethodData", "_arg_local").offset;
 		private static final long _arg_stack = vm_struct.entry.find("MethodData", "_arg_stack").offset;
@@ -747,10 +831,10 @@ public abstract class vm_struct extends memory_operator
 
 	public static class DataLayout
 	{
-		private static final long _header__struct__tag = vm_struct.entry.find("DataLayout", "_header._struct._tag").offset;
-		private static final long _header__struct__flags = vm_struct.entry.find("DataLayout", "_header._struct._flags").offset;
-		private static final long _header__struct__bci = vm_struct.entry.find("DataLayout", "_header._struct._bci").offset;
-		private static final long _header__struct__traps = vm_struct.entry.find("DataLayout", "_header._struct._traps").offset;
+		private static final long _header_struct_tag = vm_struct.entry.find("DataLayout", "_header._struct._tag").offset;
+		private static final long _header_struct_flags = vm_struct.entry.find("DataLayout", "_header._struct._flags").offset;
+		private static final long _header_struct_bci = vm_struct.entry.find("DataLayout", "_header._struct._bci").offset;
+		private static final long _header_struct_traps = vm_struct.entry.find("DataLayout", "_header._struct._traps").offset;
 		private static final long _cells_0 = vm_struct.entry.find("DataLayout", "_cells[0]").offset;
 	}
 
@@ -1032,7 +1116,7 @@ public abstract class vm_struct extends memory_operator
 		private static final long _constants = vm_struct.entry.find("ConstMethod", "_constants").offset;
 		private static final long _stackmap_data = vm_struct.entry.find("ConstMethod", "_stackmap_data").offset;
 		private static final long _constMethod_size = vm_struct.entry.find("ConstMethod", "_constMethod_size").offset;
-		private static final long _flags__flags = vm_struct.entry.find("ConstMethod", "_flags._flags").offset;
+		private static final long _flags_flags = vm_struct.entry.find("ConstMethod", "_flags._flags").offset;
 		private static final long _code_size = vm_struct.entry.find("ConstMethod", "_code_size").offset;
 		private static final long _name_index = vm_struct.entry.find("ConstMethod", "_name_index").offset;
 		private static final long _signature_index = vm_struct.entry.find("ConstMethod", "_signature_index").offset;
@@ -1058,9 +1142,16 @@ public abstract class vm_struct extends memory_operator
 	{
 		private static final long _hash_and_refcount = vm_struct.entry.find("Symbol", "_hash_and_refcount").offset;
 		private static final long _length = vm_struct.entry.find("Symbol", "_length").offset;
+
+		/**
+		 * 符号的名称，UTF8字符数组。<br>
+		 * 计算identity_hash也会使用。<br>
+		 * GC不安全。<br>
+		 * 尽管定义_body[]长度为2，但实际储存的长度大于2，具体长度为_length字段表明
+		 */
 		private static final long _body = vm_struct.entry.find("Symbol", "_body").offset;
+
 		private static final long _body_0 = vm_struct.entry.find("Symbol", "_body[0]").offset;
-		private static final long _vm_symbols_0 = vm_struct.entry.find("Symbol", "_vm_symbols[0]").address;// static Symbol* _vm_symbols[];起始地址
 
 		public Symbol(long address)
 		{
@@ -1077,9 +1168,52 @@ public abstract class vm_struct extends memory_operator
 			return super.read_short(_length);
 		}
 
-		public byte _body(int idx)
+		public byte get_body(int idx)
 		{
 			return super.read_byte(_body + idx);
+		}
+
+		/**
+		 * 读取_body[]全部字节
+		 * 
+		 * @return
+		 */
+		public byte[] bytes()
+		{
+			byte[] b = new byte[_length()];
+			unsafe.memcpy(base(), b, 0, b.length);
+			return b;
+		}
+
+		public long base()
+		{
+			return this.address + _body;
+		}
+
+		/**
+		 * 获取符号名称为C UTF-8字符串。<br>
+		 * 
+		 * @return
+		 */
+		public long cstr()
+		{
+			return base();
+		}
+
+		/**
+		 * 获取符号名称为Java字符串。<br>
+		 * 
+		 * @return
+		 */
+		public String jstring()
+		{
+			return memory.string(cstr());
+		}
+
+		@Override
+		public String toString()
+		{
+			return jstring();
 		}
 	}
 
@@ -1152,17 +1286,24 @@ public abstract class vm_struct extends memory_operator
 
 	public static class CompressedOops
 	{
-		private static final long _narrow_oop__base = vm_struct.entry.find("CompressedOops", "_narrow_oop._base", "_base").address;
-		private static final long _narrow_oop__shift = vm_struct.entry.find("CompressedOops", "_narrow_oop._shift", "_shift").address;
+		private static final long _base = jdk_versions.switch_execute(
+				() -> vm_struct.entry.find("CompressedOops", "_narrow_oop._base").address, // JDK21
+				() -> vm_struct.entry.find("CompressedOops", "_base").address// JDK25
+		);
+
+		private static final long _shift = jdk_versions.switch_execute(
+				() -> vm_struct.entry.find("CompressedOops", "_narrow_oop._shift").address, // JDK21
+				() -> vm_struct.entry.find("CompressedOops", "_shift").address// JDK25
+		);
 
 		public static final long _narrow_oop_base()
 		{
-			return unsafe.read_pointer(_narrow_oop__base);
+			return unsafe.read_pointer(_base);
 		}
 
 		public static final int _narrow_oop_shift()
 		{
-			return unsafe.read_int(_narrow_oop__shift);
+			return unsafe.read_int(_shift);
 		}
 
 		public static final int encode(long native_addr)
@@ -1178,27 +1319,35 @@ public abstract class vm_struct extends memory_operator
 
 	public static class CompressedKlassPointers
 	{
-		private static final long _narrow_klass__base = vm_struct.entry.find("CompressedKlassPointers", "_narrow_klass._base", "_base").address;
-		private static final long _narrow_klass__shift = vm_struct.entry.find("CompressedKlassPointers", "_narrow_klass._shift", "_shift").address;
+		private static final long _base = jdk_versions.switch_execute(
+				() -> vm_struct.entry.find("CompressedKlassPointers", "_narrow_klass._base").address, // JDK21
+				() -> vm_struct.entry.find("CompressedKlassPointers", "_base").address// JDK25
+		);
+
+		private static final long _shift = jdk_versions.switch_execute(
+				() -> vm_struct.entry.find("CompressedKlassPointers", "_narrow_klass._shift").address, // JDK21
+				() -> vm_struct.entry.find("CompressedKlassPointers", "_shift").address// JDK25
+		);
 
 		public static final long _narrow_klass_base()
 		{
-			return unsafe.read_pointer(_narrow_klass__base);
+			return unsafe.read_pointer(_base);
 		}
 
 		public static final int _narrow_klass_shift()
 		{
-			return unsafe.read_int(_narrow_klass__shift);
+			return unsafe.read_int(_shift);
 		}
 
 		public static final int encode(long klass_ptr)
 		{
+			// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/compressedKlass.inline.hpp#L39
 			return (int) ((klass_ptr - _narrow_klass_base()) >> _narrow_klass_shift());
 		}
 
 		public static final long decode(int narrow_klass)
 		{
-			// https://github.com/openjdk/jdk/blob/8e906ddad6e8019718a916e02082b2badf0c0ff2/src/hotspot/share/oops/compressedKlass.inline.hpp#L59
+			// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/compressedKlass.inline.hpp#L35
 			return _narrow_klass_base() + ((narrow_klass & cxx_type.uint32_t_mask) << _narrow_klass_shift());
 		}
 	}
@@ -1786,11 +1935,11 @@ public abstract class vm_struct extends memory_operator
 	public static class ciConstant
 	{
 		private static final long _type = vm_struct.entry.find("ciConstant", "_type").offset;
-		private static final long _value__int = vm_struct.entry.find("ciConstant", "_value._int").offset;
-		private static final long _value__long = vm_struct.entry.find("ciConstant", "_value._long").offset;
-		private static final long _value__float = vm_struct.entry.find("ciConstant", "_value._float").offset;
-		private static final long _value__double = vm_struct.entry.find("ciConstant", "_value._double").offset;
-		private static final long _value__object = vm_struct.entry.find("ciConstant", "_value._object").offset;
+		private static final long _value_int = vm_struct.entry.find("ciConstant", "_value._int").offset;
+		private static final long _value_long = vm_struct.entry.find("ciConstant", "_value._long").offset;
+		private static final long _value_float = vm_struct.entry.find("ciConstant", "_value._float").offset;
+		private static final long _value_double = vm_struct.entry.find("ciConstant", "_value._double").offset;
+		private static final long _value_object = vm_struct.entry.find("ciConstant", "_value._object").offset;
 	}
 
 	public static class ObjectMonitor
@@ -2198,7 +2347,7 @@ public abstract class vm_struct extends memory_operator
 		 */
 		public static final long as_Klass(long java_clazz_address)
 		{
-			// https://github.com/openjdk/jdk/blob/cc29010ae29c65964b44e9f472ad0c1d9f848f0a/src/hotspot/share/classfile/javaClasses.inline.hpp#L286
+			// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/classfile/javaClasses.inline.hpp#L286
 			return oopDesc.metadata_field(java_clazz_address, _klass_offset());
 		}
 
@@ -2243,11 +2392,7 @@ public abstract class vm_struct extends memory_operator
 		public static final InstanceKlass as_InstanceKlass(Class<?> clazz)
 		{
 			InstanceKlass ik = new InstanceKlass(klass_ptr(clazz));
-			short kind = ik._kind();
-			if (kind >= Klass.InstanceKlassKind && kind < Klass.TypeArrayKlassKind)
-				return ik;
-			else
-				return null;
+			return ik.is_instance_klass() ? ik : null;
 		}
 	}
 

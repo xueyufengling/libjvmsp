@@ -175,31 +175,22 @@ public abstract class memory
 	 * 
 	 * @param flags
 	 * @param flag  只能有一个bit为1，其他为0
-	 * @param value
+	 * @param mark
 	 * @return
 	 */
-	public static final int set_flag_bit(int flags, int flag, boolean value)
+	public static final int set_flag_bit(int flags, int flag, boolean mark)
 	{
-		if (value)
-			return flags |= flag;
-		else
-			return flags &= ~flag;
+		return mark ? flags | flag : flags & (~flag);
 	}
 
-	public static final short set_flag_bit(short flags, short flag, boolean value)
+	public static final short set_flag_bit(short flags, short flag, boolean mark)
 	{
-		if (value)
-			return flags |= flag;
-		else
-			return flags &= ~flag;
+		return (short) (mark ? flags | flag : flags & (~flag));
 	}
 
-	public static final byte set_flag_bit(byte flags, byte flag, boolean value)
+	public static final byte set_flag_bit(byte flags, byte flag, boolean mark)
 	{
-		if (value)
-			return flags |= flag;
-		else
-			return flags &= ~flag;
+		return (byte) (mark ? flags | flag : flags & (~flag));
 	}
 
 	public static final String bits_str(byte value)

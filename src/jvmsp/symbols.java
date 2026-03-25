@@ -10,12 +10,15 @@ import java.security.ProtectionDomain;
 
 import jvmsp.reflection.reflection_factory;
 
+import static jvmsp.versions.jdk_versions;
+
 /**
  * 句柄操作相关，包括调用native方法<br>
  * 不依赖<br>
  * 
  * @implNote 该类未引用任何本库的类，需要最先初始化
  */
+@SuppressWarnings("unchecked")
 public class symbols
 {
 	public static final int PUBLIC = Modifier.PUBLIC;
@@ -142,7 +145,8 @@ public class symbols
 	}
 
 	/**
-	 * 查找Class的初始化方法
+	 * 查找Class的构造函数方法。<br>
+	 * 该方法第一个参数固定为this，且该方法无返回值。<br>
 	 * 
 	 * @param clazz
 	 * @return
@@ -151,8 +155,8 @@ public class symbols
 	{
 		Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
 		int flags = symbols.member_name_flags(member_name);
-		flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
-		flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
+		flags = memory.set_flag_bit(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
+		flags = memory.set_flag_bit(flags, symbols.IS_METHOD, true);// 添加普通方法标志
 		symbols.set_member_name_flags(member_name, flags);
 		return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
 	}
@@ -856,49 +860,45 @@ public class symbols
 		java_lang_invoke_MemberName_flags.set(member_name, flags);
 	}
 
-	/**
-	 * 设置flags中的标志flag是否启用，可通过该方法为flags增加或删除flag。
-	 * 
-	 * @param flags
-	 * @param flag
-	 * @param mark
-	 * @return
-	 */
-	public static final int set_flag(int flags, int flag, boolean mark)
-	{
-		return mark ? flags | flag : flags & (~flag);
-	}
-
-	private static MethodHandle getDirectMethodCommon;
-	private static boolean removedSecurityManager;// 是否已经移除了SecurityManager，JDK21未移除，JDK25已经移除
+	private static MethodHandle Lookup_getDirectMethodCommon;
 
 	static
 	{
-		try
-		{
-			getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, boolean.class, MethodHandles.Lookup.class);
-			removedSecurityManager = false;
-		}
-		catch (Throwable ex)
-		{
-			getDirectMethodCommon = find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, MethodHandles.Lookup.class);
-			removedSecurityManager = true;
-		}
+		// SecurityManager的移除关系到该方法的参数，JDK21未移除，JDK25已经移除
+		Lookup_getDirectMethodCommon = jdk_versions.switch_execute_nonnull(
+				// JDK21
+				() -> find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, boolean.class, MethodHandles.Lookup.class),
+				// JDK25
+				() -> find_special_method(MethodHandles.Lookup.class, "getDirectMethodCommon", MethodHandle.class, byte.class, Class.class, java_lang_invoke_MemberName, boolean.class, MethodHandles.Lookup.class));
 	}
 
 	public static final MethodHandle direct_method(byte ref_kind, Class<?> refc, Object member_name, boolean do_restrict, MethodHandles.Lookup bound_caller)
 	{
-		try
-		{
-			if (removedSecurityManager)
-				return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, do_restrict, bound_caller);
-			else
-				return (MethodHandle) getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, false, do_restrict, bound_caller);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("member name '" + member_name.toString() + "' wrap direct method handle failed", ex);
-		}
+		return jdk_versions.switch_execute_nonnull(
+				() ->
+				{
+					try
+					{
+						// false参数为SecurityManager是否检查权限
+						return (MethodHandle) Lookup_getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, false, do_restrict, bound_caller);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("member name '" + member_name.toString() + "' wrap direct method handle failed [jdk21]", ex);
+					}
+				}, // JDK21
+				() ->
+				{
+					try
+					{
+						return (MethodHandle) Lookup_getDirectMethodCommon.invoke(trusted_lookup, ref_kind, refc, member_name, do_restrict, bound_caller);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("member name '" + member_name.toString() + "' wrap direct method handle failed [jdk25]", ex);
+					}
+				}// JDK25
+		);
 	}
 
 	/**
@@ -1019,8 +1019,8 @@ public class symbols
 	{
 		Object member_name = symbols.member_name(symbols.find_constructor(target_class, arg_types));
 		int flags = symbols.member_name_flags(member_name);
-		flags = symbols.set_flag(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
-		flags = symbols.set_flag(flags, symbols.IS_METHOD, true);// 添加普通方法标志
+		flags = memory.set_flag_bit(flags, symbols.IS_CONSTRUCTOR, false);// 取消构造函数标志
+		flags = memory.set_flag_bit(flags, symbols.IS_METHOD, true);// 添加普通方法标志
 		symbols.set_member_name_flags(member_name, flags);
 		return symbols.direct_method(symbols.constants.REF_invokeVirtual, target_class, member_name);
 	}
@@ -1130,7 +1130,6 @@ public class symbols
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public static final <_T> _T construct(Class<_T> clazz, Class<?>[] ctorTypes, Object... args)
 	{
 		try
