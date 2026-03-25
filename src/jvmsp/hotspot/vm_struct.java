@@ -142,6 +142,23 @@ public abstract class vm_struct extends memory_object
 			}
 			return null;
 		}
+
+		/**
+		 * 打印一种类型的全部导出字段
+		 * 
+		 * @param type_name
+		 */
+		public static final void print_type(String type_name)
+		{
+			Map<String, entry> fields = vm_struct_entries.get(type_name);
+			if (fields != null)
+			{
+				for (entry e : fields.values())
+				{
+					System.out.println(e);
+				}
+			}
+		}
 	}
 
 	/**
@@ -154,28 +171,18 @@ public abstract class vm_struct extends memory_object
 	 */
 	private final boolean exported;
 
-	protected vm_struct(String name, long address, long idx_base)
+	protected vm_struct(String name, long address)
 	{
-		super(address, idx_base);
+		super(address);
 		this.type = vm_type.get(name);
 		this.exported = this.type != null;
 	}
 
-	protected vm_struct(long address, long idx_base)
-	{
-		super(address, idx_base);
-		this.type = null;
-		this.exported = false;
-	}
-
-	protected vm_struct(String name, long address)
-	{
-		this(name, address, 0);
-	}
-
 	protected vm_struct(long address)
 	{
-		this(address, 0);
+		super(address);
+		this.type = null;
+		this.exported = false;
 	}
 
 	public final boolean is_exported()
@@ -1169,15 +1176,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _can_hotswap_or_post_breakpoint = vm_struct.entry.find("JvmtiExport", "_can_hotswap_or_post_breakpoint").address;
 		private static final long _can_post_on_exceptions = vm_struct.entry.find("JvmtiExport", "_can_post_on_exceptions").address;
 		private static final long _can_walk_any_space = vm_struct.entry.find("JvmtiExport", "_can_walk_any_space").address;
-	}
-
-	public static class Arguments
-	{
-		private static final long _jvm_flags_array = vm_struct.entry.find("Arguments", "_jvm_flags_array").address;
-		private static final long _num_jvm_flags = vm_struct.entry.find("Arguments", "_num_jvm_flags").address;
-		private static final long _jvm_args_array = vm_struct.entry.find("Arguments", "_jvm_args_array").address;
-		private static final long _num_jvm_args = vm_struct.entry.find("Arguments", "_num_jvm_args").address;
-		private static final long _java_command = vm_struct.entry.find("Arguments", "_java_command").address;
 	}
 
 	public static class FileMapInfo

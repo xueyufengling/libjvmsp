@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
+import jvmsp.type.cxx_type;
+import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
 import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.oops.Klass;
@@ -445,12 +447,61 @@ public final class unsafe
 	/**
 	 * 读取const char*字段并将其转为Java String。<br>
 	 * 
-	 * @param cstr
+	 * @param base
+	 * @param offset
 	 * @return
 	 */
-	public static final String read_cstr(long cstr)
+	public static final String read_cstr(Object base, long offset)
 	{
-		return memory.string(read_pointer(cstr));
+		return memory.string(read_pointer(base, offset));
+	}
+
+	public static final String read_cstr(long addr)
+	{
+		return read_cstr(null, addr);
+	}
+
+	/**
+	 * 读取C字符串数组
+	 * 
+	 * @param base
+	 * @param offset
+	 * @param num
+	 * @return
+	 */
+	public static final String[] read_cstr_arr(Object base, long offset, int num)
+	{
+		String[] strs = new String[num];
+		for (int idx = 0; idx < num; ++idx)
+		{
+			strs[idx] = read_cstr(base, offset + idx * cxx_type.pchar.size());
+		}
+		return strs;
+	}
+
+	public static final String[] read_cstr_arr(long addr, int num)
+	{
+		return read_cstr_arr(null, addr, num);
+	}
+
+	/**
+	 * 写入C字符串，字符串不需要时需要手动释放内存。<br>
+	 * 
+	 * @param base
+	 * @param offset
+	 * @param str
+	 * @return 分配的C字符串
+	 */
+	public static final pointer write_cstr(Object base, long offset, String str)
+	{
+		pointer cstr = memory.c_str(str);
+		write_pointer(base, offset, cstr.address());
+		return cstr;
+	}
+
+	public static final pointer write_cstr(long addr, String str)
+	{
+		return write_cstr(null, addr, str);
 	}
 
 	public static final int address_size()

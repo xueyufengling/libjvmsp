@@ -21,7 +21,6 @@ import com.sun.tools.attach.VirtualMachine;
 import jvmsp.object_layout.object_header_layout;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
-import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.memory.Universe;
 import jvmsp.hotspot.oops.CompressedKlassPointers;

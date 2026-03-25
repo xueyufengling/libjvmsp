@@ -1,21 +1,28 @@
 package jvmsp.hotspot.oops;
 
+import jvmsp.memory.sized_memory;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.memory.MetaspaceObj;
 
-public class Array extends MetaspaceObj
+public class Array extends MetaspaceObj implements sized_memory
 {
-	long length_offset;
+	long length_addr;
 
 	protected Array(String name, long length_offset, long data_offset, long address)
 	{
-		super(name, address, data_offset);
-		this.length_offset = length_offset;
+		super(name, address + data_offset);
+		this.length_addr = address + length_offset;
+	}
+
+	@Override
+	public long size_addr()
+	{
+		return length_addr;
 	}
 
 	public int length()
 	{
-		return super.read_int(length_offset);
+		return this.int_size();
 	}
 
 	public static class Array_int extends Array
@@ -101,4 +108,5 @@ public class Array extends MetaspaceObj
 			super.write_pointer_idx(idx, value);
 		}
 	}
+
 }

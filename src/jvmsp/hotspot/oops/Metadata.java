@@ -12,6 +12,11 @@ public class Metadata extends MetaspaceObj
 		super(name, address);
 	}
 
+	protected Metadata(long address)
+	{
+		this("Metadata", address);
+	}
+
 	public int identity_hash()
 	{
 		return (int) address;

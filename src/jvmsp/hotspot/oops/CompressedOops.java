@@ -6,7 +6,7 @@ import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.type.cxx_type;
 
-public class CompressedOops
+public abstract class CompressedOops
 {
 	private static final long _base = jdk_versions.switch_execute(
 			() -> vm_struct.entry.find("CompressedOops", "_narrow_oop._base").address, // JDK21

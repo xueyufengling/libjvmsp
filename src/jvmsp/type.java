@@ -2033,6 +2033,14 @@ public abstract class type<_T>
 			}
 
 			/**
+			 * 释放指针
+			 */
+			public void delete()
+			{
+				memory.free(this);
+			}
+
+			/**
 			 * 创建一个新指针，地址和本指针相同，但托管在try-with-resources代码中自动释放指针
 			 * 
 			 * @return
@@ -2053,7 +2061,7 @@ public abstract class type<_T>
 					@Override
 					public void close() throws Exception
 					{
-						memory.free(this);
+						this.delete();
 					}
 				}
 				return new auto_pointer(this);

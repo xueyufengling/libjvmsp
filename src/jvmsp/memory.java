@@ -221,17 +221,10 @@ public abstract class memory
 	public static class memory_object
 	{
 		protected final long address;
-		protected final long idx_base;// 使用索引访问时的前置偏移量
-
-		public memory_object(long address, long idx_base)
-		{
-			this.address = address;
-			this.idx_base = idx_base;
-		}
 
 		public memory_object(long address)
 		{
-			this(address, 0);
+			this.address = address;
 		}
 
 		public final long address()
@@ -303,6 +296,16 @@ public abstract class memory
 			unsafe.write_pointer(address + offset, ptr);
 		}
 
+		public final String read_cstr(long offset)
+		{
+			return unsafe.read_cstr(address + offset);
+		}
+
+		public final pointer write_cstr(long offset, String str)
+		{
+			return unsafe.write_cstr(address + offset, str);
+		}
+
 		public final boolean read_cbool(long offset)
 		{
 			return unsafe.read_cbool(address + offset);
@@ -361,57 +364,92 @@ public abstract class memory
 
 		public final byte read_byte_idx(int idx)
 		{
-			return read_byte(idx_base + idx * cxx_type.unsigned_char.size());
+			return read_byte(idx * cxx_type.unsigned_char.size());
 		}
 
 		public final short read_short_idx(int idx)
 		{
-			return read_short(idx_base + idx * cxx_type._short.size());
+			return read_short(idx * cxx_type._short.size());
 		}
 
 		public final int read_int_idx(int idx)
 		{
-			return read_int(idx_base + idx * cxx_type._int.size());
+			return read_int(idx * cxx_type._int.size());
 		}
 
 		public final long read_pointer_idx(int idx)
 		{
-			return read_pointer(idx_base + idx * cxx_type.pvoid.size());
+			return read_pointer(idx * cxx_type.pvoid.size());
 		}
 
 		public final <_MemObject extends memory_object> _MemObject read_memory_operator_ptr_idx(Class<_MemObject> clazz, int idx)
 		{
-			return read_memory_object_ptr(clazz, idx_base + idx * cxx_type.pvoid.size());
+			return read_memory_object_ptr(clazz, idx * cxx_type.pvoid.size());
 		}
 
 		public final void write_idx(int idx, byte value)
 		{
-			write(idx_base + idx * cxx_type.unsigned_char.size(), value);
+			write(idx * cxx_type.unsigned_char.size(), value);
 		}
 
 		public final void write_idx(int idx, short value)
 		{
-			write(idx_base + idx * cxx_type._short.size(), value);
+			write(idx * cxx_type._short.size(), value);
 		}
 
 		public final void write_idx(int idx, int value)
 		{
-			write(idx_base + idx * cxx_type._int.size(), value);
+			write(idx * cxx_type._int.size(), value);
 		}
 
 		public final void write_idx(int idx, long value)
 		{
-			write(idx_base + idx * cxx_type._long_long.size(), value);
+			write(idx * cxx_type._long_long.size(), value);
 		}
 
 		public final void write_pointer_idx(int idx, long ptr)
 		{
-			write_pointer(idx_base + idx * cxx_type.pvoid.size(), ptr);
+			write_pointer(idx * cxx_type.pvoid.size(), ptr);
 		}
 
 		public final void write_pointer_idx(int idx, memory_object struct)
 		{
-			write_pointer(idx_base + idx * cxx_type.pvoid.size(), struct);
+			write_pointer(idx * cxx_type.pvoid.size(), struct);
+		}
+	}
+
+	/**
+	 * 可以记录长度的内存操作接口
+	 */
+	public static interface sized_memory
+	{
+		public abstract long size_addr();
+
+		public default int int_size()
+		{
+			return unsafe.read_int(size_addr());
+		}
+
+		public default long long_size()
+		{
+			return unsafe.read_long(size_addr());
+		}
+
+		public static class memory_array extends memory_object implements sized_memory
+		{
+			private long length_addr;
+
+			public memory_array(long data_addr, long length_addr)
+			{
+				super(data_addr);
+				this.length_addr = length_addr;
+			}
+
+			@Override
+			public long size_addr()
+			{
+				return length_addr;
+			}
 		}
 	}
 }

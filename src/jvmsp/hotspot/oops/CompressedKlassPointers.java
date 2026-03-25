@@ -9,7 +9,7 @@ import jvmsp.type.cxx_type;
 /**
  * Klass指针压缩，用于对象头的Klass Word计算
  */
-public class CompressedKlassPointers
+public abstract class CompressedKlassPointers
 {
 	private static final long _base = jdk_versions.switch_execute(
 			() -> vm_struct.entry.find("CompressedKlassPointers", "_narrow_klass._base").address, // JDK21
