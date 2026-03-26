@@ -70,9 +70,9 @@ public class virtual_machine
 	static
 	{
 		// 获取JVM位数，支持多种JVM实现
-		String arch = System.getProperty("os.arch");
+		String arch = System.getProperty("sun.arch.data.model");
 		if (arch == null)
-			throw new java.lang.UnknownError("system property 'os.arch' found null, this property is guaranteed Java Specification");
+			throw new java.lang.UnknownError("system property 'sun.arch.data.model' found null");
 		if (arch.contains("64"))
 			jvm_bit_version = 64;
 		else

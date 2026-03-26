@@ -7,6 +7,8 @@ public class AccessFlags extends vm_struct
 {
 	private static final long _flags = vm_struct.entry.find("AccessFlags", "_flags").offset;
 
+	public static final long size = sizeof("AccessFlags");
+
 	// 类、字段、方法通用标记
 
 	/**
@@ -237,6 +239,16 @@ public class AccessFlags extends vm_struct
 		return memory.flag_bit(_flags(), JVM_ACC_SYNTHETIC);
 	}
 
+	/**
+	 * 无访问修饰符的包级权限。<br>
+	 * 
+	 * @return
+	 */
+	public boolean is_package_private()
+	{
+		return !is_public() && !is_private() && !is_protected();
+	}
+
 	public void set_public(boolean value)
 	{
 		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_PUBLIC, value));
@@ -325,5 +337,12 @@ public class AccessFlags extends vm_struct
 	public void set_enum(boolean value)
 	{
 		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_ENUM, value));
+	}
+
+	public void set_package_private()
+	{
+		set_public(false);
+		set_private(false);
+		set_protected(false);
 	}
 }

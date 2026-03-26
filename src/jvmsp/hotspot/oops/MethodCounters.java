@@ -11,6 +11,8 @@ public class MethodCounters extends Metadata
 	private static final long _invocation_counter = vm_struct.entry.find("MethodCounters", "_invocation_counter").offset;
 	private static final long _backedge_counter = vm_struct.entry.find("MethodCounters", "_backedge_counter").offset;
 
+	public static final long size = sizeof("MethodCounters");
+	
 	public MethodCounters(long address)
 	{
 		super("MethodCounters", address);

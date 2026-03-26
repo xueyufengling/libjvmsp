@@ -56,6 +56,8 @@ public class Klass extends Metadata
 	public static final short ObjArrayKlassKind = 6;
 	public static final short UnknownKlassKind = 7;
 
+	public static final long size = sizeof("Klass");
+
 	protected Klass(String name, long address)
 	{
 		super(name, address);
@@ -70,6 +72,12 @@ public class Klass extends Metadata
 	public final boolean is_klass()
 	{
 		return true;
+	}
+
+	@Override
+	public String toString()
+	{
+		return 'L' + this.name().toString() + ';';
 	}
 
 	public static final Klass java_lang_Object = java_lang_Class.as_Klass(Object.class);
@@ -280,14 +288,14 @@ public class Klass extends Metadata
 		this.resolve_primary_supers();
 	}
 
-	public Symbol _name()
+	public Symbol name()
 	{
 		return super.read_memory_object_ptr(Symbol.class, _name);
 	}
 
 	public void set_name(Symbol name)
 	{
-		super.write(_name, name.address());
+		super.write_pointer(_name, name);
 	}
 
 	public AccessFlags _access_flags()
@@ -345,6 +353,11 @@ public class Klass extends Metadata
 	public Klass _next_link()
 	{
 		return super.read_memory_object_ptr(Klass.class, _next_link);
+	}
+
+	public OopHandle java_mirror()
+	{
+		return super.read_memory_object(OopHandle.class, _java_mirror);
 	}
 
 	/**

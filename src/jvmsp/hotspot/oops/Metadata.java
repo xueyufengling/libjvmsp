@@ -7,6 +7,8 @@ import jvmsp.hotspot.memory.MetaspaceObj;
  */
 public class Metadata extends MetaspaceObj
 {
+	public static final long size = sizeof("Metadata");
+
 	protected Metadata(String name, long address)
 	{
 		super(name, address);

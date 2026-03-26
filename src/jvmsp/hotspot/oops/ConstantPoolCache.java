@@ -15,6 +15,8 @@ public class ConstantPoolCache extends MetaspaceObj
 	private static final long _constant_pool = vm_struct.entry.find("ConstantPoolCache", "_constant_pool").offset;
 	private static final long _resolved_indy_entries = vm_struct.entry.find("ConstantPoolCache", "_resolved_indy_entries").offset;
 
+	public static final long size = sizeof("ConstantPoolCache");
+	
 	public ConstantPoolCache(long address)
 	{
 		super("ConstantPoolCache", address);

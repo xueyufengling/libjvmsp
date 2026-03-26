@@ -9,6 +9,8 @@ public class oopDesc extends vm_struct
 	private static final long _metadata_klass = vm_struct.entry.find("oopDesc", "_metadata._klass").offset;
 	private static final long _metadata_compressed_klass = vm_struct.entry.find("oopDesc", "_metadata._compressed_klass").offset;
 
+	public static final long size = sizeof("oopDesc");
+	
 	public oopDesc(long address)
 	{
 		super("oopDesc", address);

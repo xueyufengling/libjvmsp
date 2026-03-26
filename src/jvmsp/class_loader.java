@@ -288,7 +288,7 @@ public class class_loader
 
 	public static final ClassLoader new_class_loader(HashMap<String, byte[]> undefined_class)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return new_class_loader(caller.getClassLoader(), undefined_class);
 	}
 
@@ -512,7 +512,7 @@ public class class_loader
 
 	public static final void load(boolean init, String start_path, boolean include_subpackage)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		load(caller, init, start_path, include_subpackage);
 	}
 
@@ -523,7 +523,7 @@ public class class_loader
 
 	public static final void load(Function<String, String> classpath_resolver, boolean init, String start_path, boolean include_subpackage)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		load(caller, classpath_resolver, init, start_path, include_subpackage);
 	}
 
@@ -569,7 +569,7 @@ public class class_loader
 
 	public static final String[] loaded_packages()
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return loaded_packages(caller.getClassLoader());
 	}
 
@@ -618,19 +618,19 @@ public class class_loader
 	 */
 	public static final ClassLoader load_jar(InputStream... jars)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), jars);
 	}
 
 	public static final ClassLoader load_jar(byte[]... multi_jar_bytes)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), file_system.jar_streams(multi_jar_bytes));
 	}
 
 	public static final ClassLoader load_jar(String... jar_paths)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), file_system.jar_streams(caller, jar_paths));
 	}
 
@@ -643,19 +643,19 @@ public class class_loader
 	 */
 	public static final ClassLoader load_jar(String package_name, boolean include_subpackage, InputStream... jars)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), package_name, include_subpackage, jars);
 	}
 
 	public static final ClassLoader load_jar(String package_name, boolean include_subpackage, byte[]... multi_jar_bytes)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), package_name, include_subpackage, file_system.jar_streams(multi_jar_bytes));
 	}
 
 	public static final ClassLoader load_jar(String package_name, boolean include_subpackage, String... entry_jar_paths)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return load_jar(caller.getClassLoader(), package_name, include_subpackage, file_system.jar_streams(caller, entry_jar_paths));
 	}
 

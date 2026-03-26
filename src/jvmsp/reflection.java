@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import jvmsp.type.java_type;
+import jvmsp.hotspot.oops.InstanceKlass;
 import sun.reflect.ReflectionFactory;
 
 /**
@@ -245,7 +246,6 @@ public abstract class reflection
 	private static MethodHandle Class_searchMethods;
 	private static MethodHandle Class_getConstructor0;
 	private static MethodHandle Class_forName0;
-	private static MethodHandle Reflection_isCallerSensitive;
 
 	static
 	{
@@ -260,7 +260,6 @@ public abstract class reflection
 			Class_searchMethods = symbols.find_static_method(Class.class, "searchMethods", Method.class, Method[].class, String.class, Class[].class);
 			Class_getConstructor0 = symbols.find_special_method(Class.class, Class.class, "getConstructor0", Constructor.class, Class[].class, int.class);
 			Class_forName0 = symbols.find_static_method(Class.class, "forName0", Class.class, String.class, boolean.class, ClassLoader.class, Class.class);
-			Reflection_isCallerSensitive = symbols.find_static_method(jdk_internal_reflect_Reflection, "isCallerSensitive", boolean.class, Method.class);
 		}
 		catch (SecurityException | IllegalArgumentException ex)
 		{
@@ -511,19 +510,19 @@ public abstract class reflection
 
 	public static final Class<?> find_class(String name, boolean initialize, ClassLoader loader)
 	{
-		Class<?> caller = caller_class();
+		Class<?> caller = get_caller_class();
 		return find_class(name, initialize, loader, caller);
 	}
 
 	public static final Class<?> find_class(String name, boolean initialize)
 	{
-		Class<?> caller = caller_class();
+		Class<?> caller = get_caller_class();
 		return find_class(name, initialize, caller.getClassLoader(), caller);
 	}
 
 	public static final Class<?> find_class(String name)
 	{
-		Class<?> caller = caller_class();
+		Class<?> caller = get_caller_class();
 		return find_class(name, true, caller.getClassLoader(), caller);
 	}
 
@@ -979,21 +978,67 @@ public abstract class reflection
 	}
 
 	/**
-	 * jdk.internal.reflect.Reflection.isCallerSensitive()
+	 * JVM一些内部方法只能由具有call_sensitive标志的方法直接调用。<br>
+	 * 一个类是否是call_sensitive的与它的运行时注解无关，只有ConstMethod*->_flags中的call_sensitive标志位有关
+	 * 
+	 * @param clazz
+	 * @return 是否设置成功
+	 */
+	public static final void set_caller_sensitive(Class<?> clazz, String name, String signature, boolean caller_sensitive)
+	{
+		jvmsp.hotspot.oops.Method m = InstanceKlass.lookup_method(clazz, name, signature);
+		if (m != null)
+		{
+			m.constMethod().flags().set_caller_sensitive(caller_sensitive);
+		}
+	}
+
+	/**
+	 * jdk.internal.reflect.Reflection.getCallerClass()获取调用此方法的上下文的类。<br>
+	 * 调用此方法算起，返回栈帧中第一个没有caller_sensitive标记的方法所在的类。<br>
+	 * 此方法本身在JVM内部是call_sensitive的。<br>
+	 * 调用时的栈帧如下：<br>
+	 * [0] [ @CallerSensitive public jdk.internal.reflect.Reflection.getCallerClass() ]<br>
+	 * [1] [ @CallerSensitive API.method ] 直接调用Reflection.getCallerClass()的方法，即此方法。<br>
+	 * [.] [ (skipped intermediate frames) ] 根据Method*->intrinsic_id()决定是否跳过，例如反射、MethodHandle、lambda就会跳过。<br>
+	 * [n] [ caller ]<br>
 	 * 
 	 * @param m
 	 * @return
 	 */
-	public static final boolean is_caller_sensitive(Method m)
+	public static final Class<?> get_caller_class()
 	{
-		try
+		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/jvm.cpp#L724
+		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/method.cpp#L1435
+		class _register_caller_sensitive
 		{
-			return (boolean) Reflection_isCallerSensitive.invokeExact(m);
+			static
+			{
+				// 直接调用Reflection.getCallerClass()的方法必须是call_sensitive的，否则报错
+				// MethodHandle::invokeExact()方法在语法层是直接调用Reflection.getCallerClass()的方法，但为其设置caller_sensitive标记仍然报错直接调用方法不是call_sensitive的
+				// 因此判断内部还有JVM生成的或内部的中间函数
+				jvmsp.hotspot.oops.Method _vm_getCallerClass = InstanceKlass.lookup_method(jdk_internal_reflect_Reflection, "getCallerClass", "()Ljava/lang/Class;");
+
+				jvmsp.hotspot.oops.Method _m_get_caller_class = InstanceKlass.lookup_method(reflection.class, "get_caller_class", "()Ljava/lang/Class;");
+				jvmsp.hotspot.oops.ConstMethodFlags flags = _m_get_caller_class.constMethod().flags();
+				flags.set_caller_sensitive(true);// 为get_caller_class()方法设置caller_sensitive标志
+				flags.set_intrinsic_candidate(true);// 设置内联建议标志
+
+				_m_get_caller_class.set_intrinsic_id(_vm_getCallerClass.intrinsic_id());// 设置内部ID，遍历栈帧时查找caller时就会跳过此栈帧
+
+				// _m_get_caller_class.constants().symbol_at_put(0, "jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;");
+			}
+
+			public static final Object init = null;
+
+			public static final Class<?> _dummy()
+			{
+				return null;
+			}
 		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("method '" + m.toString() + "' check is caller sensitive faield", ex);
-		}
+		@SuppressWarnings("unused")
+		Object unused = _register_caller_sensitive.init; // 仅在调用此方法时才访问vm_struct，防止vm_struct$entry.<clinit>递归调用
+		return null;
 	}
 
 	/**
@@ -1073,13 +1118,13 @@ public abstract class reflection
 
 	public static final List<String> class_names_in_package(String package_name, boolean include_subpackage)
 	{
-		Class<?> caller = caller_class();
+		Class<?> caller = get_caller_class();
 		return class_names_in_package(caller, package_name, include_subpackage);// 获取调用该方法的类
 	}
 
 	public static final List<String> class_names_in_package(Function<String, String> classpath_resolver, String package_name, boolean include_subpackage)
 	{
-		Class<?> caller = caller_class();
+		Class<?> caller = get_caller_class();
 		return class_names_in_package(caller, classpath_resolver, package_name, include_subpackage);
 	}
 
@@ -1094,7 +1139,15 @@ public abstract class reflection
 
 	static
 	{
-		Class<?> class_AnnotationData = find_class("java.lang.Class$AnnotationData");
+		Class<?> class_AnnotationData = null;
+		try
+		{
+			class_AnnotationData = Class.forName("java.lang.Class$AnnotationData");
+		}
+		catch (ClassNotFoundException ex)
+		{
+			ex.printStackTrace();
+		}
 		Class_annotationData = symbols.find_special_method(Class.class, Class.class, "annotationData", class_AnnotationData);
 		AnnotationData_annotations = symbols.find_var(class_AnnotationData, "annotations", Map.class);
 		AnnotationData_declaredAnnotations = symbols.find_var(class_AnnotationData, "declaredAnnotations", Map.class);
@@ -1119,6 +1172,7 @@ public abstract class reflection
 	 * @param e
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	public static final Map<Class<?>, ?> declared_annotations(AnnotatedElement ae)
 	{
 		try
@@ -1629,24 +1683,6 @@ public abstract class reflection
 	public static final Class<?> context_class()
 	{
 		return unwind_class(2);
-	}
-
-	/**
-	 * 获取一次间接调用该方法的类<br>
-	 * 例如A()调用B()，B()调用caller_class()，那么返回A()栈帧
-	 * 
-	 * @return
-	 * @since Java 9
-	 * @CallerSensitive
-	 */
-	public static final Class<?> caller_class()
-	{
-		return unwind_class(3);
-	}
-
-	public static final Class<?> caller_class_as_param()
-	{
-		return unwind_class(4);
 	}
 
 	public class class_operation

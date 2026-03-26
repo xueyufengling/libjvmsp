@@ -19,9 +19,23 @@ public class Symbol extends vm_struct
 
 	private static final long _body_0 = vm_struct.entry.find("Symbol", "_body[0]").offset;
 
+	public static final long size = sizeof("Symbol");
+
 	public Symbol(long address)
 	{
 		super("Symbol", address);
+	}
+
+	public Symbol(int _hash_and_refcount, byte[] bytes)
+	{
+		super("Symbol", unsafe.malloc(size + bytes.length));
+		set_hash_and_refcount(_hash_and_refcount);
+		set_data(bytes);
+	}
+
+	public Symbol(int _hash_and_refcount, String sym)
+	{
+		this(_hash_and_refcount, sym.getBytes());
 	}
 
 	public int _hash_and_refcount()
@@ -29,9 +43,20 @@ public class Symbol extends vm_struct
 		return super.read_int(_hash_and_refcount);
 	}
 
-	public short _length()
+	public void set_hash_and_refcount(int hash_and_refcount)
 	{
-		return super.read_short(_length);
+		super.write(_hash_and_refcount, hash_and_refcount);
+	}
+
+	public int length()
+	{
+		return super.read_uint16_t(_length);
+	}
+
+	public void set_data(byte[] bytes)
+	{
+		super.write_uint16_t(_length, bytes.length);
+		unsafe.memcpy(base(), bytes, 0, bytes.length);
 	}
 
 	public byte char_at(int idx)
@@ -44,10 +69,10 @@ public class Symbol extends vm_struct
 	 * 
 	 * @return
 	 */
-	public byte[] bytes()
+	public byte[] data()
 	{
-		byte[] b = new byte[_length()];
-		unsafe.memcpy(base(), b, 0, b.length);
+		byte[] b = new byte[length()];
+		unsafe.memcpy(b, 0, base(), b.length);
 		return b;
 	}
 

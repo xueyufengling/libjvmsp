@@ -43,18 +43,25 @@ public class shared_object
 
 	static
 	{
-		jdk_internal_loader_NativeLibrary = reflection.find_class("jdk.internal.loader.NativeLibrary");
+		try
+		{
+			jdk_internal_loader_NativeLibrary = Class.forName("jdk.internal.loader.NativeLibrary");
+			jdk_internal_loader_NativeLibraries = Class.forName("jdk.internal.loader.NativeLibraries");
+			jdk_internal_loader_NativeLibraries$NativeLibraryImpl = Class.forName("jdk.internal.loader.NativeLibraries$NativeLibraryImpl");
+			jdk_internal_loader_RawNativeLibraries = Class.forName("jdk.internal.loader.RawNativeLibraries");
+			jdk_internal_loader_RawNativeLibraries$RawNativeLibraryImpl = Class.forName("jdk.internal.loader.RawNativeLibraries$RawNativeLibraryImpl");
+		}
+		catch (ClassNotFoundException ex)
+		{
+			ex.printStackTrace();
+		}
 		NativeLibrary_findEntry0 = symbols.find_static_method(jdk_internal_loader_NativeLibrary, "findEntry0", long.class, long.class, String.class);
 		// 加载JNI模块
-		jdk_internal_loader_NativeLibraries = reflection.find_class("jdk.internal.loader.NativeLibraries");
-		jdk_internal_loader_NativeLibraries$NativeLibraryImpl = reflection.find_class("jdk.internal.loader.NativeLibraries$NativeLibraryImpl");
 		NativeLibraries_load = symbols.find_static_method(jdk_internal_loader_NativeLibraries, "load", boolean.class, jdk_internal_loader_NativeLibraries$NativeLibraryImpl, String.class, boolean.class, boolean.class);
 		NativeLibraries_unload = symbols.find_static_method(jdk_internal_loader_NativeLibraries, "unload", void.class, String.class, boolean.class, long.class);
 		NativeLibraries_libraries = reflection.find_declared_field(jdk_internal_loader_NativeLibraries, "libraries");
 		NativeLibraryImpl_handle = symbols.find_var(jdk_internal_loader_NativeLibraries$NativeLibraryImpl, "handle", long.class);
 		// 加载通用模块
-		jdk_internal_loader_RawNativeLibraries = reflection.find_class("jdk.internal.loader.RawNativeLibraries");
-		jdk_internal_loader_RawNativeLibraries$RawNativeLibraryImpl = reflection.find_class("jdk.internal.loader.RawNativeLibraries$RawNativeLibraryImpl");
 		RawNativeLibraries_load0 = symbols.find_static_method(jdk_internal_loader_RawNativeLibraries, "load0", boolean.class, jdk_internal_loader_RawNativeLibraries$RawNativeLibraryImpl, String.class);
 		RawNativeLibraries_unload0 = symbols.find_static_method(jdk_internal_loader_RawNativeLibraries, "unload0", void.class, String.class, long.class);
 		RawNativeLibraries_libraries = reflection.find_declared_field(jdk_internal_loader_RawNativeLibraries, "libraries");
@@ -660,6 +667,7 @@ public class shared_object
 	/**
 	 * JVM内部使用的ABIDescriptor对象，不同架构和平台ABI描述对象不同。 https://github.com/openjdk/jdk/blob/a69409b0b7bcb4eb9a66327e1c6c53b3361ea1e9/src/hotspot/cpu/x86/foreignGlobals_x86_64.cpp#L46
 	 */
+	@SuppressWarnings("preview")
 	public static enum abi
 	{
 		x86_64_CSysV("x64.sysv", "CallArranger", "CSysV"),

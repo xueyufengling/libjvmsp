@@ -78,13 +78,13 @@ public class file_system
 
 	public static final String classpath()
 	{
-		Class<?> caller = reflection.caller_class();// 获取调用该方法的类
+		Class<?> caller = reflection.get_caller_class();// 获取调用该方法的类
 		return classpath(caller);
 	}
 
 	public static final String classpath(Function<String, String> path_resolver)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return classpath(caller, path_resolver);
 	}
 
@@ -386,7 +386,7 @@ public class file_system
 
 	public static final byte[] resource_bytes(String path)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return resource_bytes(caller, path);// 获取调用该方法的类
 	}
 
@@ -404,7 +404,7 @@ public class file_system
 
 	public static final InputStream resource_stream(String path)
 	{
-		Class<?> caller = reflection.caller_class();
+		Class<?> caller = reflection.get_caller_class();
 		return resource_stream(caller, path);// 获取调用该方法的类
 	}
 

@@ -27,6 +27,8 @@ public class algorithms
 		while (left < right)
 		{
 			int mid = (left + right) >>> 1;
+			if (mid == left)// 迭代终止
+				return mid;
 			if (value >= bounds[mid])
 			{
 				left = mid;
@@ -56,6 +58,8 @@ public class algorithms
 		while (left < right)
 		{
 			int mid = (left + right) >>> 1;
+			if (mid == left)// 迭代终止
+				return mid;
 			if (value >= bounds[mid])
 			{
 				left = mid;

@@ -14,6 +14,7 @@ import java.util.Objects;
 
 import jvmsp.memory.memory_object;
 
+@SuppressWarnings("preview")
 public abstract class type<_T>
 {
 	public static enum lang
@@ -1282,58 +1283,52 @@ public abstract class type<_T>
 
 		public static final cxx_type uintptr_t = cxx_type.define_primitive("uintptr_t", type.sizeof(pvoid), ValueLayout.ADDRESS);
 
-		/**
-		 * 用于将signed int类型储存的unsigned int值转换为unsigned long值。<br>
-		 * 用法：{@code uint64_t addr = (int32_t) & UINT32_T_MASK;}
-		 */
 		public static final long uint32_t_mask = 0xFFFFFFFFL;
 
-		public static final long uint_ptr(int oop_addr)
+		/**
+		 * 将i的值直接视作uint32_t正数
+		 * 
+		 * @param i
+		 * @return
+		 */
+		public static final long as_uint32_t(int i)
 		{
-			return oop_addr & uint32_t_mask;
+			return i & uint32_t_mask;
 		}
 
-		public static final long uint16_t_mask = 0xFFFFL;
+		/**
+		 * 将i的值直接转换为uint32_t正数，bit不变。<br>
+		 * 
+		 * @param i
+		 * @return
+		 */
+		public static final int uint32_t(long i)
+		{
+			return (int) (i & uint32_t_mask);
+		}
 
-		public static final long uint_ptr(short s)
+		public static final int uint16_t_mask = 0xFFFF;
+
+		public static final int as_uint16_t(short s)
 		{
 			return s & uint16_t_mask;
 		}
 
-		public static final long uint8_t_mask = 0xFFL;
-
-		public static final long uint_ptr(byte b)
+		public static final short uint16_t(int s)
 		{
-			return b & uint8_t_mask;
+			return (short) (s & uint16_t_mask);
 		}
 
-		public static final long uint_ptr(char c)
+		public static final short uint8_t_mask = 0xFF;
+
+		public static final short as_uint8_t(byte b)
 		{
-			return c & uint8_t_mask;
+			return (short) (b & uint8_t_mask);
 		}
 
-		public static final int uint8_t_mask_i = 0xFF;
-
-		public static final int uint8_t(byte b)
+		public static final byte uint8_t(short b)
 		{
-			return b & uint8_t_mask_i;
-		}
-
-		public static final int uint8_t(char c)
-		{
-			return c & uint8_t_mask_i;
-		}
-
-		public static final int uint16_t_mask_i = 0xFFFF;
-
-		public static final int uint16_t(short s)
-		{
-			return s & uint16_t_mask_i;
-		}
-
-		public static final long uint32_t(int i)
-		{
-			return i & uint32_t_mask;
+			return (byte) (b & uint8_t_mask);
 		}
 
 		/**
@@ -1808,11 +1803,6 @@ public abstract class type<_T>
 				return new pointer(addr);
 			}
 
-			public static final pointer to(int _32bit_addr)
-			{
-				return new pointer(cxx_type.uint_ptr(_32bit_addr));
-			}
-
 			/**
 			 * 将给定的十六进制地址和类型包装为指针
 			 * 
@@ -2072,7 +2062,7 @@ public abstract class type<_T>
 				pointer indicator = this.copy().cast(uint8_t);
 				for (int i = 0; i < size; ++i, indicator.inc())
 				{
-					System.out.print(String.format("%02x", cxx_type.uint_ptr((byte) indicator.dereference())) + " ");
+					System.out.print(String.format("%02x", cxx_type.uint8_t((byte) indicator.dereference())) + " ");
 				}
 			}
 
@@ -2224,7 +2214,7 @@ public abstract class type<_T>
 				else if (type == double.class)
 					unsafe.write(base, offset, java_type.double_value(v));
 				else
-					unsafe.memcpy(v, virtual_machine.host.get_header_byte_length(), base, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
+					unsafe.memcpy(base, virtual_machine.host.get_header_byte_length(), v, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 				return this;
 			}
 		}
@@ -2460,7 +2450,7 @@ public abstract class type<_T>
 		{
 			Class<_T> clazz = (Class<_T>) object.getClass();
 			_T o = unsafe.allocate(clazz);
-			unsafe.memcpy(object, virtual_machine.host.get_header_byte_length(), o, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(o, virtual_machine.host.get_header_byte_length(), object, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 

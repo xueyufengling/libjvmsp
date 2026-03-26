@@ -230,6 +230,28 @@ public final class unsafe
 		array_long_index_scale = array_index_scale(long[].class);
 	}
 
+	public static final int os_arch;
+
+	static
+	{
+		String arch = System.getProperty("os.arch");
+		if (arch == null)
+			throw new java.lang.UnknownError("system property 'os.arch' found null, this property is guaranteed by Java Specification");
+		if (arch.contains("64"))
+			os_arch = 64;
+		else if (arch.contains("32")
+				|| arch.equals("ppc")
+				|| arch.equals("sparc")
+				|| arch.equals("mips"))
+			os_arch = 32;
+		else if (arch.contains("16")
+				|| arch.equals("i8086")
+				|| arch.equals("i286"))
+			os_arch = 16;
+		else
+			os_arch = 0;// 未知
+	}
+
 	public static final class methods
 	{
 		/**
@@ -576,7 +598,7 @@ public final class unsafe
 		memset(null, addr, num, value);
 	}
 
-	public static final void memcpy(Object src_base, long src_offset, Object dest_base, long dest_offset, long num)
+	public static final void memcpy(Object dest_base, long dest_offset, Object src_base, long src_offset, long num)
 	{
 		try
 		{
@@ -588,24 +610,29 @@ public final class unsafe
 		}
 	}
 
-	public static final void memcpy(Object[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
+	public static final void memcpy(long dest_addr, long src_addr, long num)
 	{
-		memcpy((Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, dest_base, dest_offset, num * java_type.object_reference_size);
+		memcpy((Object) null, dest_addr, (Object) null, src_addr, num);
 	}
 
-	public static final void memcpy(Object[] src_arr, long src_idx, Object[] dest_arr, long dest_idx, long num)
+	public static final void memcpy(Object dest_base, long dest_offset, Object[] src_arr, long src_idx, long num)
 	{
-		memcpy((Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, (Object) dest_arr, array_object_base_offset + dest_idx * java_type.object_reference_size, num * java_type.object_reference_size);
+		memcpy(dest_base, dest_offset, (Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, num * java_type.object_reference_size);
 	}
 
-	public static final void memcpy(byte[] src_arr, long src_idx, Object dest_base, long dest_offset, long num)
+	public static final void memcpy(Object[] dest_arr, long dest_idx, Object[] src_arr, long src_idx, long num)
 	{
-		memcpy((Object) src_arr, array_byte_base_offset + src_idx * java_type.byte_size, dest_base, dest_offset, num * java_type.byte_size);
+		memcpy((Object) dest_arr, array_object_base_offset + dest_idx * java_type.object_reference_size, (Object) src_arr, array_object_base_offset + src_idx * java_type.object_reference_size, num * java_type.object_reference_size);
 	}
 
-	public static final void memcpy(Object src_base, long src_offset, byte[] dest_arr, long dest_idx, long num)
+	public static final void memcpy(Object dest_base, long dest_offset, byte[] src_arr, long src_idx, long num)
 	{
-		memcpy(src_base, src_offset, (Object) dest_arr, array_byte_base_offset + dest_idx * java_type.byte_size, num * java_type.byte_size);
+		memcpy(dest_base, dest_offset, (Object) src_arr, array_byte_base_offset + src_idx * java_type.byte_size, num * java_type.byte_size);
+	}
+
+	public static final void memcpy(byte[] dest_arr, long dest_idx, Object src_base, long src_offset, long num)
+	{
+		memcpy((Object) dest_arr, array_byte_base_offset + dest_idx * java_type.byte_size, src_base, src_offset, num * java_type.byte_size);
 	}
 
 	/**
@@ -616,9 +643,9 @@ public final class unsafe
 	 * @param dest_addr
 	 * @param num
 	 */
-	public static final void memcpy(byte[] src_arr, long src_idx, long dest_addr, long num)
+	public static final void memcpy(long dest_addr, byte[] src_arr, long src_idx, long num)
 	{
-		memcpy(src_arr, src_idx, (Object) null, dest_addr, num);
+		memcpy((Object) null, dest_addr, src_arr, src_idx, num);
 	}
 
 	/**
@@ -629,14 +656,14 @@ public final class unsafe
 	 * @param dest_idx
 	 * @param num
 	 */
-	public static final void memcpy(long src_addr, byte[] dest_arr, long dest_idx, long num)
+	public static final void memcpy(byte[] dest_arr, long dest_idx, long src_addr, long num)
 	{
-		memcpy((Object) null, src_addr, dest_arr, dest_idx, num);
+		memcpy(dest_arr, dest_idx, (Object) null, src_addr, num);
 	}
 
-	public static final void memcpy(long[] src_arr, long src_idx, long[] dest_arr, long dest_idx, long num)
+	public static final void memcpy(long[] dest_arr, long dest_idx, long[] src_arr, long src_idx, long num)
 	{
-		memcpy(src_arr, array_long_base_offset + src_idx * java_type.long_size, dest_arr, array_long_base_offset + dest_idx * java_type.long_size, num);
+		memcpy(dest_arr, array_long_base_offset + dest_idx * java_type.long_size, src_arr, array_long_base_offset + src_idx * java_type.long_size, num);
 	}
 
 	/**
@@ -889,6 +916,102 @@ public final class unsafe
 	}
 
 	/**
+	 * 读取C的int类型字段
+	 * 
+	 * @param base
+	 * @param offset
+	 * @return
+	 */
+	public static final int read_cint(Object base, long offset)
+	{
+		try
+		{
+			if (os_arch == 16)
+			{
+				return (int) getShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset);
+			}
+			else
+			{
+				return (int) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset);
+			}
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get c int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final int read_cint(long native_addr)
+	{
+		return read_cint(null, native_addr);
+	}
+
+	public static final void write_cint(Object base, long offset, int x)
+	{
+		try
+		{
+			if (os_arch == 16)
+			{
+				putShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset, x);
+			}
+			else
+			{
+				putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, x);
+			}
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("put c int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final void write_cint(long native_addr, int x)
+	{
+		write_cint(null, native_addr, x);
+	}
+
+	/**
+	 * 读取16位整数
+	 * 
+	 * @param native_addr
+	 * @return
+	 */
+
+	public static final int read_uint16_t(Object base, long offset)
+	{
+		try
+		{
+			return cxx_type.as_uint16_t((short) getShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset));
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get uint16_t int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final int read_uint16_t(long native_addr)
+	{
+		return read_uint16_t(null, native_addr);
+	}
+
+	public static final void write_uint16_t(Object base, long offset, int x)
+	{
+		try
+		{
+			putShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset, cxx_type.uint16_t(x));
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("put uint16_t at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final void write_uint16_t(long native_addr, int x)
+	{
+		write_uint16_t(null, native_addr, x);
+	}
+
+	/**
 	 * 读取C/C++的bool值
 	 * 
 	 * @param base
@@ -899,7 +1022,7 @@ public final class unsafe
 	{
 		try
 		{
-			return ((int) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset)) == 0 ? false : true;// 严格讲必须是C/C++的int类型，不一定是32位。
+			return read_cint(base, offset) == 0 ? false : true;// 严格讲必须是C/C++的int类型，不一定是32位。
 		}
 		catch (Throwable ex)
 		{
@@ -916,7 +1039,7 @@ public final class unsafe
 	{
 		try
 		{
-			putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, value ? 1 : 0);
+			write_cint(base, offset, value ? 1 : 0);
 		}
 		catch (Throwable ex)
 		{
@@ -1985,12 +2108,12 @@ public final class unsafe
 	{
 		long top_offset = top_offset(clazz);
 		long bottom_offset = bottom_offset(clazz);
-		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
+		unsafe.memcpy(dest, top_offset, src, top_offset, bottom_offset - top_offset);
 	}
 
 	public static final <_T> void copy_member_fields(_T src, _T dest, long top_offset, long bottom_offset)
 	{
-		unsafe.memcpy(src, top_offset, dest, top_offset, bottom_offset - top_offset);
+		unsafe.memcpy(dest, top_offset, src, top_offset, bottom_offset - top_offset);
 	}
 
 	/**

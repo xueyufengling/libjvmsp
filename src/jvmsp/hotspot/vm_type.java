@@ -65,6 +65,15 @@ public class vm_type
 		return sb.toString();
 	}
 
+	public static final void print_type(String type_name)
+	{
+		vm_type t = vm_type_entries.get(type_name);
+		if (t != null)
+		{
+			System.out.println(t);
+		}
+	}
+
 	private static final Map<String, vm_type> vm_type_entries = new HashMap<>();
 
 	static
@@ -80,7 +89,7 @@ public class vm_type
 		}
 	}
 
-	public static final vm_type get(String type_name)
+	public static final vm_type find(String type_name)
 	{
 		return vm_type_entries.get(type_name);
 	}

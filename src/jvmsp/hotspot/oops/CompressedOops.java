@@ -1,19 +1,17 @@
 package jvmsp.hotspot.oops;
 
-import static jvmsp.versions.jdk_versions;
-
+import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
-import jvmsp.type.cxx_type;
 
 public abstract class CompressedOops
 {
-	private static final long _base = jdk_versions.switch_execute(
+	private static final long _base = vm_struct.switch_address(
 			() -> vm_struct.entry.find("CompressedOops", "_narrow_oop._base").address, // JDK21
 			() -> vm_struct.entry.find("CompressedOops", "_base").address// JDK25
 	);
 
-	private static final long _shift = jdk_versions.switch_execute(
+	private static final long _shift = vm_struct.switch_address(
 			() -> vm_struct.entry.find("CompressedOops", "_narrow_oop._shift").address, // JDK21
 			() -> vm_struct.entry.find("CompressedOops", "_shift").address// JDK25
 	);

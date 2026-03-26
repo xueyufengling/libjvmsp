@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import jvmsp.memory;
 import jvmsp.memory.memory_object;
@@ -161,6 +162,12 @@ public abstract class vm_struct extends memory_object
 		}
 	}
 
+	public static final long sizeof(String name)
+	{
+		vm_type t = vm_type.find(name);
+		return t == null ? 0 : t.size;
+	}
+
 	/**
 	 * 导出的VMType
 	 */
@@ -174,7 +181,7 @@ public abstract class vm_struct extends memory_object
 	protected vm_struct(String name, long address)
 	{
 		super(address);
-		this.type = vm_type.get(name);
+		this.type = vm_type.find(name);
 		this.exported = this.type != null;
 	}
 
@@ -190,7 +197,7 @@ public abstract class vm_struct extends memory_object
 		return exported;
 	}
 
-	public final long size()
+	public final long type_size()
 	{
 		return exported ? 0 : type.size;
 	}
@@ -218,6 +225,30 @@ public abstract class vm_struct extends memory_object
 	public final boolean is_unsigned()
 	{
 		return exported ? false : type.is_unsigned;
+	}
+
+	/**
+	 * 根据当前版本号选择偏移量，如果当前版本不存在则返回-1.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	@SafeVarargs
+	public static final long switch_offset(Supplier<Long>... values)
+	{
+		return jdk_versions.switch_execute_existj(-1, values);
+	}
+
+	/**
+	 * 根据当前版本号选择内存地址，如果当前版本不存在则返回0.
+	 * 
+	 * @param values
+	 * @return
+	 */
+	@SafeVarargs
+	public static final long switch_address(Supplier<Long>... values)
+	{
+		return jdk_versions.switch_execute_existj(0, values);
 	}
 
 	public static class ContiguousSpace
@@ -592,21 +623,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _flags = vm_struct.entry.find("PcDesc", "_flags").offset;
 	}
 
-	public static class CodeBlob
-	{
-		private static final long _name = vm_struct.entry.find("CodeBlob", "_name").offset;
-		private static final long _size = vm_struct.entry.find("CodeBlob", "_size").offset;
-		private static final long _header_size = vm_struct.entry.find("CodeBlob", "_header_size").offset;
-		private static final long _frame_complete_offset = vm_struct.entry.find("CodeBlob", "_frame_complete_offset").offset;
-		private static final long _data_offset = vm_struct.entry.find("CodeBlob", "_data_offset").offset;
-		private static final long _frame_size = vm_struct.entry.find("CodeBlob", "_frame_size").offset;
-		private static final long _oop_maps = vm_struct.entry.find("CodeBlob", "_oop_maps").offset;
-		private static final long _code_begin = vm_struct.entry.find("CodeBlob", "_code_begin").offset;
-		private static final long _code_end = vm_struct.entry.find("CodeBlob", "_code_end").offset;
-		private static final long _content_begin = vm_struct.entry.find("CodeBlob", "_content_begin").offset;
-		private static final long _data_end = vm_struct.entry.find("CodeBlob", "_data_end").offset;
-	}
-
 	public static class DeoptimizationBlob
 	{
 		private static final long _unpack_offset = vm_struct.entry.find("DeoptimizationBlob", "_unpack_offset").offset;
@@ -624,29 +640,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _scopes_data_begin = vm_struct.entry.find("CompiledMethod", "_scopes_data_begin").offset;
 		private static final long _deopt_handler_begin = vm_struct.entry.find("CompiledMethod", "_deopt_handler_begin").offset;
 		private static final long _deopt_mh_handler_begin = vm_struct.entry.find("CompiledMethod", "_deopt_mh_handler_begin").offset;
-	}
-
-	public static class nmethod
-	{
-		private static final long _entry_bci = vm_struct.entry.find("nmethod", "_entry_bci").offset;
-		private static final long _osr_link = vm_struct.entry.find("nmethod", "_osr_link").offset;
-		private static final long _state = vm_struct.entry.find("nmethod", "_state").offset;
-		private static final long _exception_offset = vm_struct.entry.find("nmethod", "_exception_offset").offset;
-		private static final long _orig_pc_offset = vm_struct.entry.find("nmethod", "_orig_pc_offset").offset;
-		private static final long _stub_offset = vm_struct.entry.find("nmethod", "_stub_offset").offset;
-		private static final long _consts_offset = vm_struct.entry.find("nmethod", "_consts_offset").offset;
-		private static final long _oops_offset = vm_struct.entry.find("nmethod", "_oops_offset").offset;
-		private static final long _metadata_offset = vm_struct.entry.find("nmethod", "_metadata_offset").offset;
-		private static final long _scopes_pcs_offset = vm_struct.entry.find("nmethod", "_scopes_pcs_offset").offset;
-		private static final long _dependencies_offset = vm_struct.entry.find("nmethod", "_dependencies_offset").offset;
-		private static final long _handler_table_offset = vm_struct.entry.find("nmethod", "_handler_table_offset").offset;
-		private static final long _nul_chk_table_offset = vm_struct.entry.find("nmethod", "_nul_chk_table_offset").offset;
-		private static final long _nmethod_end_offset = vm_struct.entry.find("nmethod", "_nmethod_end_offset").offset;
-		private static final long _entry_point = vm_struct.entry.find("nmethod", "_entry_point").offset;
-		private static final long _verified_entry_point = vm_struct.entry.find("nmethod", "_verified_entry_point").offset;
-		private static final long _osr_entry_point = vm_struct.entry.find("nmethod", "_osr_entry_point").offset;
-		private static final long _compile_id = vm_struct.entry.find("nmethod", "_compile_id").offset;
-		private static final long _comp_level = vm_struct.entry.find("nmethod", "_comp_level").offset;
 	}
 
 	public static class Deoptimization
@@ -763,18 +756,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _state = vm_struct.entry.find("OSThread", "_state").offset;
 		private static final long _thread_id = vm_struct.entry.find("OSThread", "_thread_id").offset;
 		private static final long _thread_handle = vm_struct.entry.find("OSThread", "_thread_handle").offset;
-	}
-
-	public static class ImmutableOopMapSet
-	{
-		private static final long _count = vm_struct.entry.find("ImmutableOopMapSet", "_count").offset;
-		private static final long _size = vm_struct.entry.find("ImmutableOopMapSet", "_size").offset;
-	}
-
-	public static class ImmutableOopMapPair
-	{
-		private static final long _pc_offset = vm_struct.entry.find("ImmutableOopMapPair", "_pc_offset").offset;
-		private static final long _oopmap_offset = vm_struct.entry.find("ImmutableOopMapPair", "_oopmap_offset").offset;
 	}
 
 	public static class ImmutableOopMap

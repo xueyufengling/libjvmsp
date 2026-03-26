@@ -6,6 +6,8 @@ public class OopHandle extends vm_struct
 {
 	private static final long _obj = vm_struct.entry.find("OopHandle", "_obj").offset;
 
+	public static final long size = sizeof("OopHandle");
+
 	public OopHandle(long address)
 	{
 		super(address);

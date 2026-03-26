@@ -2,6 +2,7 @@ package jvmsp.hotspot.oops;
 
 import jvmsp.type.cxx_type;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.oops.Array.Array_pMethod;
 
 public class InstanceKlass extends Klass
@@ -38,13 +39,54 @@ public class InstanceKlass extends Klass
 	private static final long _permitted_subclasses = _nest_host + cxx_type.pvoid.size();
 	private static final long _record_components = _permitted_subclasses + cxx_type.pvoid.size();
 
+	public static final long size = sizeof("InstanceKlass");
+
 	public InstanceKlass(long address)
 	{
 		super("InstanceKlass", address);
 	}
 
-	public Array_pMethod _methods()
+	public Array_pMethod methods()
 	{
 		return super.read_memory_object_ptr(Array_pMethod.class, _methods);
+	}
+
+	/**
+	 * 查找指定名称和签名的方法
+	 * 
+	 * @param methods
+	 * @param name
+	 * @param signature
+	 * @return
+	 */
+	public static final Method lookup_method(Array_pMethod methods, String name, String signature)
+	{
+		int length = methods.length();
+		for (int idx = 0; idx < length; ++idx)
+		{
+			Method m = methods.at(idx);
+			if (name.equals(m.name().jstring()) && signature.equals(m.signature().jstring()))
+			{
+				return m;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 查找本类定义的方法
+	 * 
+	 * @param name
+	 * @param signature
+	 * @return
+	 */
+	public Method lookup_method(String name, String signature)
+	{
+		return lookup_method(methods(), name, signature);
+	}
+
+	public static final Method lookup_method(Class<?> clazz, String name, String signature)
+	{
+		return java_lang_Class.as_InstanceKlass(clazz).lookup_method(name, signature);
 	}
 }

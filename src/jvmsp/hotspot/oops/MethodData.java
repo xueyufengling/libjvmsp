@@ -21,6 +21,8 @@ public class MethodData extends Metadata
 	private static final long _invoke_mask = vm_struct.entry.find("MethodData", "_invoke_mask").offset;
 	private static final long _backedge_mask = vm_struct.entry.find("MethodData", "_backedge_mask").offset;
 
+	public static final long size = sizeof("MethodData");
+
 	public MethodData(long address)
 	{
 		super("MethodData", address);

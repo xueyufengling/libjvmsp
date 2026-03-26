@@ -73,6 +73,26 @@ public class versions
 		return values[current_version_idx];
 	}
 
+	/**
+	 * 如果当前版本号的索引超出了待选择的值，则直接返回default_value
+	 * 
+	 * @param <_T>
+	 * @param default_value
+	 * @param values
+	 * @return
+	 */
+	@SafeVarargs
+	public final <_T> _T switch_exist_default(_T default_value, _T... values)
+	{
+		return current_version_idx >= values.length ? default_value : values[current_version_idx];
+	}
+
+	@SafeVarargs
+	public final <_T> _T switch_exist(_T... values)
+	{
+		return switch_exist_default(null, values);
+	}
+
 	@SafeVarargs
 	public final <_T> _T switch_execute(Supplier<_T>... execs)
 	{
@@ -81,6 +101,46 @@ public class versions
 			return exec.get();
 		else
 			return null;
+	}
+
+	@SafeVarargs
+	public final <_T> _T switch_execute_exist(Supplier<_T>... values)
+	{
+		return current_version_idx >= values.length ? null : switch_execute(values);
+	}
+
+	/**
+	 * 根据版本long类型的值，如果无效则使用默认值。
+	 * 
+	 * @param default_value
+	 * @param values
+	 * @return
+	 */
+	@SafeVarargs
+	public final long switch_execute_existj(long default_value, Supplier<Long>... values)
+	{
+		if (current_version_idx < values.length)
+		{
+			Long v = switch_execute(values);
+			if (v == null)
+			{
+				return default_value;
+			}
+			else
+			{
+				return v;
+			}
+		}
+		else
+		{
+			return default_value;
+		}
+	}
+
+	@SafeVarargs
+	public final long switch_execute_existj(Supplier<Long>... values)
+	{
+		return switch_execute_existj(0, values);
 	}
 
 	public final byte _switch(byte... values)
