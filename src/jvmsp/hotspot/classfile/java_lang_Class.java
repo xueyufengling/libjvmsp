@@ -1,5 +1,6 @@
 package jvmsp.hotspot.classfile;
 
+import jvmsp.type.java_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.oops.CompressedKlassPointers;
@@ -7,9 +8,8 @@ import jvmsp.hotspot.oops.CompressedOops;
 import jvmsp.hotspot.oops.InstanceKlass;
 import jvmsp.hotspot.oops.Klass;
 import jvmsp.hotspot.oops.oopDesc;
-import jvmsp.type.java_type;
 
-public class java_lang_Class
+public abstract class java_lang_Class
 {
 	private static final long _klass_offset = vm_struct.entry.find("java_lang_Class", "_klass_offset").address;
 	private static final long _array_klass_offset = vm_struct.entry.find("java_lang_Class", "_array_klass_offset").address;
@@ -83,12 +83,19 @@ public class java_lang_Class
 
 	public static final Klass as_Klass(Class<?> clazz)
 	{
-		return new Klass(klass_ptr(clazz));
+		long klass_ptr = klass_ptr(clazz);
+		short kind = Klass._kind(klass_ptr);
+		switch (kind)
+		{
+		case Klass.InstanceKlassKind:
+			return new InstanceKlass(klass_ptr);
+		default:
+			return null;
+		}
 	}
 
 	public static final InstanceKlass as_InstanceKlass(Class<?> clazz)
 	{
-		InstanceKlass ik = new InstanceKlass(klass_ptr(clazz));
-		return ik.is_instance_klass() ? ik : null;
+		return new InstanceKlass(klass_ptr(clazz));
 	}
 }

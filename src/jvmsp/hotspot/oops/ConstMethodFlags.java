@@ -6,10 +6,13 @@ import jvmsp.type.cxx_type;
 
 public class ConstMethodFlags extends vm_struct
 {
+	public static final String type_name = "ConstMethodFlags";
 
-	public static final cxx_type ConstMethodFlags = cxx_type.define("ConstMethodFlags")
+	public static final cxx_type ConstMethodFlags = cxx_type.define(type_name)
 			.decl_field("_flags", cxx_type.uint32_t)
 			.resolve();
+
+	public static final long size = ConstMethodFlags.size();
 
 	private static final long _flags = ConstMethodFlags.field("_flags").offset();
 
@@ -40,7 +43,7 @@ public class ConstMethodFlags extends vm_struct
 
 	public ConstMethodFlags(long address)
 	{
-		super("ConstMethodFlags", address);
+		super(type_name, address);
 	}
 
 	public String toString()

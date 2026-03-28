@@ -6,14 +6,17 @@ import jvmsp.hotspot.oops.OopHandle;
 
 public class ClassLoaderData extends vm_struct
 {
-	private static final long _class_loader = vm_struct.entry.find("ClassLoaderData", "_class_loader").offset;
-	private static final long _next = vm_struct.entry.find("ClassLoaderData", "_next").offset;
-	private static final long _klasses = vm_struct.entry.find("ClassLoaderData", "_klasses").offset;
-	private static final long _has_class_mirror_holder = vm_struct.entry.find("ClassLoaderData", "_has_class_mirror_holder").offset;
+	public static final String type_name = "ClassLoaderData";
+	public static final long size = sizeof(type_name);
+
+	private static final long _class_loader = vm_struct.entry.find(type_name, "_class_loader").offset;
+	private static final long _next = vm_struct.entry.find(type_name, "_next").offset;
+	private static final long _klasses = vm_struct.entry.find(type_name, "_klasses").offset;
+	private static final long _has_class_mirror_holder = vm_struct.entry.find(type_name, "_has_class_mirror_holder").offset;
 
 	public ClassLoaderData(long address)
 	{
-		super(address);
+		super(type_name, address);
 	}
 
 	public OopHandle _class_loader()

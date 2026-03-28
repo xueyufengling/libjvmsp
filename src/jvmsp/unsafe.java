@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.security.ProtectionDomain;
 
+import jvmsp.memory.pointer_type;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
@@ -362,30 +363,27 @@ public final class unsafe
 	public static final <_T> _T force_allocate(Class<_T> clazz)
 	{
 		_T o = null;
-		Klass k = java_lang_Class.as_Klass(clazz);
-		AccessFlags acc = k._access_flags();
-		boolean is_abstract = acc.is_abstract();
-		boolean is_interface = acc.is_interface();// 接口同时具有is_abstract标志位，因此要先判断is_interface
+		// unsafe方法是许多方法的前置，因此在此方法内只使用参数为基本类型的静态方法，不构造vm_struct对象，防止方法无限递归
+		long k = java_lang_Class.klass_ptr(clazz);
+		short acc = Klass._access_flags(k);
+		boolean is_abstract = AccessFlags.is_abstract(acc);
+		boolean is_interface = AccessFlags.is_interface(acc);// 接口同时具有is_abstract标志位，因此要先判断is_interface
 		if (is_interface)
 		{
-			acc.set_interface(false);
-			acc.set_abstract(false);
-			int interface_layout = k._layout_helper();// 接口的内存布局为空
-			k.set_layout_helper(Klass.java_lang_Object_layout_helper);// 将接口的内存布局改为Object才能进行对象分配
+			// 接口的内存布局为空
+			// 将接口的内存布局改为Object才能进行对象分配
 			/*
 			 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klassVtable.cpp#L1151
 			 * 分配内存时需要计算vtable和itable，接口没有itable。
 			 */
-			o = allocate(clazz);
-			k.set_layout_helper(interface_layout);
-			acc.set_abstract(is_abstract);
-			acc.set_interface(is_interface);
 		}
 		else if (is_abstract)
 		{
-			acc.set_abstract(false);
+			acc = AccessFlags.set_abstract(acc, false);
+			Klass.set_access_flags(k, acc);
 			o = allocate(clazz);
-			acc.set_abstract(is_abstract);
+			acc = AccessFlags.set_abstract(acc, is_abstract);
+			Klass.set_access_flags(k, acc);
 		}
 		else
 		{
@@ -439,6 +437,11 @@ public final class unsafe
 	public static final void write_pointer(long addr, long ptr)
 	{
 		write_pointer(null, addr, ptr);
+	}
+
+	public static final void write_pointer(long addr, pointer_type ptr)
+	{
+		write_pointer(addr, ptr.address());
 	}
 
 	/**
@@ -915,6 +918,50 @@ public final class unsafe
 		return read_int(null, native_addr);
 	}
 
+	public static final long read_size_int(Object base, long offset, int size)
+	{
+		switch (size)
+		{
+		case Byte.BYTES:
+			return read_byte(base, offset);
+		case Short.BYTES:
+			return read_short(base, offset);
+		case Integer.BYTES:
+			return read_int(base, offset);
+		case Long.BYTES:
+			return read_long(base, offset);
+		default:
+			throw new java.lang.IllegalArgumentException("invalid integer size '" + size + "'");
+		}
+	}
+
+	public static final long read_size_int(long native_addr, int size)
+	{
+		return read_size_int(null, native_addr, size);
+	}
+
+	public static final void write_size_int(Object base, long offset, int size, long x)
+	{
+		switch (size)
+		{
+		case Byte.BYTES:
+			write(base, offset, (byte) x);
+		case Short.BYTES:
+			write(base, offset, (short) x);
+		case Integer.BYTES:
+			write(base, offset, (int) x);
+		case Long.BYTES:
+			write(base, offset, x);
+		default:
+			throw new java.lang.IllegalArgumentException("invalid integer size '" + size + "'");
+		}
+	}
+
+	public static final void write_size_int(long native_addr, int size, long x)
+	{
+		write_size_int(null, native_addr, size, x);
+	}
+
 	/**
 	 * 读取C的int类型字段
 	 * 
@@ -968,6 +1015,61 @@ public final class unsafe
 	public static final void write_cint(long native_addr, int x)
 	{
 		write_cint(null, native_addr, x);
+	}
+
+	/**
+	 * 读取unsigned int
+	 * 
+	 * @param base
+	 * @param offset
+	 * @return
+	 */
+	public static final long read_cuint(Object base, long offset)
+	{
+		try
+		{
+			if (os_arch == 16)
+			{
+				return cxx_type.as_uint16_t((short) getShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset));
+			}
+			else
+			{
+				return cxx_type.as_uint32_t((short) getInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset));
+			}
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get c unsigned int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final long read_cuint(long native_addr)
+	{
+		return read_cuint(null, native_addr);
+	}
+
+	public static final void write_cuint(Object base, long offset, long x)
+	{
+		try
+		{
+			if (os_arch == 16)
+			{
+				putShort.invoke(instance_jdk_internal_misc_Unsafe, base, offset, cxx_type.uint16_t((int) x));
+			}
+			else
+			{
+				putInt.invoke(instance_jdk_internal_misc_Unsafe, base, offset, cxx_type.uint32_t(x));
+			}
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("put c unsigned int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final void write_cuint(long native_addr, long x)
+	{
+		write_cuint(null, native_addr, x);
 	}
 
 	/**

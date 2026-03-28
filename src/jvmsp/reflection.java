@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import jvmsp.type.java_type;
+import jvmsp.hotspot.interpreter.Bytecodes;
 import jvmsp.hotspot.oops.InstanceKlass;
 import sun.reflect.ReflectionFactory;
 
@@ -1010,35 +1011,49 @@ public abstract class reflection
 	{
 		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/jvm.cpp#L724
 		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/method.cpp#L1435
-		class _register_caller_sensitive
+		class _invoker
 		{
 			static
 			{
 				// 直接调用Reflection.getCallerClass()的方法必须是call_sensitive的，否则报错
 				// MethodHandle::invokeExact()方法在语法层是直接调用Reflection.getCallerClass()的方法，但为其设置caller_sensitive标记仍然报错直接调用方法不是call_sensitive的
-				// 因此判断内部还有JVM生成的或内部的中间函数
+				// 因此判断内部还有JVM生成的或内部的中间函数，故必须在字节码层面使用invokeStatic直接调用。
 				jvmsp.hotspot.oops.Method _vm_getCallerClass = InstanceKlass.lookup_method(jdk_internal_reflect_Reflection, "getCallerClass", "()Ljava/lang/Class;");
-
-				jvmsp.hotspot.oops.Method _m_get_caller_class = InstanceKlass.lookup_method(reflection.class, "get_caller_class", "()Ljava/lang/Class;");
-				jvmsp.hotspot.oops.ConstMethodFlags flags = _m_get_caller_class.constMethod().flags();
+				jvmsp.hotspot.oops.Method _dummy_getCallerClass = InstanceKlass.lookup_method(_invoker.class, "_dummy_getCallerClass", "()Ljava/lang/Class;");
+				jvmsp.hotspot.oops.Method _get_caller_class = InstanceKlass.lookup_method(reflection.class, "get_caller_class", "()Ljava/lang/Class;");
+				jvmsp.hotspot.oops.ConstMethod _get_caller_class_constMethod = _get_caller_class.constMethod();
+				jvmsp.hotspot.oops.ConstMethodFlags flags = _get_caller_class_constMethod.flags();
 				flags.set_caller_sensitive(true);// 为get_caller_class()方法设置caller_sensitive标志
 				flags.set_intrinsic_candidate(true);// 设置内联建议标志
-
-				_m_get_caller_class.set_intrinsic_id(_vm_getCallerClass.intrinsic_id());// 设置内部ID，遍历栈帧时查找caller时就会跳过此栈帧
-
-				// _m_get_caller_class.constants().symbol_at_put(0, "jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;");
+				_get_caller_class.set_intrinsic_id(_vm_getCallerClass.intrinsic_id());// 设置内部ID，遍历栈帧时查找caller时就会跳过此栈帧
+				// 修改字节码
+				byte[] bytecode = _get_caller_class_constMethod.code();
+				int targetCpIdxOffset = 0;
+				for (int i = 0; i < bytecode.length; ++i)
+				{
+					if (bytecode[i] == Bytecodes.Code._invokestatic)// invokeStatic
+					{
+						targetCpIdxOffset = i + 1;// _dummy_getCallerClass常量池索引偏移量
+						break;
+					}
+				}
+				int targetCpIdx = (bytecode[targetCpIdxOffset] << 8) | (bytecode[targetCpIdxOffset + 1] & 0xFF);
+				// int cpi = _get_caller_class.constMethod().resolve_cp_cache_idx(targetCpIdx);
+				// System.out.println("targetCpIdx " + targetCpIdx + " -> " + cpi);
+				System.out.println(_get_caller_class.method_holder());
+				// _get_caller_class.constants().symbol_at_put(targetCpIdx, _vm_getCallerClass.name());
 			}
 
 			public static final Object init = null;
 
-			public static final Class<?> _dummy()
+			public static final Class<?> _dummy_getCallerClass()
 			{
 				return null;
 			}
 		}
 		@SuppressWarnings("unused")
-		Object unused = _register_caller_sensitive.init; // 仅在调用此方法时才访问vm_struct，防止vm_struct$entry.<clinit>递归调用
-		return null;
+		Object unsused = _invoker.init;// 仅在调用此方法时才访问vm_struct，防止vm_struct$entry.<clinit>递归调用
+		return _invoker._dummy_getCallerClass();// 运行时修改字节码将invokeStatic目标从_dummy_getCallerClass()重定向到getCallerClass()
 	}
 
 	/**

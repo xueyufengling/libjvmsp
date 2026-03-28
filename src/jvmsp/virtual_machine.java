@@ -31,10 +31,6 @@ import jvmsp.hotspot.oops.CompressedOops;
  */
 public class virtual_machine
 {
-	/**
-	 * uint32_t的最大值，用于掩码和计算32位机器最大寻址地址。
-	 */
-	public static final long juint_max = 0xFFFFFFFFL;
 
 	/**
 	 * 64或32位JVM
@@ -45,11 +41,6 @@ public class virtual_machine
 	 * 是否运行在64位JVM，该变量为缓存值，用于指针的快速条件判断
 	 */
 	public static final boolean on_64bit_jvm;
-
-	/**
-	 * JVM中未压缩的32位oop时支持的最大堆内存大小，类型为uint，该值为常数，即固定为4G
-	 */
-	public static final long UnscaledOopHeapMax;
 
 	/**
 	 * HotSpotDiagnosticMXBean的实现类是 com.sun.management.internal.HotSpotDiagnostic
@@ -82,35 +73,13 @@ public class virtual_machine
 			on_64bit_jvm = true;
 		else
 			on_64bit_jvm = false;
-		UnscaledOopHeapMax = juint_max + 1;// 2^32+1
+
 		// 获取HotSpotDiagnosticMXBean实例
 		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
 		if (instance_HotSpotDiagnosticMXBean == null)
 		{
 			throw new java.lang.InternalError("only Hotspot JVM supported");
 		}
-	}
-
-	/**
-	 * 求2为底的对数，用于2的整数次幂的快速算法
-	 * 
-	 * @param num
-	 * @return -1为无效结果
-	 */
-	public static final int uint64_log2(long uint64)
-	{
-		if (uint64 == 0)// 非法值
-			return -1;
-		int power = 0;
-		long i = 0x01;
-		while (i != uint64)
-		{
-			++power;
-			if (i == 0)// 溢出
-				return -1;
-			i <<= 1;
-		}
-		return power;
 	}
 
 	public static final VMOption get_option(String name)
@@ -252,26 +221,6 @@ public class virtual_machine
 	private boolean UseCompressedClassPointers;
 
 	/**
-	 * 堆内存base的最小地址。堆的实际基地址大于等于此值
-	 */
-	private long HeapBaseMinAddress;
-
-	/**
-	 * JVM中压缩了oop时支持的最大堆内存大小，类型为ulong，实际上是32G
-	 */
-	private long OopEncodingHeapMax;
-
-	/**
-	 * 最大堆内存大小
-	 */
-	private long max_heap_size;
-
-	/**
-	 * 堆内存末尾在内存中的绝对地址
-	 */
-	private long heap_end_address;
-
-	/**
 	 * 堆内存的实际起始地址，大于等于HeapBaseMinAddress
 	 */
 	private long heap_base_address;
@@ -367,7 +316,6 @@ public class virtual_machine
 				}
 			}
 		}
-		HeapBaseMinAddress = get_long_option("HeapBaseMinAddress");
 		try
 		{
 			UseCompactObjectHeaders = virtual_machine.get_bool_option("UseCompactObjectHeaders");// JDK25+压缩对象头，压缩后变为8字节
@@ -378,17 +326,9 @@ public class virtual_machine
 		}
 		narrow_oop_base_address = narrow_oop_base();
 		narrow_oop_address_shift = narrow_oop_shift();
-		OopEncodingHeapMax = UnscaledOopHeapMax << narrow_oop_shift();// 使用OOP压缩编码后支持的最大的堆内存
-		// 堆相关信息
-		max_heap_size = virtual_machine.max_heap_size();
-		heap_end_address = HeapBaseMinAddress + max_heap_size;// 这是最大的范围，实际范围可能只是其中一段区间。
-		if (heap_end_address > UnscaledOopHeapMax || UseCompressedOops)
-		{
-			// 实际堆内存终止地址大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
-			// 指定了UseCompressedOops后则必定压缩。
-			// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
-			UseCompressedOops = true;
-		}
+		// 实际堆内存终止地址大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
+		// 指定了UseCompressedOops后则必定压缩。
+		// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
 		// 对象头信息内存布局
 		switch (jvm_bit_version)
 		{
@@ -774,11 +714,6 @@ public class virtual_machine
 	public static final void attach(String agent_path)
 	{
 		attach(agent_path, null);
-	}
-
-	public final long oop_encoding_heap_max()
-	{
-		return OopEncodingHeapMax;
 	}
 
 	/**

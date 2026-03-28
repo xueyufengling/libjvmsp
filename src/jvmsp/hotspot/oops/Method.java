@@ -1,36 +1,41 @@
 package jvmsp.hotspot.oops;
 
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.code.nmethod;
+import jvmsp.hotspot.interpreter.Bytecodes;
+import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.utilities.AccessFlags;
+import jvmsp.hotspot.utilities.align;
 
 /**
  * 方法的运行时数据
  */
 public class Method extends Metadata
 {
-	private static final long _constMethod = vm_struct.entry.find("Method", "_constMethod").offset;
-	private static final long _method_data = vm_struct.entry.find("Method", "_method_data").offset;
-	private static final long _method_counters = vm_struct.entry.find("Method", "_method_counters").offset;
-	private static final long _vtable_index = vm_struct.entry.find("Method", "_vtable_index").offset;
-	private static final long _access_flags = vm_struct.entry.find("Method", "_access_flags").offset;
-	private static final long _intrinsic_id = vm_struct.entry.find("Method", "_intrinsic_id").offset;
-	private static final long _i2i_entry = vm_struct.entry.find("Method", "_i2i_entry").offset;
+	public static final String type_name = "Method";
+	public static final long size = sizeof(type_name);
 
-	private static final long _from_compiled_entry = vm_struct.entry.find("Method", "_from_compiled_entry").offset;
+	private static final long _constMethod = vm_struct.entry.find(type_name, "_constMethod").offset;
+	private static final long _method_data = vm_struct.entry.find(type_name, "_method_data").offset;
+	private static final long _method_counters = vm_struct.entry.find(type_name, "_method_counters").offset;
+	private static final long _vtable_index = vm_struct.entry.find(type_name, "_vtable_index").offset;
+	private static final long _access_flags = vm_struct.entry.find(type_name, "_access_flags").offset;
+	private static final long _intrinsic_id = vm_struct.entry.find(type_name, "_intrinsic_id").offset;
+	private static final long _i2i_entry = vm_struct.entry.find(type_name, "_i2i_entry").offset;
+
+	private static final long _from_compiled_entry = vm_struct.entry.find(type_name, "_from_compiled_entry").offset;
 
 	// JDK21为CompiledMethod*，JDK25为nmethod*
-	private static final long _code = vm_struct.entry.find("Method", "_code").offset;
-	private static final long _from_interpreted_entry = vm_struct.entry.find("Method", "_from_interpreted_entry").offset;
+	private static final long _code = vm_struct.entry.find(type_name, "_code").offset;
+	private static final long _from_interpreted_entry = vm_struct.entry.find(type_name, "_from_interpreted_entry").offset;
 
 	// _flags字段位于u2 _intrinsic_id之前
 	private static final long _flags = _intrinsic_id - MethodFlags.MethodFlags.size();
 
-	public static final long size = sizeof("Method");
-
 	public Method(long address)
 	{
-		super("Method", address);
+		super(type_name, address);
 	}
 
 	@Override
@@ -56,7 +61,7 @@ public class Method extends Metadata
 
 	public void set_constMethod(ConstMethod xconst)
 	{
-		super.write_pointer(_constMethod, xconst);
+		super.write_memory_object_ptr(_constMethod, xconst);
 	}
 
 	public ConstantPool constants()
@@ -71,7 +76,7 @@ public class Method extends Metadata
 
 	public void set_method_data(MethodData method_data)
 	{
-		super.write_pointer(_method_data, method_data);
+		super.write_memory_object_ptr(_method_data, method_data);
 	}
 
 	public MethodCounters method_counters()
@@ -81,7 +86,7 @@ public class Method extends Metadata
 
 	public void set_method_counters(MethodCounters method_counters)
 	{
-		super.write_pointer(_method_counters, method_counters);
+		super.write_memory_object_ptr(_method_counters, method_counters);
 	}
 
 	public AccessFlags access_flags()
@@ -146,6 +151,11 @@ public class Method extends Metadata
 		super.write(_from_compiled_entry, from_compiled_entry);
 	}
 
+	public boolean is_native()
+	{
+		return access_flags().is_native();
+	}
+
 	public MethodFlags flags()
 	{
 		return super.read_memory_object(MethodFlags.class, _flags);
@@ -159,7 +169,26 @@ public class Method extends Metadata
 
 	public void set_code(nmethod code)
 	{
-		super.write_pointer(_code, code);
+		super.write_memory_object_ptr(_code, code);
+	}
+
+	/**
+	 * 该方法的断点BCI->对应字节码
+	 * 
+	 * @param bci
+	 * @return
+	 */
+	public byte orig_bytecode_at(int bci)
+	{
+		BreakpointInfo bp = method_holder().breakpoints();
+		for (; bp != null; bp = bp.next())
+		{
+			if (bp.match(this, bci))
+			{
+				return bp.orig_bytecode();
+			}
+		}
+		return Bytecodes.Code._shouldnotreachhere;// 该断点没有对应本方法的任何字节码
 	}
 
 	public int name_index()
@@ -177,6 +206,11 @@ public class Method extends Metadata
 		return constants().symbol_at(name_index());
 	}
 
+	public void set_name(Symbol name)
+	{
+		constants().symbol_at_put(name_index(), name);
+	}
+
 	public int signature_index()
 	{
 		return constMethod().signature_index();
@@ -192,10 +226,64 @@ public class Method extends Metadata
 		return constants().symbol_at(signature_index());
 	}
 
+	public void set_signature(Symbol signature)
+	{
+		constants().symbol_at_put(signature_index(), signature);
+	}
+
+	/**
+	 * native方法的函数地址
+	 * 
+	 * @return
+	 */
+	public long native_function_addr()
+	{
+		assert is_native() : "must be native";
+		return address + size;
+	}
+
+	/**
+	 * native方法的签名处理
+	 * 
+	 * @return
+	 */
+	public long signature_handler_addr()
+	{
+		return native_function_addr() + vm_constant.BytesPerWord;
+	}
+
 	// 拓展方法
 	public InstanceKlass method_holder()
 	{
 		return constants().pool_holder();
+	}
+
+	public int method_size()
+	{
+		return (int) (size / vm_constant.BytesPerWord + (is_native() ? 2 : 0));
+	}
+
+	public static final int header_size()
+	{
+		return (int) (align.align_up((int) size, vm_constant.BytesPerWord) / vm_constant.BytesPerWord);
+	}
+
+	@Override
+	public long size()
+	{
+		return method_size();
+	}
+
+	@Override
+	public String internal_name()
+	{
+		return "{method}";
+	}
+
+	@Override
+	public int type()
+	{
+		return MetaspaceObj.Type.MethodType;
 	}
 
 }

@@ -1,35 +1,46 @@
 package jvmsp.hotspot.oops;
 
+import jvmsp.structs.long_array;
+import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.ClassLoaderData;
 import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.memory.MetaspaceObj;
+import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.utilities.AccessFlags;
-import jvmsp.structs.long_array;
-import jvmsp.type.cxx_type;
 
-public class Klass extends Metadata
+public abstract class Klass extends Metadata
 {
+	public static final String type_name = "Klass";
+	public static final long size = sizeof(type_name);
+
 	/**
 	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/instanceKlass.hpp#944
 	 * 对象布局信息，包括对象的大小，此值将用于JVM分配对象。
 	 */
-	private static final long _layout_helper = vm_struct.entry.find("Klass", "_layout_helper").offset;// 8
-	private static final long _super_check_offset = vm_struct.entry.find("Klass", "_super_check_offset").offset;// 20
-	private static final long _name = vm_struct.entry.find("Klass", "_name").offset;// 24
-	private static final long _secondary_super_cache = vm_struct.entry.find("Klass", "_secondary_super_cache").offset;// 32
-	private static final long _secondary_supers = vm_struct.entry.find("Klass", "_secondary_supers").offset;// 40
-	private static final long _primary_supers_0 = vm_struct.entry.find("Klass", "_primary_supers[0]").offset;// 48
-	private static final long _java_mirror = vm_struct.entry.find("Klass", "_java_mirror").offset;// 112
-	private static final long _super = vm_struct.entry.find("Klass", "_super").offset;// 120
-	private static final long _subklass = vm_struct.entry.find("Klass", "_subklass").offset;// 128
-	private static final long _next_sibling = vm_struct.entry.find("Klass", "_next_sibling").offset;// 136
-	private static final long _next_link = vm_struct.entry.find("Klass", "_next_link").offset;// 144
-	private static final long _class_loader_data = vm_struct.entry.find("Klass", "_class_loader_data").offset;// 152
-	private static final long _vtable_len = vm_struct.entry.find("Klass", "_vtable_len").offset;// 160
-	private static final long _access_flags = vm_struct.entry.find("Klass", "_access_flags").offset;// 164
+	private static final long _layout_helper = vm_struct.entry.find(type_name, "_layout_helper").offset;// 8
+	private static final long _super_check_offset = vm_struct.entry.find(type_name, "_super_check_offset").offset;// 20
+	private static final long _name = vm_struct.entry.find(type_name, "_name").offset;// 24
+	private static final long _secondary_super_cache = vm_struct.entry.find(type_name, "_secondary_super_cache").offset;// 32
+	private static final long _secondary_supers = vm_struct.entry.find(type_name, "_secondary_supers").offset;// 40
+	private static final long _primary_supers_0 = vm_struct.entry.find(type_name, "_primary_supers[0]").offset;// 48
+	private static final long _java_mirror = vm_struct.entry.find(type_name, "_java_mirror").offset;// 112
+	private static final long _super = vm_struct.entry.find(type_name, "_super").offset;// 120
+	private static final long _subklass = vm_struct.entry.find(type_name, "_subklass").offset;// 128
+	private static final long _next_sibling = vm_struct.entry.find(type_name, "_next_sibling").offset;// 136
+	private static final long _next_link = vm_struct.entry.find(type_name, "_next_link").offset;// 144
+	private static final long _class_loader_data = vm_struct.entry.find(type_name, "_class_loader_data").offset;// 152
+	private static final long _vtable_len = vm_struct.entry.find(type_name, "_vtable_len").offset;// 160
 
+	/**
+	 * 仅在JDK25及以前存在
+	 */
+	private static final long _access_flags = switch_offset(// 164
+			() -> vm_struct.entry.find(type_name, "_access_flags").offset, // JDK21
+			() -> vm_struct.entry.find(type_name, "_access_flags").offset// JDK25
+	);
 	// 计算相对偏移量，4字节对齐
 	/**
 	 * 在JDK21中(https://github.com/openjdk/jdk/blob/jdk-21%2B35/src/hotspot/share/oops/klass.hpp#L126)，该字段还是
@@ -56,16 +67,14 @@ public class Klass extends Metadata
 	public static final short ObjArrayKlassKind = 6;
 	public static final short UnknownKlassKind = 7;
 
-	public static final long size = sizeof("Klass");
-
 	protected Klass(String name, long address)
 	{
 		super(name, address);
 	}
 
-	public Klass(long klass_ptr)
+	public Klass(long address)
 	{
-		this("Klass", klass_ptr);
+		this(type_name, address);
 	}
 
 	@Override
@@ -80,7 +89,7 @@ public class Klass extends Metadata
 		return 'L' + this.name().toString() + ';';
 	}
 
-	public static final Klass java_lang_Object = java_lang_Class.as_Klass(Object.class);
+	public static final InstanceKlass java_lang_Object = java_lang_Class.as_InstanceKlass(Object.class);
 	// java.lang.Object的对象布局
 	public static final int java_lang_Object_layout_helper = java_lang_Object._layout_helper();
 
@@ -100,6 +109,18 @@ public class Klass extends Metadata
 		public Klass _secondary_super_cache()
 		{
 			return this;// 0
+		}
+
+		@Override
+		public String internal_name()
+		{
+			return "nullptr";
+		}
+
+		@Override
+		public long size()
+		{
+			return 0;
 		}
 	};
 
@@ -164,6 +185,16 @@ public class Klass extends Metadata
 	public void set_secondary_super_cache(Klass secondary_super_cache)
 	{
 		super.write(_secondary_super_cache, secondary_super_cache.address());
+	}
+
+	public Array_pKlass secondary_supers()
+	{
+		return super.read_memory_object_ptr(Array_pKlass.class, _secondary_supers);
+	}
+
+	public void set_secondary_supers(Array_pKlass secondary_supers)
+	{
+		super.write_memory_object_ptr(_secondary_supers, secondary_supers);
 	}
 
 	private long _primary_supers_offset(int idx)
@@ -295,12 +326,37 @@ public class Klass extends Metadata
 
 	public void set_name(Symbol name)
 	{
-		super.write_pointer(_name, name);
+		super.write_memory_object_ptr(_name, name);
 	}
 
-	public AccessFlags _access_flags()
+	public AccessFlags access_flags()
 	{
 		return super.read_memory_object(AccessFlags.class, _access_flags);
+	}
+
+	public short _access_flags()
+	{
+		return _access_flags(address);
+	}
+
+	public static short _access_flags(long klass_ptr)
+	{
+		return unsafe.read_short(klass_ptr + _access_flags + AccessFlags._flags);
+	}
+
+	public static void set_access_flags(long klass_ptr, short flags)
+	{
+		unsafe.write(klass_ptr + _access_flags + AccessFlags._flags, flags);
+	}
+
+	public void set_access_flags(short flags)
+	{
+		set_access_flags(address, flags);
+	}
+
+	public static short _kind(long klass_ptr)
+	{
+		return unsafe.read_short(klass_ptr + _kind);
 	}
 
 	public short _kind()
@@ -315,13 +371,107 @@ public class Klass extends Metadata
 
 	public boolean is_instance_klass()
 	{
-		short kind = _kind();
-		return kind >= Klass.InstanceKlassKind && kind < Klass.TypeArrayKlassKind;
+		return _kind() <= InstanceStackChunkKlassKind;
+	}
+
+	public InstanceKlass as_instance_klass()
+	{
+		return super.cast(InstanceKlass.class);
+	}
+
+	public boolean is_other_instance_klass()
+	{
+		return _kind() == InstanceKlassKind;
+	}
+
+	public boolean is_reference_instance_klass()
+	{
+		return _kind() == InstanceRefKlassKind;
+	}
+
+	public boolean is_mirror_instance_klass()
+	{
+		return _kind() == InstanceMirrorKlassKind;
+	}
+
+	public boolean is_class_loader_instance_klass()
+	{
+		return _kind() == InstanceClassLoaderKlassKind;
+	}
+
+	public boolean is_array_klass()
+	{
+		return _kind() >= TypeArrayKlassKind;
+	}
+
+	public boolean is_stack_chunk_instance_klass()
+	{
+		return _kind() == InstanceStackChunkKlassKind;
+	}
+
+	public boolean is_objArray_klass()
+	{
+		return _kind() == ObjArrayKlassKind;
+	}
+
+	public boolean is_typeArray_klass()
+	{
+		return _kind() == TypeArrayKlassKind;
 	}
 
 	public KlassFlags _misc_flags()
 	{
 		return super.read_memory_object(KlassFlags.class, _misc_flags);
+	}
+
+	public long misc_flags_addr()
+	{
+		return address + _misc_flags;
+	}
+
+	/**
+	 * 是否是隐藏类
+	 * 
+	 * @return
+	 */
+	public boolean is_hidden()
+	{
+		return _misc_flags().is_hidden_class();
+	}
+
+	public void set_is_hidden(boolean value)
+	{
+		_misc_flags().set_is_hidden_class(value);
+	}
+
+	public boolean is_value_based()
+	{
+		return _misc_flags().is_value_based_class();
+	}
+
+	public void set_is_value_based(boolean value)
+	{
+		_misc_flags().set_is_value_based_class(value);
+	}
+
+	public boolean has_finalizer()
+	{
+		return _misc_flags().has_finalizer();
+	}
+
+	public void set_has_finalizer(boolean value)
+	{
+		_misc_flags().set_has_finalizer(value);
+	}
+
+	public boolean is_cloneable_fast()
+	{
+		return _misc_flags().is_cloneable_fast();
+	}
+
+	public void set_is_cloneable_fast(boolean value)
+	{
+		_misc_flags().set_is_cloneable_fast(value);
 	}
 
 	/**
@@ -365,8 +515,45 @@ public class Klass extends Metadata
 	 * 
 	 * @return
 	 */
-	ClassLoaderData _class_loader_data()
+	public ClassLoaderData _class_loader_data()
 	{
 		return super.read_memory_object_ptr(ClassLoaderData.class, _class_loader_data);
+	}
+
+	public int vtable_length()
+	{
+		return super.read_cint(_vtable_len);
+	}
+
+	public void set_vtable_length(int vtable_length)
+	{
+		super.write_cint(_vtable_len, vtable_length);
+	}
+
+	public long start_of_vtable()
+	{
+		return address + vtable_start_offset();
+	}
+
+	public static long vtable_start_offset()
+	{
+		return InstanceKlass.header_size() * vm_constant.BytesPerWord;
+	}
+
+	public klassVtable vtable()
+	{
+		return new klassVtable(this, start_of_vtable(), vtable_length() / vtableEntry.size());
+	}
+
+	@Override
+	public String internal_name()
+	{
+		return name().toString();
+	}
+
+	@Override
+	public int type()
+	{
+		return MetaspaceObj.Type.ClassType;
 	}
 }

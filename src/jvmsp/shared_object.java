@@ -17,6 +17,8 @@ import static jvmsp.versions.jdk_versions;
 
 /**
  * 加载so库以及符号查找
+ * 
+ * @since jdk-21
  */
 public class shared_object
 {

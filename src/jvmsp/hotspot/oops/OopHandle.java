@@ -4,13 +4,14 @@ import jvmsp.hotspot.vm_struct;
 
 public class OopHandle extends vm_struct
 {
-	private static final long _obj = vm_struct.entry.find("OopHandle", "_obj").offset;
+	public static final String type_name = "OopHandle";
+	public static final long size = sizeof(type_name);
 
-	public static final long size = sizeof("OopHandle");
+	private static final long _obj = vm_struct.entry.find(type_name, "_obj").offset;
 
 	public OopHandle(long address)
 	{
-		super(address);
+		super(type_name, address);
 	}
 
 	public long _obj()

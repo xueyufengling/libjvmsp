@@ -3,13 +3,17 @@ package jvmsp.hotspot.utilities;
 import jvmsp.memory;
 import jvmsp.hotspot.vm_struct;
 
+/**
+ * 访问标志
+ */
 public class AccessFlags extends vm_struct
 {
-	private static final long _flags = vm_struct.entry.find("AccessFlags", "_flags").offset;
+	public static final String type_name = "AccessFlags";
+	public static final long size = sizeof(type_name);
 
-	public static final long size = sizeof("AccessFlags");
+	public static final long _flags = vm_struct.entry.find(type_name, "_flags").offset;
 
-	// 类、字段、方法通用标记
+	// 类、字段、方法通用标志
 
 	/**
 	 * 是否是public修饰的
@@ -36,28 +40,28 @@ public class AccessFlags extends vm_struct
 	 */
 	public static final short JVM_ACC_SYNTHETIC = 0x1000;
 
-	// 类、字段通用标记
+	// 类、字段通用标志
 
 	/**
 	 * 是否是枚举
 	 */
 	public static final short JVM_ACC_ENUM = 0x4000;
 
-	// 类、方法通用标记
+	// 类、方法通用标志
 
 	/**
 	 * 是否是abstract修饰的
 	 */
 	public static final short JVM_ACC_ABSTRACT = 0x0400;
 
-	// 字段、方法通用标记
+	// 字段、方法通用标志
 
 	/**
 	 * 是否是static修饰的
 	 */
 	public static final short JVM_ACC_STATIC = 0x0008;
 
-	// 类专用标记
+	// 类专用标志
 
 	/**
 	 * 类专用，invokespecial使用
@@ -74,7 +78,7 @@ public class AccessFlags extends vm_struct
 	 */
 	public static final short JVM_ACC_ANNOTATION = 0x2000;
 
-	// 字段专用标记
+	// 字段专用标志
 
 	/**
 	 * 字段专用，是否是transient修饰的，序列化与反序列化使用
@@ -86,7 +90,7 @@ public class AccessFlags extends vm_struct
 	 */
 	public static final short JVM_ACC_VOLATILE = 0x0040;
 
-	// 方法专用标记
+	// 方法专用标志
 
 	/**
 	 * 方法专用，是否加锁
@@ -114,7 +118,7 @@ public class AccessFlags extends vm_struct
 	public static final short JVM_ACC_STRICT = 0x0800;
 
 	/**
-	 * JVM识别类的标记掩码
+	 * JVM识别类的标志掩码
 	 */
 	public static final short JVM_RECOGNIZED_CLASS_MODIFIERS = (JVM_ACC_PUBLIC |
 			JVM_ACC_FINAL |
@@ -126,7 +130,7 @@ public class AccessFlags extends vm_struct
 			JVM_ACC_SYNTHETIC);
 
 	/**
-	 * JVM识别字段的标记掩码
+	 * JVM识别字段的标志掩码
 	 */
 	public static final short JVM_RECOGNIZED_FIELD_MODIFIERS = (JVM_ACC_PUBLIC |
 			JVM_ACC_PRIVATE |
@@ -139,7 +143,7 @@ public class AccessFlags extends vm_struct
 			JVM_ACC_SYNTHETIC);
 
 	/**
-	 * JVM识别方法的标记掩码
+	 * JVM识别方法的标志掩码
 	 */
 	public static final short JVM_RECOGNIZED_METHOD_MODIFIERS = (JVM_ACC_PUBLIC |
 			JVM_ACC_PRIVATE |
@@ -156,7 +160,7 @@ public class AccessFlags extends vm_struct
 
 	public AccessFlags(long address)
 	{
-		super("AccessFlags", address);
+		super(type_name, address);
 	}
 
 	public String toString()
@@ -174,69 +178,69 @@ public class AccessFlags extends vm_struct
 		super.write(_flags, flags);
 	}
 
-	public boolean is_public()
+	public static final boolean is_public(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_PUBLIC);
+		return memory.flag_bit(flags, JVM_ACC_PUBLIC);
 	}
 
-	public boolean is_private()
+	public static final boolean is_private(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_PRIVATE);
+		return memory.flag_bit(flags, JVM_ACC_PRIVATE);
 	}
 
-	public boolean is_protected()
+	public static final boolean is_protected(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_PROTECTED);
+		return memory.flag_bit(flags, JVM_ACC_PROTECTED);
 	}
 
-	public boolean is_static()
+	public static final boolean is_static(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_STATIC);
+		return memory.flag_bit(flags, JVM_ACC_STATIC);
 	}
 
-	public boolean is_final()
+	public static final boolean is_final(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_FINAL);
+		return memory.flag_bit(flags, JVM_ACC_FINAL);
 	}
 
-	public boolean is_synchronized()
+	public static final boolean is_synchronized(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_SYNCHRONIZED);
+		return memory.flag_bit(flags, JVM_ACC_SYNCHRONIZED);
 	}
 
-	public boolean is_super()
+	public static final boolean is_super(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_SUPER);
+		return memory.flag_bit(flags, JVM_ACC_SUPER);
 	}
 
-	public boolean is_volatile()
+	public static final boolean is_volatile(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_VOLATILE);
+		return memory.flag_bit(flags, JVM_ACC_VOLATILE);
 	}
 
-	public boolean is_transient()
+	public static final boolean is_transient(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_TRANSIENT);
+		return memory.flag_bit(flags, JVM_ACC_TRANSIENT);
 	}
 
-	public boolean is_native()
+	public static final boolean is_native(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_NATIVE);
+		return memory.flag_bit(flags, JVM_ACC_NATIVE);
 	}
 
-	public boolean is_interface()
+	public static final boolean is_interface(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_INTERFACE);
+		return memory.flag_bit(flags, JVM_ACC_INTERFACE);
 	}
 
-	public boolean is_abstract()
+	public static final boolean is_abstract(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_ABSTRACT);
+		return memory.flag_bit(flags, JVM_ACC_ABSTRACT);
 	}
 
-	public boolean is_synthetic()
+	public static final boolean is_synthetic(short flags)
 	{
-		return memory.flag_bit(_flags(), JVM_ACC_SYNTHETIC);
+		return memory.flag_bit(flags, JVM_ACC_SYNTHETIC);
 	}
 
 	/**
@@ -244,105 +248,273 @@ public class AccessFlags extends vm_struct
 	 * 
 	 * @return
 	 */
+	public static final boolean is_package_private(short flags)
+	{
+		return !is_public(flags) && !is_private(flags) && !is_protected(flags);
+	}
+
+	public static final short set_public(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_PUBLIC, value);
+	}
+
+	public static final short set_private(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_PRIVATE, value);
+	}
+
+	public static final short set_protected(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_PROTECTED, value);
+	}
+
+	public static final short set_static(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_STATIC, value);
+	}
+
+	public static final short set_final(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_FINAL, value);
+	}
+
+	public static final short set_synchronized(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_SYNCHRONIZED, value);
+	}
+
+	public static final short set_super(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_SUPER, value);
+	}
+
+	public static final short set_volatile(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_VOLATILE, value);
+	}
+
+	public static final short set_bridge(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_BRIDGE, value);
+	}
+
+	public static final short set_transient(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_TRANSIENT, value);
+	}
+
+	public static final short set_varargs(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_VARARGS, value);
+	}
+
+	public static final short set_native(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_NATIVE, value);
+	}
+
+	public static final short set_interface(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_INTERFACE, value);
+	}
+
+	public static final short set_abstract(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_ABSTRACT, value);
+	}
+
+	public static final short set_strict(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_STRICT, value);
+	}
+
+	public static final short set_synthetic(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_SYNTHETIC, value);
+	}
+
+	public static final short set_annotation(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_ANNOTATION, value);
+	}
+
+	public static final short set_enum(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, JVM_ACC_ENUM, value);
+	}
+
+	public static final short set_package_private(short flags)
+	{
+		flags = set_public(flags, false);
+		flags = set_private(flags, false);
+		flags = set_protected(flags, false);
+		return flags;
+	}
+
+	// 成员方法
+
+	public boolean is_public()
+	{
+		return is_public(_flags());
+	}
+
+	public boolean is_private()
+	{
+		return is_private(_flags());
+	}
+
+	public boolean is_protected()
+	{
+		return is_protected(_flags());
+	}
+
+	public boolean is_static()
+	{
+		return is_static(_flags());
+	}
+
+	public boolean is_final()
+	{
+		return is_final(_flags());
+	}
+
+	public boolean is_synchronized()
+	{
+		return is_synchronized(_flags());
+	}
+
+	public boolean is_super()
+	{
+		return is_super(_flags());
+	}
+
+	public boolean is_volatile()
+	{
+		return is_volatile(_flags());
+	}
+
+	public boolean is_transient()
+	{
+		return is_transient(_flags());
+	}
+
+	public boolean is_native()
+	{
+		return is_native(_flags());
+	}
+
+	public boolean is_interface()
+	{
+		return is_interface(_flags());
+	}
+
+	public boolean is_abstract()
+	{
+		return is_abstract(_flags());
+	}
+
+	public boolean is_synthetic()
+	{
+		return is_synthetic(_flags());
+	}
+
 	public boolean is_package_private()
 	{
-		return !is_public() && !is_private() && !is_protected();
+		return is_package_private(_flags());
 	}
 
 	public void set_public(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_PUBLIC, value));
+		set_flags(set_public(_flags(), value));
 	}
 
 	public void set_private(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_PRIVATE, value));
+		set_flags(set_private(_flags(), value));
 	}
 
 	public void set_protected(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_PROTECTED, value));
+		set_flags(set_protected(_flags(), value));
 	}
 
 	public void set_static(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_STATIC, value));
+		set_flags(set_static(_flags(), value));
 	}
 
 	public void set_final(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_FINAL, value));
+		set_flags(set_final(_flags(), value));
 	}
 
 	public void set_synchronized(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_SYNCHRONIZED, value));
+		set_flags(set_synchronized(_flags(), value));
 	}
 
 	public void set_super(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_SUPER, value));
+		set_flags(set_super(_flags(), value));
 	}
 
 	public void set_volatile(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_VOLATILE, value));
+		set_flags(set_volatile(_flags(), value));
 	}
 
 	public void set_bridge(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_BRIDGE, value));
+		set_flags(set_bridge(_flags(), value));
 	}
 
 	public void set_transient(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_TRANSIENT, value));
+		set_flags(set_transient(_flags(), value));
 	}
 
 	public void set_varargs(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_VARARGS, value));
+		set_flags(set_varargs(_flags(), value));
 	}
 
 	public void set_native(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_NATIVE, value));
+		set_flags(set_native(_flags(), value));
 	}
 
 	public void set_interface(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_INTERFACE, value));
+		set_flags(set_interface(_flags(), value));
 	}
 
 	public void set_abstract(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_ABSTRACT, value));
+		set_flags(set_abstract(_flags(), value));
 	}
 
 	public void set_strict(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_STRICT, value));
+		set_flags(set_strict(_flags(), value));
 	}
 
 	public void set_synthetic(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_SYNTHETIC, value));
+		set_flags(set_synthetic(_flags(), value));
 	}
 
 	public void set_annotation(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_ANNOTATION, value));
+		set_flags(set_annotation(_flags(), value));
 	}
 
 	public void set_enum(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), JVM_ACC_ENUM, value));
+		set_flags(set_enum(_flags(), value));
 	}
 
 	public void set_package_private()
 	{
-		set_public(false);
-		set_private(false);
-		set_protected(false);
+		set_flags(set_package_private(_flags()));
 	}
 }

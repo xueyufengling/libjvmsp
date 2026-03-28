@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import jvmsp.memory;
@@ -16,6 +17,7 @@ import jvmsp.versions;
 import jvmsp.libso.libjvm;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
+import jvmsp.type.cxx_type.pointer;
 
 import static jvmsp.versions.jdk_versions;
 
@@ -173,58 +175,55 @@ public abstract class vm_struct extends memory_object
 	 */
 	private final vm_type type;
 
-	/**
-	 * 该类型是否在libjvm.so中导出给Serviceability Agent
-	 */
-	private final boolean exported;
-
 	protected vm_struct(String name, long address)
 	{
 		super(address);
 		this.type = vm_type.find(name);
-		this.exported = this.type != null;
 	}
 
 	protected vm_struct(long address)
 	{
-		super(address);
-		this.type = null;
-		this.exported = false;
+		this(null, address);
 	}
 
+	/**
+	 * 该类型是否在libjvm.so中导出给Serviceability Agent
+	 * 
+	 * @return
+	 */
 	public final boolean is_exported()
 	{
-		return exported;
+		return this.type != null;
 	}
 
 	public final long type_size()
 	{
-		return exported ? 0 : type.size;
+		return is_exported() ? 0 : type.size;
 	}
 
 	public final String type_name()
 	{
-		return exported ? null : type.type_name;
+		return is_exported() ? null : type.type_name;
 	}
 
 	public final String super_class_name()
 	{
-		return exported ? null : type.super_class_name;
+		return is_exported() ? null : type.super_class_name;
 	}
 
 	public final boolean is_oop_type()
 	{
-		return exported ? false : type.is_oop_type;
+		return is_exported() ? false : type.is_oop_type;
 	}
 
 	public final boolean is_integer_type()
 	{
-		return exported ? false : type.is_integer_type;
+		return is_exported() ? false : type.is_integer_type;
 	}
 
 	public final boolean is_unsigned()
 	{
-		return exported ? false : type.is_unsigned;
+		return is_exported() ? false : type.is_unsigned;
 	}
 
 	/**
@@ -249,6 +248,210 @@ public abstract class vm_struct extends memory_object
 	public static final long switch_address(Supplier<Long>... values)
 	{
 		return jdk_versions.switch_execute_existj(0, values);
+	}
+
+	/**
+	 * 检查当前JDK版本是否有此条目
+	 * 
+	 * @param offset
+	 */
+	protected final void offset_check_jdk_version(long offset)
+	{
+		if (offset < 0)
+			throw new java.lang.UnsupportedClassVersionError("offset check failed. current jdk version " + jdk_versions.current_version() + " is not supported");
+	}
+
+	protected static final void address_check_jdk_version(long addr)
+	{
+		if (addr == 0)
+			throw new java.lang.UnsupportedClassVersionError("address check failed. current jdk version " + jdk_versions.current_version() + " is not supported");
+	}
+
+	@Override
+	protected long offset_addr(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.offset_addr(offset);
+	}
+
+	@Override
+	public byte read_byte(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_byte(offset);
+	}
+
+	@Override
+	public void write(long offset, byte value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write(offset, value);
+	}
+
+	@Override
+	public short read_short(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_short(offset);
+	}
+
+	@Override
+	public void write(long offset, short value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write(offset, value);
+	}
+
+	@Override
+	public int read_int(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_int(offset);
+	}
+
+	@Override
+	public void write(long offset, int value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write(offset, value);
+	}
+
+	@Override
+	public long read_long(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_long(offset);
+	}
+
+	@Override
+	public void write(long offset, long value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write(offset, value);
+	}
+
+	@Override
+	public long read_pointer(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_pointer(offset);
+	}
+
+	@Override
+	public void write_pointer(long offset, long ptr)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_pointer(offset, ptr);
+	}
+
+	@Override
+	public String read_cstr(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_cstr(offset);
+	}
+
+	@Override
+	public pointer write_cstr(long offset, String str)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.write_cstr(offset, str);
+	}
+
+	@Override
+	public int read_cint(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_cint(offset);
+	}
+
+	@Override
+	public void write_cint(long offset, int value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_cint(offset, value);
+	}
+
+	protected long read_cuint(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_cuint(offset);
+	}
+
+	protected void write_cuint(long offset, long value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_cuint(offset, value);
+	}
+
+	@Override
+	public int read_uint16_t(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_uint16_t(offset);
+	}
+
+	@Override
+	public void write_uint16_t(long offset, int value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_uint16_t(offset, value);
+	}
+
+	@Override
+	public boolean read_cbool(long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_cbool(offset);
+	}
+
+	@Override
+	public void write_cbool(long offset, boolean value)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_cbool(offset, value);
+	}
+
+	@Override
+	public <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Class<_MemObject> clazz, long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_memory_object_ptr(clazz, offset);
+	}
+
+	@Override
+	public <_MemObject extends memory_object> _MemObject read_memory_object_at(Class<_MemObject> clazz, long offset, long size, int idx)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_memory_object_at(clazz, offset, size, idx);
+	}
+
+	@Override
+	public <_MemObject extends memory_object> _MemObject[] read_memory_object_arr(Class<_MemObject> clazz, long offset, long size, int num)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_memory_object_arr(clazz, offset, size, num);
+	}
+
+	@Override
+	public <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
+	{
+		this.offset_check_jdk_version(offset);
+		return super.read_memory_object(clazz, offset);
+	}
+
+	@Override
+	public void write_memory_object_ptr(long offset, memory_object struct)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_memory_object_ptr(offset, struct);
+	}
+
+	@Override
+	public <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
+	{
+		this.offset_check_jdk_version(offset);
+		super.write_memory_object(offset, struct, size);
 	}
 
 	public static class ContiguousSpace
@@ -298,27 +501,10 @@ public abstract class vm_struct extends memory_object
 		private static final long _barrier_set = vm_struct.entry.find("BarrierSet", "_barrier_set").address;
 	}
 
-	public static class ArrayKlass
-	{
-		private static final long _dimension = vm_struct.entry.find("ArrayKlass", "_dimension").offset;
-		private static final long _higher_dimension = vm_struct.entry.find("ArrayKlass", "_higher_dimension").offset;
-		private static final long _lower_dimension = vm_struct.entry.find("ArrayKlass", "_lower_dimension").offset;
-	}
-
 	public static class CompiledICHolder
 	{
 		private static final long _holder_metadata = vm_struct.entry.find("CompiledICHolder", "_holder_metadata").offset;
 		private static final long _holder_klass = vm_struct.entry.find("CompiledICHolder", "_holder_klass").offset;
-	}
-
-	public static class ResolvedIndyEntry
-	{
-		private static final long _cpool_index = vm_struct.entry.find("ResolvedIndyEntry", "_cpool_index").offset;
-	}
-
-	public static class vtableEntry
-	{
-		private static final long _method = vm_struct.entry.find("vtableEntry", "_method").offset;
 	}
 
 	public static class DataLayout
@@ -328,12 +514,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _header_struct_bci = vm_struct.entry.find("DataLayout", "_header._struct._bci").offset;
 		private static final long _header_struct_traps = vm_struct.entry.find("DataLayout", "_header._struct._traps").offset;
 		private static final long _cells_0 = vm_struct.entry.find("DataLayout", "_cells[0]").offset;
-	}
-
-	public static class ObjArrayKlass
-	{
-		private static final long _element_klass = vm_struct.entry.find("ObjArrayKlass", "_element_klass").offset;
-		private static final long _bottom_klass = vm_struct.entry.find("ObjArrayKlass", "_bottom_klass").offset;
 	}
 
 	public static class TypeArrayKlass
@@ -370,15 +550,6 @@ public abstract class vm_struct extends memory_object
 		private static final long end_pc = vm_struct.entry.find("ExceptionTableElement", "end_pc").offset;
 		private static final long handler_pc = vm_struct.entry.find("ExceptionTableElement", "handler_pc").offset;
 		private static final long catch_type_index = vm_struct.entry.find("ExceptionTableElement", "catch_type_index").offset;
-	}
-
-	public static class BreakpointInfo
-	{
-		private static final long _orig_bytecode = vm_struct.entry.find("BreakpointInfo", "_orig_bytecode").offset;
-		private static final long _bci = vm_struct.entry.find("BreakpointInfo", "_bci").offset;
-		private static final long _name_index = vm_struct.entry.find("BreakpointInfo", "_name_index").offset;
-		private static final long _signature_index = vm_struct.entry.find("BreakpointInfo", "_signature_index").offset;
-		private static final long _next = vm_struct.entry.find("BreakpointInfo", "_next").offset;
 	}
 
 	public static class JNIid

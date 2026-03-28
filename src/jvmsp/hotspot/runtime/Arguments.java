@@ -8,14 +8,16 @@ import jvmsp.hotspot.vm_struct;
  */
 public abstract class Arguments
 {
+	public static final String type_name = "Arguments";
+
 	// JVM标志列表
-	private static final long _jvm_flags_array = vm_struct.entry.find("Arguments", "_jvm_flags_array").address;
-	private static final long _num_jvm_flags = vm_struct.entry.find("Arguments", "_num_jvm_flags").address;
+	private static final long _jvm_flags_array = vm_struct.entry.find(type_name, "_jvm_flags_array").address;
+	private static final long _num_jvm_flags = vm_struct.entry.find(type_name, "_num_jvm_flags").address;
 	// JVM启动参数列表
-	private static final long _jvm_args_array = vm_struct.entry.find("Arguments", "_jvm_args_array").address;
-	private static final long _num_jvm_args = vm_struct.entry.find("Arguments", "_num_jvm_args").address;
+	private static final long _jvm_args_array = vm_struct.entry.find(type_name, "_jvm_args_array").address;
+	private static final long _num_jvm_args = vm_struct.entry.find(type_name, "_num_jvm_args").address;
 	// 启动命令
-	private static final long _java_command = vm_struct.entry.find("Arguments", "_java_command").address;
+	private static final long _java_command = vm_struct.entry.find(type_name, "_java_command").address;
 
 	/**
 	 * JVM标志数组，标志为字符串。<br>

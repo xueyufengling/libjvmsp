@@ -4,7 +4,6 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.function.Function;
 
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.pointer;
@@ -225,22 +224,48 @@ public abstract class memory
 	}
 
 	/**
+	 * 具有内存地址的对象
+	 */
+	@FunctionalInterface
+	public static interface pointer_type
+	{
+		public abstract long address();
+	}
+
+	/**
 	 * 内存操作封装。<br>
 	 * 可用于Java层访问C++对象的接口。<br>
 	 */
-	public static abstract class memory_object
+	public static class memory_object implements pointer_type
 	{
 		protected final long address;
 
-		protected memory_object(long address)
+		/**
+		 * 新分配对象或从现有对象上创建
+		 * 
+		 * @param address_or_size
+		 * @param alloc_size
+		 */
+		protected memory_object(long address_or_size, boolean alloc_size)
 		{
-			this.address = address;
+			if (alloc_size)
+				this.address = unsafe.malloc(address_or_size);
+			else
+				this.address = address_or_size;
 		}
 
+		protected memory_object(long address)
+		{
+			this(address, false);
+		}
+
+		@Override
 		public long address()
 		{
 			return address;
 		}
+
+		public static final memory_object nullptr = new memory_object(0);
 
 		public void delete()
 		{
@@ -331,6 +356,16 @@ public abstract class memory
 			unsafe.write_cint(address + offset, value);
 		}
 
+		protected long read_cuint(long offset)
+		{
+			return unsafe.read_cuint(address + offset);
+		}
+
+		protected void write_cuint(long offset, long value)
+		{
+			unsafe.write_cuint(address + offset, value);
+		}
+
 		protected int read_uint16_t(long offset)
 		{
 			return unsafe.read_uint16_t(address + offset);
@@ -351,11 +386,26 @@ public abstract class memory
 			unsafe.write_cbool(address + offset, value);
 		}
 
+		private static final Class<?>[] _memory_object_ctor_arg_types = new Class<?>[]
+		{ long.class };
+
+		/**
+		 * 将该地址解释为指定类型的对象，类型可以为抽象类。<br>
+		 * 如果构建为抽象类，则不要调用抽象方法，否则会引发运行时异常。<br>
+		 * 
+		 * @param <_MemObject>
+		 * @param clazz
+		 * @param addr
+		 * @return
+		 */
 		public static final <_MemObject extends memory_object> _MemObject as_memory_object(Class<_MemObject> clazz, long addr)
 		{
 			try
 			{
-				return (_MemObject) symbols.find_constructor(clazz, long.class).invoke(addr);
+				if (addr == 0)
+					return null;// 空指针则不构造对象
+				else
+					return (_MemObject) unsafe.force_construct(clazz, _memory_object_ctor_arg_types, addr);
 			}
 			catch (Throwable ex)
 			{
@@ -368,11 +418,6 @@ public abstract class memory
 			return as_memory_object(clazz, unsafe.read_pointer(ptr_addr));
 		}
 
-		public static final void write_memory_object_ptr(long addr, memory_object obj)
-		{
-			unsafe.write_pointer(addr, obj.address);
-		}
-
 		@SuppressWarnings("unchecked")
 		public static final <_MemObject extends memory_object> _MemObject[] as_memory_object_arr(Class<_MemObject> clazz, long addr, long size, int num)
 		{
@@ -380,27 +425,6 @@ public abstract class memory
 			for (int idx = 0; idx < num; ++idx)
 			{
 				arr[idx] = as_memory_object(clazz, addr + idx * size);
-			}
-			return arr;
-		}
-
-		public static final <_MemObject extends memory_object> _MemObject as_memory_object(Function<Long, _MemObject> ctor, long addr)
-		{
-			return ctor.apply(addr);
-		}
-
-		public static final <_MemObject extends memory_object> _MemObject as_memory_object_ptr(Function<Long, _MemObject> ctor, long ptr_addr)
-		{
-			return as_memory_object(ctor, unsafe.read_pointer(ptr_addr));
-		}
-
-		@SuppressWarnings("unchecked")
-		public static final <_MemObject extends memory_object> _MemObject[] as_memory_object_arr(Function<Long, _MemObject> ctor, long addr, long size, int num)
-		{
-			_MemObject[] arr = (_MemObject[]) new memory_object[num];
-			for (int idx = 0; idx < num; ++idx)
-			{
-				arr[idx] = as_memory_object(ctor, addr + idx * size);
 			}
 			return arr;
 		}
@@ -441,24 +465,31 @@ public abstract class memory
 			return as_memory_object_arr(clazz, address + offset, size, num);
 		}
 
-		protected <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Function<Long, _MemObject> ctor, long offset)
-		{
-			return as_memory_object_ptr(ctor, address + offset);
-		}
-
 		protected <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
 		{
 			return as_memory_object(clazz, address + offset);
 		}
 
-		protected <_MemObject extends memory_object> _MemObject read_memory_object(Function<Long, _MemObject> ctor, long offset)
+		/**
+		 * 强制转换
+		 * 
+		 * @param <_MemObject>
+		 * @param clazz
+		 * @return
+		 */
+		public <_MemObject extends memory_object> _MemObject cast(Class<_MemObject> clazz)
 		{
-			return as_memory_object(ctor, address + offset);
+			return as_memory_object(clazz, address);
 		}
 
-		protected void write_pointer(long offset, memory_object struct)
+		protected void write_memory_object_ptr(long offset, memory_object struct)
 		{
-			write_pointer(offset, struct.address);
+			unsafe.write_pointer(address + offset, struct);
+		}
+
+		protected <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
+		{
+			unsafe.memcpy(address + offset, struct.address, size);
 		}
 	}
 
@@ -617,27 +648,21 @@ public abstract class memory
 		}
 
 		@Override
-		public <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Function<Long, _MemObject> ctor, long offset)
-		{
-			return super.read_memory_object_ptr(ctor, offset);
-		}
-
-		@Override
 		public <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
 		{
 			return super.read_memory_object(clazz, offset);
 		}
 
 		@Override
-		public <_MemObject extends memory_object> _MemObject read_memory_object(Function<Long, _MemObject> ctor, long offset)
+		public void write_memory_object_ptr(long offset, memory_object struct)
 		{
-			return super.read_memory_object(ctor, offset);
+			super.write_memory_object_ptr(offset, struct);
 		}
 
 		@Override
-		public void write_pointer(long offset, memory_object struct)
+		public <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
 		{
-			super.write_pointer(offset, struct);
+			super.write_memory_object(offset, struct, size);
 		}
 	}
 }

@@ -5,27 +5,30 @@ import jvmsp.hotspot.compiler.ImmutableOopMapSet;
 
 public class CodeBlob extends vm_struct
 {
+	public static final String type_name = "CodeBlob";
+	public static final long size = sizeof(type_name);
+
 	private static final long _code_begin = switch_offset(
-			() -> vm_struct.entry.find("CodeBlob", "_code_begin").offset// JDK21
+			() -> vm_struct.entry.find(type_name, "_code_begin").offset// JDK21
 	);
 	private static final long _code_end = switch_offset(
-			() -> vm_struct.entry.find("CodeBlob", "_code_end").offset// JDK21
+			() -> vm_struct.entry.find(type_name, "_code_end").offset// JDK21
 	);
 	private static final long _content_begin = switch_offset(
-			() -> vm_struct.entry.find("CodeBlob", "_content_begin").offset// JDK21
+			() -> vm_struct.entry.find(type_name, "_content_begin").offset// JDK21
 	);
 	private static final long _data_end = switch_offset(
-			() -> vm_struct.entry.find("CodeBlob", "_data_end").offset// JDK21
+			() -> vm_struct.entry.find(type_name, "_data_end").offset// JDK21
 	);
 
-	private static final long _oop_maps = vm_struct.entry.find("CodeBlob", "_oop_maps").offset;
-	private static final long _name = vm_struct.entry.find("CodeBlob", "_name").offset;
-	private static final long _size = vm_struct.entry.find("CodeBlob", "_size").offset;
-	private static final long _header_size = vm_struct.entry.find("CodeBlob", "_header_size").offset;
+	private static final long _oop_maps = vm_struct.entry.find(type_name, "_oop_maps").offset;
+	private static final long _name = vm_struct.entry.find(type_name, "_name").offset;
+	private static final long _size = vm_struct.entry.find(type_name, "_size").offset;
+	private static final long _header_size = vm_struct.entry.find(type_name, "_header_size").offset;
 
-	private static final long _frame_complete_offset = vm_struct.entry.find("CodeBlob", "_frame_complete_offset").offset;
-	private static final long _data_offset = vm_struct.entry.find("CodeBlob", "_data_offset").offset;
-	private static final long _frame_size = vm_struct.entry.find("CodeBlob", "_frame_size").offset;
+	private static final long _frame_complete_offset = vm_struct.entry.find(type_name, "_frame_complete_offset").offset;
+	private static final long _data_offset = vm_struct.entry.find(type_name, "_data_offset").offset;
+	private static final long _frame_size = vm_struct.entry.find(type_name, "_frame_size").offset;
 
 	protected CodeBlob(String name, long address)
 	{
@@ -34,7 +37,7 @@ public class CodeBlob extends vm_struct
 
 	public CodeBlob(long address)
 	{
-		this("CodeBlob", address);
+		this(type_name, address);
 	}
 
 	public long _name()
@@ -59,7 +62,7 @@ public class CodeBlob extends vm_struct
 
 	public void set_oop_maps(ImmutableOopMapSet oop_maps)
 	{
-		super.write_pointer(_oop_maps, oop_maps);
+		super.write_memory_object_ptr(_oop_maps, oop_maps);
 	}
 
 	public int size()

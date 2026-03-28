@@ -4,20 +4,23 @@ import jvmsp.hotspot.vm_struct;
 
 public class MemRegion extends vm_struct
 {
+	public static final String type_name = "MemRegion";
+	public static final long size = sizeof(type_name);
+
 	/**
 	 * 堆的起始地址。<br>
 	 * HeapWord*实质是void*，因为HeapWord只有声明没有定义。<br>
 	 */
-	private static final long _start = vm_struct.entry.find("MemRegion", "_start").offset;
+	private static final long _start = vm_struct.entry.find(type_name, "_start").offset;
 
 	/**
 	 * size_t _word_size，该内存块的长度
 	 */
-	private static final long _word_size = vm_struct.entry.find("MemRegion", "_word_size").offset;
+	private static final long _word_size = vm_struct.entry.find(type_name, "_word_size").offset;
 
 	public MemRegion(long address)
 	{
-		super("MemRegion", address);
+		super(type_name, address);
 	}
 
 	public long start()

@@ -5,14 +5,18 @@ import jvmsp.hotspot.vm_struct;
 import jvmsp.type.cxx_type;
 
 /**
- * JVM运行时Klass内部使用标志。<br>
+ * JVM运行时Klass的JVM内部使用标志。<br>
  * JDK21尚不存在。<br>
  */
 public class KlassFlags extends vm_struct
 {
-	public static final cxx_type KlassFlags = cxx_type.define("KlassFlags")
+	public static final String type_name = "KlassFlags";
+
+	public static final cxx_type KlassFlags = cxx_type.define(type_name)
 			.decl_field("_flags", cxx_type.uint8_t)
 			.resolve();
+
+	public static final long size = KlassFlags.size();
 
 	private static final long _flags = KlassFlags.field("_flags").offset();
 
@@ -23,9 +27,10 @@ public class KlassFlags extends vm_struct
 
 	public KlassFlags(long address)
 	{
-		super("KlassFlags", address);
+		super(type_name, address);
 	}
 
+	@Override
 	public String toString()
 	{
 		return memory.bits_str(_flags());
@@ -41,7 +46,7 @@ public class KlassFlags extends vm_struct
 		super.write(_flags, flags);
 	}
 
-	public boolean is_is_hidden_class()
+	public boolean is_hidden_class()
 	{
 		return memory.flag_bit(_flags(), is_hidden_class);
 	}
@@ -51,7 +56,7 @@ public class KlassFlags extends vm_struct
 		set_flags(memory.set_flag_bit(_flags(), is_hidden_class, value));
 	}
 
-	public boolean is_is_value_based_class()
+	public boolean is_value_based_class()
 	{
 		return memory.flag_bit(_flags(), is_value_based_class);
 	}
@@ -61,7 +66,7 @@ public class KlassFlags extends vm_struct
 		set_flags(memory.set_flag_bit(_flags(), is_value_based_class, value));
 	}
 
-	public boolean is_has_finalizer()
+	public boolean has_finalizer()
 	{
 		return memory.flag_bit(_flags(), has_finalizer);
 	}
@@ -71,7 +76,7 @@ public class KlassFlags extends vm_struct
 		set_flags(memory.set_flag_bit(_flags(), has_finalizer, value));
 	}
 
-	public boolean is_is_cloneable_fast()
+	public boolean is_cloneable_fast()
 	{
 		return memory.flag_bit(_flags(), is_cloneable_fast);
 	}

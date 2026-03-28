@@ -4,37 +4,41 @@ import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.interpreter.Bytecodes;
+import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.oops.Array.Array_u1;
 import jvmsp.hotspot.oops.Array.Array_u2;
+import jvmsp.hotspot.utilities.align;
 
 /**
  * 常量池。<br>
  */
 public class ConstantPool extends Metadata
 {
-	private static final long _tags = vm_struct.entry.find("ConstantPool", "_tags").offset;
-	private static final long _cache = vm_struct.entry.find("ConstantPool", "_cache").offset;
-	private static final long _pool_holder = vm_struct.entry.find("ConstantPool", "_pool_holder").offset;// 24
+	public static final String type_name = "ConstantPool";
+	public static final long size = sizeof(type_name);
+
+	private static final long _tags = vm_struct.entry.find(type_name, "_tags").offset;// 8
+	private static final long _cache = vm_struct.entry.find(type_name, "_cache").offset;// 16
+	private static final long _pool_holder = vm_struct.entry.find(type_name, "_pool_holder").offset;// 24
 
 	// InvokeDynamic节点使用，通常为空。JDK25存在，但JDK26已移除，并改为_bsm_entries
-	private static final long _operands = switch_offset(
-			() -> vm_struct.entry.find("ConstantPool", "_operands").offset, // JDK21
-			() -> vm_struct.entry.find("ConstantPool", "_operands").offset // JDK25
+	private static final long _operands = switch_offset(// 32
+			() -> vm_struct.entry.find(type_name, "_operands").offset, // JDK21
+			() -> vm_struct.entry.find(type_name, "_operands").offset // JDK25
 	);
 
-	private static final long _resolved_klasses = vm_struct.entry.find("ConstantPool", "_resolved_klasses").offset;// 40
-	private static final long _major_version = vm_struct.entry.find("ConstantPool", "_major_version").offset;
-	private static final long _minor_version = vm_struct.entry.find("ConstantPool", "_minor_version").offset;
-	private static final long _generic_signature_index = vm_struct.entry.find("ConstantPool", "_generic_signature_index").offset;
-	private static final long _source_file_name_index = vm_struct.entry.find("ConstantPool", "_source_file_name_index").offset;
-	private static final long _length = vm_struct.entry.find("ConstantPool", "_length").offset;
-
-	public static final long size = sizeof("ConstantPool");
+	private static final long _resolved_klasses = vm_struct.entry.find(type_name, "_resolved_klasses").offset;// 40
+	private static final long _major_version = vm_struct.entry.find(type_name, "_major_version").offset;// 48
+	private static final long _minor_version = vm_struct.entry.find(type_name, "_minor_version").offset;// 50
+	private static final long _generic_signature_index = vm_struct.entry.find(type_name, "_generic_signature_index").offset;// 52
+	private static final long _source_file_name_index = vm_struct.entry.find(type_name, "_source_file_name_index").offset;// 54
+	private static final long _length = vm_struct.entry.find(type_name, "_length").offset;// 60
 
 	public ConstantPool(long address)
 	{
-		super("ConstantPool", address);
+		super(type_name, address);
 	}
 
 	@Override
@@ -60,7 +64,7 @@ public class ConstantPool extends Metadata
 
 	public void set_tags(Array_u1 tags)
 	{
-		super.write_pointer(_tags, tags);
+		super.write_memory_object_ptr(_tags, tags);
 	}
 
 	public ConstantPoolCache cache()
@@ -70,7 +74,7 @@ public class ConstantPool extends Metadata
 
 	public void set_cache(ConstantPoolCache cache)
 	{
-		super.write_pointer(_cache, cache);
+		super.write_memory_object_ptr(_cache, cache);
 	}
 
 	public long pool_holder_addr()
@@ -90,7 +94,7 @@ public class ConstantPool extends Metadata
 
 	public void set_pool_holder(InstanceKlass ik)
 	{
-		super.write_pointer(_pool_holder, ik);
+		super.write_memory_object_ptr(_pool_holder, ik);
 	}
 
 	public Array_pKlass resolved_klasses()
@@ -100,7 +104,7 @@ public class ConstantPool extends Metadata
 
 	public void set_resolved_klasses(Array_pKlass resolved_klasses)
 	{
-		super.write_pointer(_resolved_klasses, resolved_klasses);
+		super.write_memory_object_ptr(_resolved_klasses, resolved_klasses);
 	}
 
 	public Array_u2 operands()
@@ -110,7 +114,7 @@ public class ConstantPool extends Metadata
 
 	public void set_operands(Array_u2 operands)
 	{
-		super.write_pointer(_operands, operands);
+		super.write_memory_object_ptr(_operands, operands);
 	}
 
 	public int major_version()
@@ -165,7 +169,7 @@ public class ConstantPool extends Metadata
 	}
 
 	/**
-	 * 获取源文件信息
+	 * 获取源文件名称
 	 * 
 	 * @return
 	 */
@@ -173,6 +177,20 @@ public class ConstantPool extends Metadata
 	{
 		int source_file_name_index = source_file_name_index();
 		return (source_file_name_index == 0) ? null : symbol_at(source_file_name_index);
+	}
+
+	/**
+	 * 如果有源文件名称则设置源文件名称
+	 * 
+	 * @return
+	 */
+	public void try_set_source_file_name(Symbol source_file_name)
+	{
+		int source_file_name_index = source_file_name_index();
+		if (source_file_name_index != 0)
+		{
+			symbol_at_put(source_file_name_index, source_file_name);
+		}
 	}
 
 	// 拓展方法
@@ -242,12 +260,12 @@ public class ConstantPool extends Metadata
 	public void symbol_at_put(int cp_index, Symbol s)
 	{
 		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Utf8);
-		write_memory_object_ptr(symbol_at_addr(cp_index), s);
+		unsafe.write_pointer(symbol_at_addr(cp_index), s);
 	}
 
 	public void symbol_at_put(int cp_index, String s)
 	{
-		symbol_at_put(cp_index, new Symbol(0, s));
+		symbol_at_put(cp_index, Symbol.permanent(s));
 	}
 
 	public void klass_index_at_put(int cp_index, int name_index)
@@ -308,5 +326,60 @@ public class ConstantPool extends Metadata
 	{
 		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Double);
 		unsafe.write(double_at_addr(cp_index), d);
+	}
+
+	public int resolve_cp_cache_idx(byte bytecode, int cp_cache_idx)
+	{
+		switch (bytecode)
+		{
+		case Bytecodes.Code._invokedynamic:
+			return cache().resolved_indy_entry_at(cp_cache_idx).constant_pool_index();
+		case Bytecodes.Code._getfield:
+		case Bytecodes.Code._getstatic:
+		case Bytecodes.Code._putfield:
+		case Bytecodes.Code._putstatic:
+			return cache().resolved_field_entry_at(cp_cache_idx).constant_pool_index();
+		case Bytecodes.Code._invokeinterface:
+		case Bytecodes.Code._invokehandle:
+		case Bytecodes.Code._invokespecial:
+		case Bytecodes.Code._invokestatic:
+		case Bytecodes.Code._invokevirtual:
+			return cache().resolved_method_entry_at(cp_cache_idx).constant_pool_index();
+		default:
+			throw new java.lang.InternalError("invalid bytecode '" + bytecode + "' with cp cache index '" + cp_cache_idx + "'");
+		}
+	}
+
+	/**
+	 * 以WORD为单位的本结构体WORD对齐后的大小
+	 * 
+	 * @return
+	 */
+	public static final int header_size()
+	{
+		return (int) (align.align_up(size, vm_constant.BytesPerWord) / vm_constant.BytesPerWord);
+	}
+
+	public static final int size(int length)
+	{
+		return (int) align.align_metadata_size(header_size() + length);
+	}
+
+	@Override
+	public long size()
+	{
+		return size(length());
+	}
+
+	@Override
+	public String internal_name()
+	{
+		return "{constant pool}";
+	}
+
+	@Override
+	public int type()
+	{
+		return MetaspaceObj.Type.ConstantPoolType;
 	}
 }

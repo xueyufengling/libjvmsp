@@ -1571,7 +1571,7 @@ public abstract class type<_T>
 		 * 不要用于取对象地址，短时间内可能不会出问题，但对象会随着GC过程移动，原先的地址会失效。<br>
 		 * 主要配合memory使用，对分配的固定地址内存进行操作。
 		 */
-		public static class pointer implements AutoCloseable
+		public static class pointer implements jvmsp.memory.pointer_type, AutoCloseable
 		{
 			/**
 			 * C++层的指针转换为(void*)(uint64_t)addr
@@ -1648,6 +1648,7 @@ public abstract class type<_T>
 			 */
 			public static final pointer nullptr = pointer.to(0);
 
+			@Override
 			public long address()
 			{
 				return addr;

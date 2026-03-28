@@ -8,7 +8,7 @@ import jvmsp.memory.memory_object;
 /**
  * JVM的堆
  */
-public class Universe
+public abstract class Universe
 {
 	private static final long _collectedHeap = vm_struct.entry.find("Universe", "_collectedHeap").address;// 静态，堆的基地址
 

@@ -9,9 +9,13 @@ import jvmsp.type.cxx_type;
  */
 public class MethodFlags extends vm_struct
 {
-	public static final cxx_type MethodFlags = cxx_type.define("MethodFlags")
+	public static final String type_name = "MethodFlags";
+
+	public static final cxx_type MethodFlags = cxx_type.define(type_name)
 			.decl_field("_status", cxx_type.uint32_t)
 			.resolve();
+
+	public static final long size = MethodFlags.size();
 
 	private static final long _status = MethodFlags.field("_status").offset();
 
@@ -34,7 +38,7 @@ public class MethodFlags extends vm_struct
 
 	public MethodFlags(long address)
 	{
-		super("MethodFlags", address);
+		super(type_name, address);
 	}
 
 	public String toString()

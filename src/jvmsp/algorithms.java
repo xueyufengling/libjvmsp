@@ -71,4 +71,26 @@ public class algorithms
 		}
 		return left;
 	}
+
+	/**
+	 * 求2为底的对数，用于2的整数次幂的快速算法
+	 * 
+	 * @param num
+	 * @return -1为无效结果
+	 */
+	public static final int uint64_log2(long uint64)
+	{
+		if (uint64 == 0)// 非法值
+			return -1;
+		int power = 0;
+		long i = 0x01;
+		while (i != uint64)
+		{
+			++power;
+			if (i == 0)// 溢出
+				return -1;
+			i <<= 1;
+		}
+		return power;
+	}
 }

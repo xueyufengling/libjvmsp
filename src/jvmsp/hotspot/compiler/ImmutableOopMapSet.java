@@ -4,14 +4,15 @@ import jvmsp.hotspot.vm_struct;
 
 public class ImmutableOopMapSet extends vm_struct
 {
-	private static final long _count = vm_struct.entry.find("ImmutableOopMapSet", "_count").offset;
-	private static final long _size = vm_struct.entry.find("ImmutableOopMapSet", "_size").offset;
+	public static final String type_name = "ImmutableOopMapSet";
+	public static final long size = sizeof(type_name);
 
-	public static final long size = sizeof("ImmutableOopMapSet");
+	private static final long _count = vm_struct.entry.find(type_name, "_count").offset;
+	private static final long _size = vm_struct.entry.find(type_name, "_size").offset;
 
 	public ImmutableOopMapSet(long address)
 	{
-		super("ImmutableOopMapSet", address);
+		super(type_name, address);
 	}
 
 	/**
