@@ -35,28 +35,12 @@ public class virtual_machine
 	/**
 	 * 64或32位JVM
 	 */
-	public static final int jvm_bit_version;
-
-	/**
-	 * 是否运行在64位JVM，该变量为缓存值，用于指针的快速条件判断
-	 */
-	public static final boolean on_64bit_jvm;
+	public static final int vm_arch;
 
 	/**
 	 * HotSpotDiagnosticMXBean的实现类是 com.sun.management.internal.HotSpotDiagnostic
 	 */
 	private static final HotSpotDiagnosticMXBean instance_HotSpotDiagnosticMXBean;
-
-	/**
-	 * 压缩模式
-	 */
-	public static enum oops_mode
-	{
-		UnscaledNarrowOop, // 无压缩
-		ZeroBasedNarrowOop, // 压缩，基地址为0
-		DisjointBaseNarrowOop, //
-		HeapBasedNarrowOop;// 压缩，基地址非0
-	};
 
 	static
 	{
@@ -65,20 +49,14 @@ public class virtual_machine
 		if (arch == null)
 			throw new java.lang.UnknownError("system property 'sun.arch.data.model' found null");
 		if (arch.contains("64"))
-			jvm_bit_version = 64;
+			vm_arch = 64;
 		else
-			jvm_bit_version = 32;
-
-		if (jvm_bit_version == 64)
-			on_64bit_jvm = true;
-		else
-			on_64bit_jvm = false;
-
+			vm_arch = 32;
 		// 获取HotSpotDiagnosticMXBean实例
 		instance_HotSpotDiagnosticMXBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
 		if (instance_HotSpotDiagnosticMXBean == null)
 		{
-			throw new java.lang.InternalError("only Hotspot JVM supported");
+			throw new java.lang.InternalError("only Hotspot VM supported");
 		}
 	}
 
@@ -95,59 +73,96 @@ public class virtual_machine
 	 */
 	public static final boolean get_bool_option(String option_name)
 	{
-		return Boolean.parseBoolean(get_option(option_name).getValue().toString());
+		return Boolean.parseBoolean(get_option(option_name).getValue());
+	}
+
+	public static final boolean get_bool_option_or(String option_name, boolean default_value)
+	{
+		String value = get_option(option_name).getValue();
+		return value == null ? default_value : Boolean.parseBoolean(value);
 	}
 
 	public static final int get_int_option(String option_name)
 	{
-		return Integer.parseInt(get_option(option_name).getValue().toString());
+		return Integer.parseInt(get_option(option_name).getValue());
+	}
+
+	public static final int get_int_option_or(String option_name, int default_value)
+	{
+		String value = get_option(option_name).getValue();
+		return value == null ? default_value : Integer.parseInt(value);
 	}
 
 	public static final long get_long_option(String option_name)
 	{
-		return Long.parseLong(get_option(option_name).getValue().toString());
+		return Long.parseLong(get_option(option_name).getValue());
 	}
 
-	public static final void dump_heap(String file_name, boolean live)
+	public static final long get_long_option_or(String option_name, long default_value)
+	{
+		String value = get_option(option_name).getValue();
+		return value == null ? default_value : Long.parseLong(value);
+	}
+
+	/**
+	 * 无视权限获取系统属性
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static final String get_property(String key)
+	{
+		return instance_Properties.getProperty(key);
+	}
+
+	/**
+	 * 获取运行时的Java版本号
+	 * 
+	 * @return
+	 */
+	public static final String java_version()
+	{
+		return get_property("java.runtime.version");
+	}
+
+	/**
+	 * 无视权限设置系统属性
+	 * 
+	 * @param key
+	 * @param value
+	 */
+	public static final void set_property(String key, String value)
+	{
+		instance_Properties.setProperty(key, value);
+	}
+
+	/**
+	 * 无视操作权限设置JVM的参数设置，必须自己确保value的类型与JVM的参数类型一致！调用的是native方法，但不是所有参数都支持运行时修改。大部分标志无法成功设置，因为检测可写标志在native方法内，无法干涉
+	 * 
+	 * @param name
+	 * @param value
+	 */
+	public static final void set_option(String name, Object value)
 	{
 		try
 		{
-			instance_HotSpotDiagnosticMXBean.dumpHeap(file_name, live);
+			Object flag = Flag_getFlag.invoke(name);
+			Object v = Flag_getValue.invoke(class_Flag.cast(flag));
+			VarHandle writeable = symbols.find_var(class_Flag, "writeable", boolean.class);
+			writeable.set(flag, true);
+			if (v instanceof Long lv)
+				Flag_setLongValue.invokeExact(name, lv.longValue());
+			if (v instanceof Double dv)
+				Flag_setDoubleValue.invokeExact(name, dv.doubleValue());
+			if (v instanceof Boolean bv)
+				Flag_setBooleanValue.invokeExact(name, bv.booleanValue());
+			if (v instanceof String sv)
+				Flag_setStringValue.invokeExact(name, (String) sv);
 		}
-		catch (IOException ex)
+		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("dump heap to '" + file_name + "' faield", ex);
+			throw new java.lang.InternalError("set option '" + name + "' to '" + value + "' failed", ex);
 		}
-	}
-
-	/**
-	 * 堆内存的最大大小
-	 * 
-	 * @return
-	 */
-	public static final long max_heap_size()
-	{
-		return Runtime.getRuntime().maxMemory();
-	}
-
-	/**
-	 * 堆内存的当前大小
-	 * 
-	 * @return
-	 */
-	public static final long current_heap_size()
-	{
-		return Runtime.getRuntime().totalMemory();
-	}
-
-	/**
-	 * 堆内存的当前空闲空间，创建新对象时空闲空间减小，GC后空闲空间增加
-	 * 
-	 * @return
-	 */
-	public static final long free_heap_size()
-	{
-		return Runtime.getRuntime().freeMemory();
 	}
 
 	/**
@@ -212,53 +227,90 @@ public class virtual_machine
 	}
 
 	/**
-	 * 是否开启oop压缩，默认顺带开启对象头的klass word压缩（UseCompressedClassPointers）。
-	 */
-	private boolean UseCompressedOops;
-
-	private boolean UseCompactObjectHeaders;
-
-	private boolean UseCompressedClassPointers;
-
-	/**
-	 * 堆内存的实际起始地址，大于等于HeapBaseMinAddress
-	 */
-	private long heap_base_address;
-
-	private long narrow_oop_base_address;
-
-	/**
-	 * 压缩oop时的位移
-	 */
-	private long narrow_oop_address_shift;
-
-	/**
-	 * 堆内存相对地址范围
-	 */
-	private long heap_address_range;
-
-	private object_header_layout header_layout;
-
-	private virtual_machine()
-	{
-		this.update_vm_info();
-	}
-
-	public static final virtual_machine host = new virtual_machine();
-
-	public long get_header_byte_length()
-	{
-		return header_layout.header_byte_length;
-	}
-
-	/**
-	 * 获取JVM堆的基地址
+	 * 获取JVM堆的基地址，大于等于HeapBaseMinAddress。<br>
 	 * 
 	 * @return
 	 */
 	public static final long heap_base()
 	{
 		return Universe.heap().reserved().start();
+	}
+
+	public static final void dump_heap(String file_name, boolean live)
+	{
+		try
+		{
+			instance_HotSpotDiagnosticMXBean.dumpHeap(file_name, live);
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("dump heap to '" + file_name + "' faield", ex);
+		}
+	}
+
+	/**
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/runtime/globals.hpp
+	 * 运行时的VM全局变量
+	 */
+
+	/**
+	 * 是否开启oop压缩，默认顺带开启对象头的klass word压缩（UseCompressedClassPointers）。
+	 */
+	public static final boolean UseCompressedOops = virtual_machine.get_bool_option_or("UseCompressedOops", false);
+
+	public static final boolean UseCompactObjectHeaders = virtual_machine.get_bool_option_or("UseCompressedClassPointers", false);
+
+	public static final boolean UseCompressedClassPointers = virtual_machine.get_bool_option_or("UseCompressedClassPointers", false);
+
+	public static final object_header_layout header_layout;
+
+	static
+	{
+		// 对象头信息内存布局
+		switch (vm_arch)
+		{
+		case 32:
+		{
+			header_layout = object_header_layout.Uncompressed32;
+			break;
+		}
+		case 64:
+		{
+			if (UseCompactObjectHeaders)
+			{
+				header_layout = object_header_layout.Compact;
+			}
+			else if (UseCompressedOops && UseCompressedClassPointers)
+			{
+				header_layout = object_header_layout.Compressed;
+			}
+			else
+			{
+				header_layout = object_header_layout.Uncompressed64;
+			}
+			break;
+		}
+		default:
+		{
+			throw new java.lang.InternalError("unknown native jvm bit-version '" + vm_arch + "'");
+		}
+		}
+	}
+
+	public static final int object_header_byte_length()
+	{
+		return header_layout.header_byte_length;
+	}
+
+	/**
+	 * 堆上的地址
+	 * 
+	 * @param native_addr
+	 * @return
+	 */
+	public static final long address_on_heap(long native_addr)
+	{
+		return native_addr - heap_base();
 	}
 
 	/**
@@ -294,103 +346,16 @@ public class virtual_machine
 		return CompressedKlassPointers.shift();
 	}
 
-	public final void update_vm_info()
-	{
-		if (on_64bit_jvm)
-		{
-			// 64位JVM需要检查是否启用了指针压缩
-			UseCompressedOops = get_bool_option("UseCompressedOops");
-			try
-			{
-				UseCompressedClassPointers = virtual_machine.get_bool_option("UseCompressedClassPointers");
-			}
-			catch (Throwable ex)
-			{
-				if (UseCompressedOops)
-				{
-					UseCompressedClassPointers = true;// 当UseCompressedOops为true时，该选项默认打开，除非手动关闭
-				}
-				else
-				{
-					UseCompressedClassPointers = false;
-				}
-			}
-		}
-		try
-		{
-			UseCompactObjectHeaders = virtual_machine.get_bool_option("UseCompactObjectHeaders");// JDK25+压缩对象头，压缩后变为8字节
-		}
-		catch (Throwable ex)
-		{
-			// 获取不存在的Flag时会抛出异常，为了适配低版本JVM可能没有相应的标志，需要捕获错误但不操作
-		}
-		narrow_oop_base_address = narrow_oop_base();
-		narrow_oop_address_shift = narrow_oop_shift();
-		// 实际堆内存终止地址大于不压缩oop时支持的最大地址，则需要压缩oop，哪怕没启用UseCompressedOops也会自动开启压缩。
-		// 指定了UseCompressedOops后则必定压缩。
-		// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
-		// 对象头信息内存布局
-		switch (jvm_bit_version)
-		{
-		case 32:
-		{
-			header_layout = object_header_layout.Uncompressed32;
-			break;
-		}
-		case 64:
-		{
-			if (UseCompactObjectHeaders)
-			{
-				header_layout = object_header_layout.Compact;
-			}
-			else if (UseCompressedOops && UseCompressedClassPointers)
-			{
-				header_layout = object_header_layout.Compressed;
-			}
-			else
-			{
-				header_layout = object_header_layout.Uncompressed64;
-			}
-			break;
-		}
-		default:
-		{
-			throw new java.lang.InternalError("unknown native jvm bit-version '" + jvm_bit_version + "'");
-		}
-		}
-	}
-
-	public final long get_heap_address_range()
-	{
-		return heap_address_range;
-	}
-
-	public final object_header_layout get_header_layout()
-	{
-		return header_layout;
-	}
-
-	/**
-	 * 堆上的地址
-	 * 
-	 * @param native_addr
-	 * @return
-	 */
-	public final long address_on_heap(long native_addr)
-	{
-		return native_addr - heap_base_address;
-	}
-
 	/**
 	 * 编码压缩oop<br>
-	 * oop.encode_heap_oop_not_null
+	 * oop.encode_heap_oop_not_null()
 	 * 
 	 * @param native_addr
 	 * @return
 	 */
-	public final int encode_oop(long native_addr)
+	public static final int encode_oop(long native_addr)
 	{
-		return (int) ((native_addr - narrow_oop_base_address) >> narrow_oop_address_shift);
+		return CompressedOops.encode(native_addr);
 	}
 
 	/**
@@ -399,39 +364,9 @@ public class virtual_machine
 	 * @param oop
 	 * @return
 	 */
-	public final long decode_oop(int oop)
+	public static final long decode_oop(int oop)
 	{
-		return narrow_oop_base_address + ((oop & cxx_type.uint32_t_mask) << narrow_oop_address_shift);
-	}
-
-	/**
-	 * 从压缩或未压缩的OOP获取对象真实内存地址
-	 * 
-	 * @param oop
-	 * @return
-	 */
-	public final long address_of_oop(long oop)
-	{
-		if (UseCompressedOops)
-		{
-			return decode_oop((int) oop);
-		}
-		else
-		{
-			return oop;
-		}
-	}
-
-	public final int oop_of_address(long addr)
-	{
-		if (UseCompressedOops)
-		{
-			return encode_oop(addr);
-		}
-		else
-		{
-			return (int) addr;
-		}
+		return CompressedOops.decode(oop);
 	}
 
 	/**
@@ -460,14 +395,14 @@ public class virtual_machine
 	 * @param object
 	 * @return
 	 */
-	public final long address_of(Object object)
+	public static final long address_of(Object object)
 	{
-		return address_of_oop((int) java_type.oop_of(object));
+		return decode_oop((int) java_type.oop_of(object));
 	}
 
-	public final Object resolve_address(long addr)
+	public static final Object resolve_address(long addr)
 	{
-		return resolve_oop(oop_of_address(addr));
+		return resolve_oop(encode_oop(addr));
 	}
 
 	/**
@@ -476,7 +411,7 @@ public class virtual_machine
 	 * @param klass_ptr
 	 * @return
 	 */
-	public final long encode_narrow_klass(long klass_ptr)
+	public static final long encode_narrow_klass(long klass_ptr)
 	{
 		return object_header_layout.encode_narrow_klass(klass_ptr);
 	}
@@ -489,26 +424,9 @@ public class virtual_machine
 	 * @param narrow_klass
 	 * @return
 	 */
-	public final long decode_narrow_klass(int narrow_klass)
+	public static final long decode_narrow_klass(int narrow_klass)
 	{
 		return object_header_layout.decode_narrow_klass(narrow_klass);
-	}
-
-	/**
-	 * 从压缩或未压缩的KlassWord获取Klass*地址。<br>
-	 * 该地址位于metaspace，地址是不变的，可以长期使用。<br>
-	 * 
-	 * @param oop
-	 * @return
-	 */
-	public final long klass_pointer_of_klass_word(long klass_word)
-	{
-		return decode_narrow_klass((int) klass_word);
-	}
-
-	public final long klass_word_of_klass_pointer(long klass_ptr)
-	{
-		return encode_narrow_klass(klass_ptr);
 	}
 
 	/**
@@ -517,7 +435,7 @@ public class virtual_machine
 	 * @param clazz
 	 * @return
 	 */
-	public final long klass_pointer_of(Class<?> clazz)
+	public static final long klass_pointer_of(Class<?> clazz)
 	{
 		return java_lang_Class.klass_ptr(clazz);
 	}
@@ -527,17 +445,17 @@ public class virtual_machine
 		return java_lang_Class.klass_word(clazz);
 	}
 
-	public final long get_klass_word(Object obj)
+	public static final long get_klass_word(Object obj)
 	{
 		return header_layout.get_klass_word(obj);
 	}
 
-	public final void set_klass_word(Object obj, long klass_word)
+	public static final void set_klass_word(Object obj, long klass_word)
 	{
 		header_layout.set_klass_word(obj, klass_word);
 	}
 
-	public final void set_klass_word(long oop, long klass_word)
+	public static final void set_klass_word(long oop, long klass_word)
 	{
 		header_layout.set_klass_word(oop, klass_word);
 	}
@@ -575,67 +493,6 @@ public class virtual_machine
 		catch (SecurityException | IllegalArgumentException ex)
 		{
 			throw new java.lang.InternalError("get class loader '" + class_loader_name + "' classpath failed", ex);
-		}
-	}
-
-	/**
-	 * 无视权限获取系统属性
-	 * 
-	 * @param key
-	 * @return
-	 */
-	public static final String get_property(String key)
-	{
-		return instance_Properties.getProperty(key);
-	}
-
-	/**
-	 * 获取运行时的Java版本号
-	 * 
-	 * @return
-	 */
-	public static final String java_version()
-	{
-		return get_property("java.runtime.version");
-	}
-
-	/**
-	 * 无视权限设置系统属性
-	 * 
-	 * @param key
-	 * @param value
-	 */
-	public static final void set_property(String key, String value)
-	{
-		instance_Properties.setProperty(key, value);
-	}
-
-	/**
-	 * 无视操作权限设置JVM的参数设置，必须自己确保value的类型与JVM的参数类型一致！调用的是native方法，但不是所有参数都支持运行时修改。大部分标志无法成功设置，因为检测可写标志在native方法内，无法干涉
-	 * 
-	 * @param name
-	 * @param value
-	 */
-	public static final void set_option(String name, Object value)
-	{
-		try
-		{
-			Object flag = Flag_getFlag.invoke(name);
-			Object v = Flag_getValue.invoke(class_Flag.cast(flag));
-			VarHandle writeable = symbols.find_var(class_Flag, "writeable", boolean.class);
-			writeable.set(flag, true);
-			if (v instanceof Long lv)
-				Flag_setLongValue.invokeExact(name, lv.longValue());
-			if (v instanceof Double dv)
-				Flag_setDoubleValue.invokeExact(name, dv.doubleValue());
-			if (v instanceof Boolean bv)
-				Flag_setBooleanValue.invokeExact(name, bv.booleanValue());
-			if (v instanceof String sv)
-				Flag_setStringValue.invokeExact(name, (String) sv);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("set option '" + name + "' to '" + value + "' failed", ex);
 		}
 	}
 

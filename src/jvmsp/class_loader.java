@@ -372,13 +372,16 @@ public class class_loader
 	/**
 	 * 以指定的lookup类作为上下文定义类
 	 * 
+	 * @param lookup
 	 * @param name
 	 * @param b
 	 * @param off
 	 * @param len
 	 * @param protection_domain
+	 * @param initialize
+	 * @param flags
+	 * @param class_data        必须隐藏类才能定义class_data
 	 * @return
-	 * @throws ClassFormatError
 	 */
 	public static final Class<?> define(Class<?> lookup, String name, byte[] b, int off, int len, ProtectionDomain protection_domain, boolean initialize, int flags, Object class_data)
 	{

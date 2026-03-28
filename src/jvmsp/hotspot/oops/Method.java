@@ -21,6 +21,8 @@ public class Method extends Metadata
 	private static final long _method_counters = vm_struct.entry.find(type_name, "_method_counters").offset;
 	private static final long _vtable_index = vm_struct.entry.find(type_name, "_vtable_index").offset;
 	private static final long _access_flags = vm_struct.entry.find(type_name, "_access_flags").offset;
+	// _flags字段位于u2 _intrinsic_id之前
+	private static final long _flags = vm_struct.entry.find(type_name, "_flags._status").offset;
 	private static final long _intrinsic_id = vm_struct.entry.find(type_name, "_intrinsic_id").offset;
 	private static final long _i2i_entry = vm_struct.entry.find(type_name, "_i2i_entry").offset;
 
@@ -29,9 +31,6 @@ public class Method extends Metadata
 	// JDK21为CompiledMethod*，JDK25为nmethod*
 	private static final long _code = vm_struct.entry.find(type_name, "_code").offset;
 	private static final long _from_interpreted_entry = vm_struct.entry.find(type_name, "_from_interpreted_entry").offset;
-
-	// _flags字段位于u2 _intrinsic_id之前
-	private static final long _flags = _intrinsic_id - MethodFlags.MethodFlags.size();
 
 	public Method(long address)
 	{

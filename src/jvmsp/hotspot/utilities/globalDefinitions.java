@@ -87,13 +87,10 @@ public class globalDefinitions
 	// wordSize == HeapWordSize 且 wordSize == BytesPerWord
 	public static final int wordSize = HeapWordSize;
 
-	public static final boolean UseCompressedOops;
-
 	static
 	{
 		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/utilities/globalDefinitions.cpp#L186
-		UseCompressedOops = virtual_machine.get_bool_option("UseCompressedOops");
-		if (UseCompressedOops)
+		if (virtual_machine.UseCompressedOops)
 		{
 			heapOopSize = (int) cxx_type.jint.size();
 		}

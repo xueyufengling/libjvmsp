@@ -14,19 +14,19 @@ public class ConstMethod extends MetaspaceObj
 	public static final String type_name = "ConstMethod";
 	public static final long size = sizeof(type_name);
 
-	private static final long _fingerprint = vm_struct.entry.find(type_name, "_fingerprint").offset;
-	private static final long _constants = vm_struct.entry.find(type_name, "_constants").offset;
-	private static final long _stackmap_data = vm_struct.entry.find(type_name, "_stackmap_data").offset;
-	private static final long _constMethod_size = vm_struct.entry.find(type_name, "_constMethod_size").offset;
-	private static final long _flags_flags = vm_struct.entry.find(type_name, "_flags._flags").offset;
-	private static final long _code_size = vm_struct.entry.find(type_name, "_code_size").offset;
-	private static final long _name_index = vm_struct.entry.find(type_name, "_name_index").offset;
-	private static final long _signature_index = vm_struct.entry.find(type_name, "_signature_index").offset;
-	private static final long _method_idnum = vm_struct.entry.find(type_name, "_method_idnum").offset;
-	private static final long _max_stack = vm_struct.entry.find(type_name, "_max_stack").offset;
-	private static final long _max_locals = vm_struct.entry.find(type_name, "_max_locals").offset;
-	private static final long _size_of_parameters = vm_struct.entry.find(type_name, "_size_of_parameters").offset;
-	private static final long _num_stack_arg_slots = vm_struct.entry.find(type_name, "_num_stack_arg_slots").offset;
+	private static final long _fingerprint = vm_struct.entry.find(type_name, "_fingerprint").offset;// 0
+	private static final long _constants = vm_struct.entry.find(type_name, "_constants").offset;// 8
+	private static final long _stackmap_data = vm_struct.entry.find(type_name, "_stackmap_data").offset;// 16
+	private static final long _constMethod_size = vm_struct.entry.find(type_name, "_constMethod_size").offset;// 24
+	private static final long _flags_flags = vm_struct.entry.find(type_name, "_flags._flags").offset;// 28
+	private static final long _code_size = vm_struct.entry.find(type_name, "_code_size").offset;// 34
+	private static final long _name_index = vm_struct.entry.find(type_name, "_name_index").offset;// 36
+	private static final long _signature_index = vm_struct.entry.find(type_name, "_signature_index").offset;// 38
+	private static final long _method_idnum = vm_struct.entry.find(type_name, "_method_idnum").offset;// 40
+	private static final long _max_stack = vm_struct.entry.find(type_name, "_max_stack").offset;// 42
+	private static final long _max_locals = vm_struct.entry.find(type_name, "_max_locals").offset;// 44
+	private static final long _size_of_parameters = vm_struct.entry.find(type_name, "_size_of_parameters").offset;// 46
+	private static final long _num_stack_arg_slots = vm_struct.entry.find(type_name, "_num_stack_arg_slots").offset;// 48
 
 	// ConstMethod对象中储存字节码的偏移量
 	public static final long codes_offset = size;

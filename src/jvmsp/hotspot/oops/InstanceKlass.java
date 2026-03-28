@@ -28,6 +28,7 @@ public class InstanceKlass extends Klass
 	private static final long _idnum_allocated_count = vm_struct.entry.find(type_name, "_idnum_allocated_count").offset; // 286
 	private static final long _init_state = vm_struct.entry.find(type_name, "_init_state").offset; // 288
 	private static final long _reference_type = vm_struct.entry.find(type_name, "_reference_type").offset; // 289
+	private static final long _misc_flags_flags = vm_struct.entry.find(type_name, "_misc_flags._flags").offset; // 290
 	private static final long _init_thread = vm_struct.entry.find(type_name, "_init_thread").offset; // 304
 	private static final long _oop_map_cache = vm_struct.entry.find(type_name, "_oop_map_cache").offset; // 312
 	private static final long _jni_ids = vm_struct.entry.find(type_name, "_jni_ids").offset; // 320
@@ -65,6 +66,88 @@ public class InstanceKlass extends Klass
 	public void set_source_debug_extension(String source_debug_extension)
 	{
 		super.write_cstr(_source_debug_extension, source_debug_extension);
+	}
+
+	public int nonstatic_field_size()
+	{
+		return super.read_cint(_nonstatic_field_size);
+	}
+
+	public void set_nonstatic_field_size(int nonstatic_field_size)
+	{
+		super.write_cint(_nonstatic_field_size, nonstatic_field_size);
+	}
+
+	public int static_field_size()
+	{
+		return super.read_cint(_static_field_size);
+	}
+
+	public void set_static_field_size(int static_field_size)
+	{
+		super.write_cint(_static_field_size, static_field_size);
+	}
+
+	public int nonstatic_oop_map_size()
+	{
+		return super.read_cint(_nonstatic_oop_map_size);
+	}
+
+	public void set_nonstatic_oop_map_size(int nonstatic_oop_map_size)
+	{
+		super.write_cint(_nonstatic_oop_map_size, nonstatic_oop_map_size);
+	}
+
+	public int static_oop_field_count()
+	{
+		return super.read_uint16_t(_static_oop_field_count);
+	}
+
+	public void set_static_oop_field_count(int static_oop_field_count)
+	{
+		super.write_uint16_t(_static_oop_field_count, static_oop_field_count);
+	}
+
+	public int idnum_allocated_count()
+	{
+		return super.read_uint16_t(_idnum_allocated_count);
+	}
+
+	public void set_idnum_allocated_count(int idnum_allocated_count)
+	{
+		super.write_uint16_t(_idnum_allocated_count, idnum_allocated_count);
+	}
+
+	/**
+	 * 当前的初始化状态。<br>
+	 * 返回值为ClassState中定义的值。<br>
+	 * 
+	 * @return
+	 */
+	public byte init_state()
+	{
+		return super.read_byte(_init_state);
+	}
+
+	public void set_init_state(byte init_state)
+	{
+		super.write(_init_state, init_state);
+	}
+
+	/**
+	 * 当前类Klass的引用类型
+	 * 返回值为ReferenceType中定义的值。<br>
+	 * 
+	 * @return
+	 */
+	public byte reference_type()
+	{
+		return super.read_byte(_reference_type);
+	}
+
+	public void set_reference_type(byte reference_type)
+	{
+		super.write(_reference_type, reference_type);
 	}
 
 	/**
@@ -213,9 +296,9 @@ public class InstanceKlass extends Klass
 		constants().set_source_file_name_index(sourcefile_index);
 	}
 
-	public void try_set_source_file_name(Symbol source_file_name)
+	public boolean try_set_source_file_name(Symbol source_file_name)
 	{
-		constants().try_set_source_file_name(source_file_name);
+		return constants().try_set_source_file_name(source_file_name);
 	}
 
 	public AccessFlags access_flags()
@@ -302,14 +385,14 @@ public class InstanceKlass extends Klass
 		super.write_cint(_itable_len, itable_length);
 	}
 
-	public int nonstatic_oop_map_size()
+	/**
+	 * 获取类InstanceKlass的运行时JVM定义标志
+	 * 
+	 * @return
+	 */
+	public InstanceKlassFlags ik_misc_flags()
 	{
-		return super.read_cint(_nonstatic_oop_map_size);
-	}
-
-	public void set_nonstatic_oop_map_size(int nonstatic_oop_map_size)
-	{
-		super.write_cint(_nonstatic_oop_map_size, nonstatic_oop_map_size);
+		return super.read_memory_object(InstanceKlassFlags.class, _misc_flags_flags);
 	}
 
 	public static final int header_size()

@@ -1,5 +1,7 @@
 package jvmsp.hotspot.oops;
 
+import java.util.Iterator;
+
 import jvmsp.structs.long_array;
 import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
@@ -11,7 +13,7 @@ import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.utilities.AccessFlags;
 
-public abstract class Klass extends Metadata
+public abstract class Klass extends Metadata implements Iterable<Klass>
 {
 	public static final String type_name = "Klass";
 	public static final long size = sizeof(type_name);
@@ -419,7 +421,7 @@ public abstract class Klass extends Metadata
 		return _kind() == TypeArrayKlassKind;
 	}
 
-	public KlassFlags _misc_flags()
+	public KlassFlags misc_flags()
 	{
 		return super.read_memory_object(KlassFlags.class, _misc_flags);
 	}
@@ -436,42 +438,42 @@ public abstract class Klass extends Metadata
 	 */
 	public boolean is_hidden()
 	{
-		return _misc_flags().is_hidden_class();
+		return misc_flags().is_hidden_class();
 	}
 
 	public void set_is_hidden(boolean value)
 	{
-		_misc_flags().set_is_hidden_class(value);
+		misc_flags().set_is_hidden_class(value);
 	}
 
 	public boolean is_value_based()
 	{
-		return _misc_flags().is_value_based_class();
+		return misc_flags().is_value_based_class();
 	}
 
 	public void set_is_value_based(boolean value)
 	{
-		_misc_flags().set_is_value_based_class(value);
+		misc_flags().set_is_value_based_class(value);
 	}
 
 	public boolean has_finalizer()
 	{
-		return _misc_flags().has_finalizer();
+		return misc_flags().has_finalizer();
 	}
 
 	public void set_has_finalizer(boolean value)
 	{
-		_misc_flags().set_has_finalizer(value);
+		misc_flags().set_has_finalizer(value);
 	}
 
 	public boolean is_cloneable_fast()
 	{
-		return _misc_flags().is_cloneable_fast();
+		return misc_flags().is_cloneable_fast();
 	}
 
 	public void set_is_cloneable_fast(boolean value)
 	{
-		_misc_flags().set_is_cloneable_fast(value);
+		misc_flags().set_is_cloneable_fast(value);
 	}
 
 	/**
@@ -500,9 +502,46 @@ public abstract class Klass extends Metadata
 	 * 
 	 * @return
 	 */
-	public Klass _next_link()
+	public Klass next_link()
 	{
 		return super.read_memory_object_ptr(Klass.class, _next_link);
+	}
+
+	/**
+	 * 获取下一个Klass的指针
+	 * 
+	 * @return
+	 */
+	public long _next_link()
+	{
+		return super.read_pointer(_next_link);
+	}
+
+	public boolean has_next_link()
+	{
+		return _next_link() != 0;
+	}
+
+	/**
+	 * 链式迭代同一个ClassLoader加载的Klass链。<br>
+	 */
+	@Override
+	public Iterator<Klass> iterator()
+	{
+		return new Iterator<>()
+		{
+			@Override
+			public boolean hasNext()
+			{
+				return has_next_link();
+			}
+
+			@Override
+			public Klass next()
+			{
+				return next_link();
+			}
+		};
 	}
 
 	public OopHandle java_mirror()

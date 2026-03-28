@@ -46,43 +46,85 @@ public class KlassFlags extends vm_struct
 		super.write(_flags, flags);
 	}
 
+	public static final boolean is_hidden_class(byte flags)
+	{
+		return memory.flag_bit(flags, is_hidden_class);
+	}
+
+	public static final byte set_is_hidden_class(byte flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_hidden_class, value);
+	}
+
+	public static final boolean is_value_based_class(byte flags)
+	{
+		return memory.flag_bit(flags, is_value_based_class);
+	}
+
+	public static final byte set_is_value_based_class(byte flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_value_based_class, value);
+	}
+
+	public static final boolean has_finalizer(byte flags)
+	{
+		return memory.flag_bit(flags, has_finalizer);
+	}
+
+	public static final byte set_has_finalizer(byte flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, has_finalizer, value);
+	}
+
+	public static final boolean is_cloneable_fast(byte flags)
+	{
+		return memory.flag_bit(flags, is_cloneable_fast);
+	}
+
+	public static final byte set_is_cloneable_fast(byte flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_cloneable_fast, value);
+	}
+
+	// 成员方法
+
 	public boolean is_hidden_class()
 	{
-		return memory.flag_bit(_flags(), is_hidden_class);
+		return is_hidden_class(_flags());
 	}
 
 	public void set_is_hidden_class(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), is_hidden_class, value));
+		set_flags(set_is_hidden_class(_flags(), value));
 	}
 
 	public boolean is_value_based_class()
 	{
-		return memory.flag_bit(_flags(), is_value_based_class);
+		return is_value_based_class(_flags());
 	}
 
 	public void set_is_value_based_class(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), is_value_based_class, value));
+		set_flags(set_is_value_based_class(_flags(), value));
 	}
 
 	public boolean has_finalizer()
 	{
-		return memory.flag_bit(_flags(), has_finalizer);
+		return has_finalizer(_flags());
 	}
 
 	public void set_has_finalizer(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), has_finalizer, value));
+		set_flags(set_has_finalizer(_flags(), value));
 	}
 
 	public boolean is_cloneable_fast()
 	{
-		return memory.flag_bit(_flags(), is_cloneable_fast);
+		return is_cloneable_fast(_flags());
 	}
 
 	public void set_is_cloneable_fast(boolean value)
 	{
-		set_flags(memory.set_flag_bit(_flags(), is_cloneable_fast, value));
+		set_flags(set_is_cloneable_fast(_flags(), value));
 	}
 }

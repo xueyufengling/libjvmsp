@@ -3,6 +3,7 @@ package jvmsp.hotspot;
 import java.lang.invoke.MethodHandle;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import jvmsp.memory;
 import jvmsp.shared_object;
@@ -11,6 +12,7 @@ import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.object;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.unsafe;
+import jvmsp.hotspot.vm_struct.entry;
 import jvmsp.libso.libjvm;
 
 /**
@@ -54,19 +56,58 @@ public class vm_address
 			return sb.toString();
 		}
 
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o)
+				return true;
+			if (o == null)
+				return false;
+			if (o instanceof entry other)
+			{
+				return value == other.value &&
+						Objects.equals(name, other.name);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(
+					name,
+					value);
+		}
+
 		private static final Map<String, entry> address_entries = new HashMap<>();
 
-		static
+		private static final void collect_entries(Map<String, entry> address_entries, long vm_addresses)
 		{
 			for (int idx = 0;; ++idx)
 			{
-				entry entry = new entry(jvmciHotSpotVMAddresses + idx * VMAddressEntry.size());
-				address_entries.put(entry.name, entry);
+				entry entry = new entry(vm_addresses + idx * VMAddressEntry.size());
 				if (entry.name == null)
 				{
 					break;
 				}
+				entry existed = address_entries.get(entry.name);
+				if (existed != null && !entry.equals(existed))
+				{
+					throw new java.lang.InternalError("conflict VMAddressEntry '" + entry + "' and '" + existed + "'");
+				}
+				else
+				{
+					address_entries.put(entry.name, entry);
+				}
 			}
+		}
+
+		static
+		{
+			collect_entries(address_entries, jvmciHotSpotVMAddresses);
 		}
 
 		public static final entry get(String addr_name)

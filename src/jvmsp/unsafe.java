@@ -1073,12 +1073,11 @@ public final class unsafe
 	}
 
 	/**
-	 * 读取16位整数
+	 * 读取无符号16位整数
 	 * 
 	 * @param native_addr
 	 * @return
 	 */
-
 	public static final int read_uint16_t(Object base, long offset)
 	{
 		try
@@ -1111,6 +1110,47 @@ public final class unsafe
 	public static final void write_uint16_t(long native_addr, int x)
 	{
 		write_uint16_t(null, native_addr, x);
+	}
+
+	/**
+	 * 读取无符号8位整数
+	 * 
+	 * @param base
+	 * @param offset
+	 * @return
+	 */
+	public static final int read_uint8_t(Object base, long offset)
+	{
+		try
+		{
+			return cxx_type.as_uint8_t((byte) getByte.invoke(instance_jdk_internal_misc_Unsafe, base, offset));
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get uint8_t int at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final int read_uint8_t(long native_addr)
+	{
+		return read_uint8_t(null, native_addr);
+	}
+
+	public static final void write_uint8_t(Object base, long offset, short x)
+	{
+		try
+		{
+			putByte.invoke(instance_jdk_internal_misc_Unsafe, base, offset, cxx_type.uint8_t(x));
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("put uint8_t at '" + base + "' offset '" + offset + "' failed", ex);
+		}
+	}
+
+	public static final void write_uint8_t(long native_addr, short x)
+	{
+		write_uint8_t(null, native_addr, x);
 	}
 
 	/**
@@ -2171,7 +2211,7 @@ public final class unsafe
 	public static final <_T> long bottom_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return virtual_machine.host.get_header_byte_length();// 即便没有字段，也要计算对象头的偏移量
+			return virtual_machine.object_header_byte_length();// 即便没有字段，也要计算对象头的偏移量
 		Field last = last_memory_member_field(clazz);
 		if (last == null)
 			return bottom_offset(clazz.getSuperclass());
@@ -2189,7 +2229,7 @@ public final class unsafe
 	public static final <_T> long top_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return virtual_machine.host.get_header_byte_length();
+			return virtual_machine.object_header_byte_length();
 		Field first = first_memory_member_field(clazz);
 		if (first == null)
 			return bottom_offset(clazz.getSuperclass());

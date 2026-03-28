@@ -127,17 +127,6 @@ public abstract class reflection
 	}
 
 	/**
-	 * 初始化一个类
-	 * 
-	 * @param clazz
-	 * @throws ClassNotFoundException
-	 */
-	public static final void initialize_class(Class<?> clazz) throws ClassNotFoundException
-	{
-		Class.forName(clazz.getName(), true, clazz.getClassLoader());
-	}
-
-	/**
 	 * 无视权限设置是否可访问。 注意：如果access_obj为null，JVM将直接崩溃。
 	 * 
 	 * @param <_AccessObj>

@@ -14,25 +14,27 @@ public class OopHandle extends vm_struct
 		super(type_name, address);
 	}
 
-	public long _obj()
+	public int obj()
 	{
 		return super.read_int(_obj);
 	}
 
 	/**
-	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/oopHandle.inline.hpp#L33
-	 * 解析OOP
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/oopHandle.inline.hpp#L33<br>
+	 * 解析OOP将其还原为对象的内存地址。<br>
 	 * 
 	 * @return
 	 */
 	public long resolve()
 	{
-		long obj = _obj();
+		int obj = obj();
 		if (obj != 0)
 		{
-			// long oop = NativeAccess<>::oop_load(_obj);
-			// return oop;
+			return CompressedOops.decode(obj);
 		}
-		return 0;
+		else
+		{
+			return 0;
+		}
 	}
 }

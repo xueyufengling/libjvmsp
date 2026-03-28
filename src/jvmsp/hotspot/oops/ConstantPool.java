@@ -1,5 +1,6 @@
 package jvmsp.hotspot.oops;
 
+import jvmsp.memory;
 import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_constant;
@@ -34,7 +35,67 @@ public class ConstantPool extends Metadata
 	private static final long _minor_version = vm_struct.entry.find(type_name, "_minor_version").offset;// 50
 	private static final long _generic_signature_index = vm_struct.entry.find(type_name, "_generic_signature_index").offset;// 52
 	private static final long _source_file_name_index = vm_struct.entry.find(type_name, "_source_file_name_index").offset;// 54
+	private static final long _flags = vm_struct.entry.find(type_name, "_flags").offset;// 56
 	private static final long _length = vm_struct.entry.find(type_name, "_length").offset;// 60
+
+	// Flags
+	public static final short _has_preresolution = 1;
+	public static final short _on_stack = 2;
+	public static final short _in_aot_cache = 4;
+	public static final short _has_dynamic_constant = 8;
+	public static final short _is_for_method_handle_intrinsic = 16;
+
+	// 常量池标记工具方法
+
+	public static final boolean has_preresolution(short flags)
+	{
+		return memory.flag_bit(flags, _has_preresolution);
+	}
+
+	public static final short set_has_preresolution(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, _has_preresolution, value);
+	}
+
+	public static final boolean on_stack(short flags)
+	{
+		return memory.flag_bit(flags, _on_stack);
+	}
+
+	public static final short set_on_stack(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, _on_stack, value);
+	}
+
+	public static final boolean in_aot_cache(short flags)
+	{
+		return memory.flag_bit(flags, _in_aot_cache);
+	}
+
+	public static final short set_in_aot_cache(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, _in_aot_cache, value);
+	}
+
+	public static final boolean has_dynamic_constant(short flags)
+	{
+		return memory.flag_bit(flags, _has_dynamic_constant);
+	}
+
+	public static final short set_has_dynamic_constant(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, _has_dynamic_constant, value);
+	}
+
+	public static final boolean is_for_method_handle_intrinsic(short flags)
+	{
+		return memory.flag_bit(flags, _is_for_method_handle_intrinsic);
+	}
+
+	public static final short set_is_for_method_handle_intrinsic(short flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, _is_for_method_handle_intrinsic, value);
+	}
 
 	public ConstantPool(long address)
 	{
@@ -158,6 +219,71 @@ public class ConstantPool extends Metadata
 		return (generic_signature_index == 0) ? null : symbol_at(generic_signature_index);
 	}
 
+	/**
+	 * 常量池的标志
+	 * 
+	 * @return
+	 */
+	public short _flags()
+	{
+		return super.read_short(_flags);
+	}
+
+	public void set_flags(short flags)
+	{
+		super.write(_flags, flags);
+	}
+
+	public boolean has_preresolution()
+	{
+		return has_preresolution(_flags());
+	}
+
+	public void set_has_preresolution(boolean value)
+	{
+		set_flags(set_has_preresolution(_flags(), value));
+	}
+
+	public boolean on_stack()
+	{
+		return on_stack(_flags());
+	}
+
+	public void set_on_stack(boolean value)
+	{
+		set_flags(set_on_stack(_flags(), value));
+	}
+
+	public boolean in_aot_cache()
+	{
+		return in_aot_cache(_flags());
+	}
+
+	public void set_in_aot_cache(boolean value)
+	{
+		set_flags(set_in_aot_cache(_flags(), value));
+	}
+
+	public boolean has_dynamic_constant()
+	{
+		return has_dynamic_constant(_flags());
+	}
+
+	public void set_has_dynamic_constant(boolean value)
+	{
+		set_flags(set_has_dynamic_constant(_flags(), value));
+	}
+
+	public boolean is_for_method_handle_intrinsic()
+	{
+		return is_for_method_handle_intrinsic(_flags());
+	}
+
+	public void set_is_for_method_handle_intrinsic(boolean value)
+	{
+		set_flags(set_is_for_method_handle_intrinsic(_flags(), value));
+	}
+
 	public int source_file_name_index()
 	{
 		return super.read_uint16_t(_source_file_name_index);
@@ -182,14 +308,19 @@ public class ConstantPool extends Metadata
 	/**
 	 * 如果有源文件名称则设置源文件名称
 	 * 
-	 * @return
+	 * @return 是否设置成功
 	 */
-	public void try_set_source_file_name(Symbol source_file_name)
+	public boolean try_set_source_file_name(Symbol source_file_name)
 	{
 		int source_file_name_index = source_file_name_index();
 		if (source_file_name_index != 0)
 		{
 			symbol_at_put(source_file_name_index, source_file_name);
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 

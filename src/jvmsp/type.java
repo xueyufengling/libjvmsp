@@ -2118,7 +2118,7 @@ public abstract class type<_T>
 				else
 				{
 					Object deref_obj = virtual_machine.resolve_oop(address());
-					virtual_machine.host.set_klass_word(deref_obj, ref_type_klass_word);
+					virtual_machine.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
 			}
@@ -2215,7 +2215,7 @@ public abstract class type<_T>
 				else if (type == double.class)
 					unsafe.write(base, offset, java_type.double_value(v));
 				else
-					unsafe.memcpy(base, virtual_machine.host.get_header_byte_length(), v, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
+					unsafe.memcpy(base, virtual_machine.object_header_byte_length(), v, virtual_machine.object_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.object_header_byte_length());// 只拷贝字段，不覆盖对象头
 				return this;
 			}
 		}
@@ -2451,19 +2451,19 @@ public abstract class type<_T>
 		{
 			Class<_T> clazz = (Class<_T>) object.getClass();
 			_T o = unsafe.allocate(clazz);
-			unsafe.memcpy(o, virtual_machine.host.get_header_byte_length(), object, virtual_machine.host.get_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.host.get_header_byte_length());// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(o, virtual_machine.object_header_byte_length(), object, virtual_machine.object_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.object_header_byte_length());// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 
 		public static final Object cast(Object obj, long cast_type_klass_word)
 		{
-			virtual_machine.host.set_klass_word(obj, cast_type_klass_word);
+			virtual_machine.set_klass_word(obj, cast_type_klass_word);
 			return obj;
 		}
 
 		public static final Object cast(Object obj, Object cast_type_obj)
 		{
-			return cast(obj, virtual_machine.host.get_klass_word(cast_type_obj));
+			return cast(obj, virtual_machine.get_klass_word(cast_type_obj));
 		}
 
 		public static final Object cast(Object obj, Class<?> cast_type)
@@ -2473,7 +2473,7 @@ public abstract class type<_T>
 
 		public static final Object cast(Object obj, String cast_type)
 		{
-			return cast(obj, virtual_machine.host.get_klass_word(cast_type));
+			return cast(obj, virtual_machine.get_klass_word(cast_type));
 		}
 
 		@SuppressWarnings("unchecked")

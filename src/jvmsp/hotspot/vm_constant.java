@@ -2,6 +2,7 @@ package jvmsp.hotspot;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import jvmsp.shared_object;
 import jvmsp.unsafe;
@@ -15,6 +16,7 @@ public class vm_constant
 	public static class int_entry
 	{
 		private static final long gHotSpotVMIntConstants;
+		private static final long jvmciHotSpotVMIntConstants;
 		private static final long gHotSpotVMIntConstantEntryArrayStride;
 
 		private static final long gHotSpotVMIntConstantEntryNameOffset;
@@ -23,6 +25,7 @@ public class vm_constant
 		static
 		{
 			gHotSpotVMIntConstants = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMIntConstants"));
+			jvmciHotSpotVMIntConstants = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "jvmciHotSpotVMIntConstants"));
 			gHotSpotVMIntConstantEntryArrayStride = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMIntConstantEntryArrayStride"));
 			gHotSpotVMIntConstantEntryNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMIntConstantEntryNameOffset"));
 			gHotSpotVMIntConstantEntryValueOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMIntConstantEntryValueOffset"));
@@ -47,19 +50,59 @@ public class vm_constant
 			return sb.toString();
 		}
 
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o)
+				return true;
+			if (o == null)
+				return false;
+			if (o instanceof int_entry other)
+			{
+				return value == other.value &&
+						Objects.equals(name, other.name);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(
+					name,
+					value);
+		}
+
 		private static final Map<String, int_entry> vm_int_constant_entries = new HashMap<>();
 
-		static
+		private static final void collect_entries(Map<String, int_entry> vm_int_constant_entries, long vm_int_constants)
 		{
 			for (int idx = 0;; ++idx)
 			{
-				int_entry entry = new int_entry(gHotSpotVMIntConstants + idx * gHotSpotVMIntConstantEntryArrayStride);
-				vm_int_constant_entries.put(entry.name, entry);
+				int_entry entry = new int_entry(vm_int_constants + idx * gHotSpotVMIntConstantEntryArrayStride);
 				if (entry.name == null)
 				{
 					break;
 				}
+				int_entry existed = vm_int_constant_entries.get(entry.name);
+				if (existed != null && !entry.equals(existed))
+				{
+					throw new java.lang.InternalError("conflict VMIntConstantEntry '" + entry + "' and '" + existed + "'");
+				}
+				else
+				{
+					vm_int_constant_entries.put(entry.name, entry);
+				}
 			}
+		}
+
+		static
+		{
+			collect_entries(vm_int_constant_entries, jvmciHotSpotVMIntConstants);
+			collect_entries(vm_int_constant_entries, gHotSpotVMIntConstants);
 		}
 
 		public static final int_entry find(String name)
@@ -71,6 +114,7 @@ public class vm_constant
 	public static class long_entry
 	{
 		private static final long gHotSpotVMLongConstants;
+		private static final long jvmciHotSpotVMLongConstants;
 		private static final long gHotSpotVMLongConstantEntryArrayStride;
 
 		private static final long gHotSpotVMLongConstantEntryNameOffset;
@@ -79,6 +123,7 @@ public class vm_constant
 		static
 		{
 			gHotSpotVMLongConstants = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMLongConstants"));
+			jvmciHotSpotVMLongConstants = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "jvmciHotSpotVMLongConstants"));
 			gHotSpotVMLongConstantEntryArrayStride = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMLongConstantEntryArrayStride"));
 			gHotSpotVMLongConstantEntryNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMLongConstantEntryNameOffset"));
 			gHotSpotVMLongConstantEntryValueOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMLongConstantEntryValueOffset"));
@@ -103,19 +148,59 @@ public class vm_constant
 			return sb.toString();
 		}
 
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o)
+				return true;
+			if (o == null)
+				return false;
+			if (o instanceof long_entry other)
+			{
+				return value == other.value &&
+						Objects.equals(name, other.name);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(
+					name,
+					value);
+		}
+
 		private static final Map<String, long_entry> vm_long_constant_entries = new HashMap<>();
 
-		static
+		private static final void collect_entries(Map<String, long_entry> vm_long_constant_entries, long vm_long_constants)
 		{
 			for (int idx = 0;; ++idx)
 			{
-				long_entry entry = new long_entry(gHotSpotVMLongConstants + idx * gHotSpotVMLongConstantEntryArrayStride);
-				vm_long_constant_entries.put(entry.name, entry);
+				long_entry entry = new long_entry(vm_long_constants + idx * gHotSpotVMLongConstantEntryArrayStride);
 				if (entry.name == null)
 				{
 					break;
 				}
+				long_entry existed = vm_long_constant_entries.get(entry.name);
+				if (existed != null && !entry.equals(existed))
+				{
+					throw new java.lang.InternalError("conflict VMLongConstantEntry '" + entry + "' and '" + existed + "'");
+				}
+				else
+				{
+					vm_long_constant_entries.put(entry.name, entry);
+				}
 			}
+		}
+
+		static
+		{
+			collect_entries(vm_long_constant_entries, jvmciHotSpotVMLongConstants);
+			collect_entries(vm_long_constant_entries, gHotSpotVMLongConstants);
 		}
 
 		public static final long_entry find(String name)

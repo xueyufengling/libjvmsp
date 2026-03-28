@@ -19,6 +19,7 @@ public class MethodFlags extends vm_struct
 
 	private static final long _status = MethodFlags.field("_status").offset();
 
+	// 标志
 	public static final int has_monitor_bytecodes = 1 << 0;
 	public static final int has_jsrs = 1 << 1;
 	public static final int is_old = 1 << 2;
@@ -56,163 +57,325 @@ public class MethodFlags extends vm_struct
 		super.write(_status, status);
 	}
 
-	public boolean is_has_monitor_bytecodes()
+	public static final boolean has_monitor_bytecodes(int flags)
 	{
-		return memory.flag_bit(_status(), has_monitor_bytecodes);
+		return memory.flag_bit(flags, has_monitor_bytecodes);
+	}
+
+	public static final int set_has_monitor_bytecodes(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, has_monitor_bytecodes, value);
+	}
+
+	public static final boolean has_jsrs(int flags)
+	{
+		return memory.flag_bit(flags, has_jsrs);
+	}
+
+	public static final int set_has_jsrs(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, has_jsrs, value);
+	}
+
+	public static final boolean is_old(int flags)
+	{
+		return memory.flag_bit(flags, is_old);
+	}
+
+	public static final int set_is_old(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_old, value);
+	}
+
+	public static final boolean is_obsolete(int flags)
+	{
+		return memory.flag_bit(flags, is_obsolete);
+	}
+
+	public static final int set_is_obsolete(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_obsolete, value);
+	}
+
+	public static final boolean is_deleted(int flags)
+	{
+		return memory.flag_bit(flags, is_deleted);
+	}
+
+	public static final int set_is_deleted(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_deleted, value);
+	}
+
+	public static final boolean is_prefixed_native(int flags)
+	{
+		return memory.flag_bit(flags, is_prefixed_native);
+	}
+
+	public static final int set_is_prefixed_native(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_prefixed_native, value);
+	}
+
+	public static final boolean monitor_matching(int flags)
+	{
+		return memory.flag_bit(flags, monitor_matching);
+	}
+
+	public static final int set_monitor_matching(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, monitor_matching, value);
+	}
+
+	public static final boolean queued_for_compilation(int flags)
+	{
+		return memory.flag_bit(flags, queued_for_compilation);
+	}
+
+	public static final int set_queued_for_compilation(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, queued_for_compilation, value);
+	}
+
+	public static final boolean is_not_c2_compilable(int flags)
+	{
+		return memory.flag_bit(flags, is_not_c2_compilable);
+	}
+
+	public static final int set_is_not_c2_compilable(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_not_c2_compilable, value);
+	}
+
+	public static final boolean is_not_c1_compilable(int flags)
+	{
+		return memory.flag_bit(flags, is_not_c1_compilable);
+	}
+
+	public static final int set_is_not_c1_compilable(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_not_c1_compilable, value);
+	}
+
+	public static final boolean is_not_c2_osr_compilable(int flags)
+	{
+		return memory.flag_bit(flags, is_not_c2_osr_compilable);
+	}
+
+	public static final int set_is_not_c2_osr_compilable(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, is_not_c2_osr_compilable, value);
+	}
+
+	public static final boolean force_inline(int flags)
+	{
+		return memory.flag_bit(flags, force_inline);
+	}
+
+	public static final int set_force_inline(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, force_inline, value);
+	}
+
+	public static final boolean dont_inline(int flags)
+	{
+		return memory.flag_bit(flags, dont_inline);
+	}
+
+	public static final int set_dont_inline(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, dont_inline, value);
+	}
+
+	public static final boolean has_loops_flag(int flags)
+	{
+		return memory.flag_bit(flags, has_loops_flag);
+	}
+
+	public static final int set_has_loops_flag(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, has_loops_flag, value);
+	}
+
+	public static final boolean has_loops_flag_init(int flags)
+	{
+		return memory.flag_bit(flags, has_loops_flag_init);
+	}
+
+	public static final int set_has_loops_flag_init(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, has_loops_flag_init, value);
+	}
+
+	public static final boolean on_stack_flag(int flags)
+	{
+		return memory.flag_bit(flags, on_stack_flag);
+	}
+
+	public static final int set_on_stack_flag(int flags, boolean value)
+	{
+		return memory.set_flag_bit(flags, on_stack_flag, value);
+	}
+
+	// 成员方法
+
+	public boolean has_monitor_bytecodes()
+	{
+		return has_monitor_bytecodes(_status());
 	}
 
 	public void set_has_monitor_bytecodes(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), has_monitor_bytecodes, value));
+		set_status(set_has_monitor_bytecodes(_status(), value));
 	}
 
-	public boolean is_has_jsrs()
+	public boolean has_jsrs()
 	{
-		return memory.flag_bit(_status(), has_jsrs);
+		return has_jsrs(_status());
 	}
 
 	public void set_has_jsrs(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), has_jsrs, value));
+		set_status(set_has_jsrs(_status(), value));
 	}
 
 	public boolean is_old()
 	{
-		return memory.flag_bit(_status(), is_old);
+		return is_old(_status());
 	}
 
 	public void set_is_old(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_old, value));
+		set_status(set_is_old(_status(), value));
 	}
 
 	public boolean is_obsolete()
 	{
-		return memory.flag_bit(_status(), is_obsolete);
+		return is_obsolete(_status());
 	}
 
 	public void set_is_obsolete(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_obsolete, value));
+		set_status(set_is_obsolete(_status(), value));
 	}
 
 	public boolean is_deleted()
 	{
-		return memory.flag_bit(_status(), is_deleted);
+		return is_deleted(_status());
 	}
 
 	public void set_is_deleted(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_deleted, value));
+		set_status(set_is_deleted(_status(), value));
 	}
 
 	public boolean is_prefixed_native()
 	{
-		return memory.flag_bit(_status(), is_prefixed_native);
+		return is_prefixed_native(_status());
 	}
 
 	public void set_is_prefixed_native(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_prefixed_native, value));
+		set_status(set_is_prefixed_native(_status(), value));
 	}
 
-	public boolean is_monitor_matching()
+	public boolean monitor_matching()
 	{
-		return memory.flag_bit(_status(), monitor_matching);
+		return monitor_matching(_status());
 	}
 
 	public void set_monitor_matching(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), monitor_matching, value));
+		set_status(set_monitor_matching(_status(), value));
 	}
 
-	public boolean is_queued_for_compilation()
+	public boolean queued_for_compilation()
 	{
-		return memory.flag_bit(_status(), queued_for_compilation);
+		return queued_for_compilation(_status());
 	}
 
 	public void set_queued_for_compilation(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), queued_for_compilation, value));
+		set_status(set_queued_for_compilation(_status(), value));
 	}
 
 	public boolean is_not_c2_compilable()
 	{
-		return memory.flag_bit(_status(), is_not_c2_compilable);
+		return is_not_c2_compilable(_status());
 	}
 
 	public void set_is_not_c2_compilable(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_not_c2_compilable, value));
+		set_status(set_is_not_c2_compilable(_status(), value));
 	}
 
 	public boolean is_not_c1_compilable()
 	{
-		return memory.flag_bit(_status(), is_not_c1_compilable);
+		return is_not_c1_compilable(_status());
 	}
 
 	public void set_is_not_c1_compilable(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_not_c1_compilable, value));
+		set_status(set_is_not_c1_compilable(_status(), value));
 	}
 
 	public boolean is_not_c2_osr_compilable()
 	{
-		return memory.flag_bit(_status(), is_not_c2_osr_compilable);
+		return is_not_c2_osr_compilable(_status());
 	}
 
 	public void set_is_not_c2_osr_compilable(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), is_not_c2_osr_compilable, value));
+		set_status(set_is_not_c2_osr_compilable(_status(), value));
 	}
 
-	public boolean is_force_inline()
+	public boolean force_inline()
 	{
-		return memory.flag_bit(_status(), force_inline);
+		return force_inline(_status());
 	}
 
 	public void set_force_inline(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), force_inline, value));
+		set_status(set_force_inline(_status(), value));
 	}
 
-	public boolean is_dont_inline()
+	public boolean dont_inline()
 	{
-		return memory.flag_bit(_status(), dont_inline);
+		return dont_inline(_status());
 	}
 
 	public void set_dont_inline(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), dont_inline, value));
+		set_status(set_dont_inline(_status(), value));
 	}
 
-	public boolean is_has_loops_flag()
+	public boolean has_loops_flag()
 	{
-		return memory.flag_bit(_status(), has_loops_flag);
+		return has_loops_flag(_status());
 	}
 
 	public void set_has_loops_flag(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), has_loops_flag, value));
+		set_status(set_has_loops_flag(_status(), value));
 	}
 
-	public boolean is_has_loops_flag_init()
+	public boolean has_loops_flag_init()
 	{
-		return memory.flag_bit(_status(), has_loops_flag_init);
+		return has_loops_flag_init(_status());
 	}
 
 	public void set_has_loops_flag_init(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), has_loops_flag_init, value));
+		set_status(set_has_loops_flag_init(_status(), value));
 	}
 
-	public boolean is_on_stack_flag()
+	public boolean on_stack_flag()
 	{
-		return memory.flag_bit(_status(), on_stack_flag);
+		return on_stack_flag(_status());
 	}
 
 	public void set_on_stack_flag(boolean value)
 	{
-		set_status(memory.set_flag_bit(_status(), on_stack_flag, value));
+		set_status(set_on_stack_flag(_status(), value));
 	}
 }

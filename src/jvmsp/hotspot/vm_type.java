@@ -3,6 +3,7 @@ package jvmsp.hotspot;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import jvmsp.shared_object;
 import jvmsp.unsafe;
@@ -12,6 +13,7 @@ public class vm_type
 {
 	// VMTypes信息的起始地址
 	private static final long gHotSpotVMTypes;
+	private static final long jvmciHotSpotVMTypes;
 	// VMTypes数组的元素步长
 	private static final long gHotSpotVMTypeEntryArrayStride;
 
@@ -25,6 +27,7 @@ public class vm_type
 	static
 	{
 		gHotSpotVMTypes = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMTypes"));
+		jvmciHotSpotVMTypes = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "jvmciHotSpotVMTypes"));
 		gHotSpotVMTypeEntryArrayStride = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMTypeEntryArrayStride"));
 		gHotSpotVMTypeEntryTypeNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMTypeEntryTypeNameOffset"));
 		gHotSpotVMTypeEntrySuperclassNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMTypeEntrySuperclassNameOffset"));
@@ -65,6 +68,38 @@ public class vm_type
 		return sb.toString();
 	}
 
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o)
+			return true;
+		if (o == null)
+			return false;
+		if (o instanceof vm_type other)
+		{
+			// 不判断is_oop_type、is_integer_type、is_unsigned，因为sa与jvmci对同一种类型的描述可能不同
+			return size == other.size
+					&& Objects.equals(type_name, other.type_name)
+					&& Objects.equals(super_class_name, other.super_class_name);
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(
+				type_name,
+				super_class_name,
+				is_oop_type,
+				is_integer_type,
+				is_unsigned,
+				size);
+	}
+
 	public static final void print_type(String type_name)
 	{
 		vm_type t = vm_type_entries.get(type_name);
@@ -76,17 +111,31 @@ public class vm_type
 
 	private static final Map<String, vm_type> vm_type_entries = new HashMap<>();
 
-	static
+	private static final void collect_entries(Map<String, vm_type> vm_type_entries, long vm_types)
 	{
 		for (int idx = 0;; ++idx)
 		{
-			vm_type entry = new vm_type(gHotSpotVMTypes + idx * gHotSpotVMTypeEntryArrayStride);
-			vm_type_entries.put(entry.type_name, entry);
+			vm_type entry = new vm_type(vm_types + idx * gHotSpotVMTypeEntryArrayStride);
 			if (entry.type_name == null)
 			{
 				break;
 			}
+			vm_type existed = vm_type_entries.get(entry.type_name);
+			if (existed != null && !entry.equals(existed))
+			{
+				throw new java.lang.InternalError("conflict VMTypeEntry '" + entry + "' and '" + existed + "'");
+			}
+			else
+			{
+				vm_type_entries.put(entry.type_name, entry);
+			}
 		}
+	}
+
+	static
+	{
+		collect_entries(vm_type_entries, jvmciHotSpotVMTypes);
+		collect_entries(vm_type_entries, gHotSpotVMTypes);
 	}
 
 	public static final vm_type find(String type_name)

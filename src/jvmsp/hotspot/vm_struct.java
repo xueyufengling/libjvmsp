@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -30,7 +31,11 @@ public abstract class vm_struct extends memory_object
 	public static class entry
 	{
 		// VMStructs信息的起始地址
-		private static final long gHotSpotVMStructs;
+		// sa和jvmci持有的条目有可能不同，例如一个条目多一个条目少，但同一个字段的条目是完全相同的。
+		// 需要将两者综合起来得到尽可能完整的信息。
+		private static final long gHotSpotVMStructs;// sa使用的结构体偏移量
+		private static final long jvmciHotSpotVMStructs;// jvmci使用的结构体偏移量
+
 		// VMStructs数组的元素步长
 		private static final long gHotSpotVMStructEntryArrayStride;
 
@@ -44,6 +49,7 @@ public abstract class vm_struct extends memory_object
 		static
 		{
 			gHotSpotVMStructs = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMStructs"));
+			jvmciHotSpotVMStructs = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "jvmciHotSpotVMStructs"));
 			gHotSpotVMStructEntryArrayStride = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMStructEntryArrayStride"));
 			gHotSpotVMStructEntryTypeNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMStructEntryTypeNameOffset"));
 			gHotSpotVMStructEntryFieldNameOffset = unsafe.read_long(shared_object.dlsym(libjvm._libjvm, "gHotSpotVMStructEntryFieldNameOffset"));
@@ -84,6 +90,40 @@ public abstract class vm_struct extends memory_object
 			return sb.toString();
 		}
 
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o)
+				return true;
+			if (o == null)
+				return false;
+			if (o instanceof entry other)
+			{
+				// 不判断type_string，因为sa与jvmci使用的类型名称字符串有可能不同，尽管它们实际上是相同的，都是typedef的别名
+				return is_static == other.is_static &&
+						offset == other.offset &&
+						address == other.address &&
+						Objects.equals(type_name, other.type_name) &&
+						Objects.equals(field_name, other.field_name);
+			}
+			else
+			{
+				return false;
+			}
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(
+					type_name,
+					field_name,
+					type_string,
+					is_static,
+					offset,
+					address);
+		}
+
 		/**
 		 * 静态成员则获取其指针，非静态成员获取内存排布的偏移量。<br>
 		 * 
@@ -96,17 +136,32 @@ public abstract class vm_struct extends memory_object
 
 		private static final Map<String, Map<String, entry>> vm_struct_entries = new HashMap<>();
 
-		static
+		private static final void collect_entries(Map<String, Map<String, entry>> vm_struct_entries, long vm_structs)
 		{
 			for (int idx = 0;; ++idx)
 			{
-				entry entry = new entry(gHotSpotVMStructs + idx * gHotSpotVMStructEntryArrayStride);
-				vm_struct_entries.computeIfAbsent(entry.type_name, (n) -> new HashMap<>()).put(entry.field_name, entry);
+				entry entry = new entry(vm_structs + idx * gHotSpotVMStructEntryArrayStride);
 				if (entry.field_name == null)
 				{
 					break;// 最后一个vm struct为null
 				}
+				Map<String, entry> fields = vm_struct_entries.computeIfAbsent(entry.type_name, (n) -> new HashMap<>());
+				entry existed = fields.get(entry.field_name);
+				if (existed != null && !entry.equals(existed))
+				{
+					throw new java.lang.InternalError("conflict VMStructEntry '" + entry + "' and '" + existed + "'");
+				}
+				else
+				{
+					fields.put(entry.field_name, entry);
+				}
 			}
+		}
+
+		static
+		{
+			collect_entries(vm_struct_entries, jvmciHotSpotVMStructs);
+			collect_entries(vm_struct_entries, gHotSpotVMStructs);
 		}
 
 		public static final entry find(String type_name, String field_name)
@@ -454,14 +509,6 @@ public abstract class vm_struct extends memory_object
 		super.write_memory_object(offset, struct, size);
 	}
 
-	public static class ContiguousSpace
-	{
-		private static final long _end_of_live = vm_struct.entry.find("ContiguousSpace", "_end_of_live").offset;
-		private static final long _top = vm_struct.entry.find("ContiguousSpace", "_top").offset;
-
-		private static final long _saved_mark_word = vm_struct.entry.find("ContiguousSpace", "_saved_mark_word").offset;
-	}
-
 	public static class Generation
 	{
 		private static final long _reserved = vm_struct.entry.find("Generation", "_reserved").offset;
@@ -490,12 +537,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _old_gen_spec = vm_struct.entry.find("GenCollectedHeap", "_old_gen_spec").offset;
 	}
 
-	public static class Space
-	{
-		private static final long _bottom = vm_struct.entry.find("Space", "_bottom").offset;
-		private static final long _end = vm_struct.entry.find("Space", "_end").offset;
-	}
-
 	public static class BarrierSet
 	{
 		private static final long _barrier_set = vm_struct.entry.find("BarrierSet", "_barrier_set").address;
@@ -519,14 +560,6 @@ public abstract class vm_struct extends memory_object
 	public static class TypeArrayKlass
 	{
 		private static final long _max_length = vm_struct.entry.find("TypeArrayKlass", "_max_length").offset;
-	}
-
-	public static class ConstantPoolCacheEntry
-	{
-		private static final long _indices = vm_struct.entry.find("ConstantPoolCacheEntry", "_indices").offset;
-		private static final long _f1 = vm_struct.entry.find("ConstantPoolCacheEntry", "_f1").offset;
-		private static final long _f2 = vm_struct.entry.find("ConstantPoolCacheEntry", "_f2").offset;
-		private static final long _flags = vm_struct.entry.find("ConstantPoolCacheEntry", "_flags").offset;
 	}
 
 	public static class CheckedExceptionElement
@@ -861,48 +894,6 @@ public abstract class vm_struct extends memory_object
 	{
 		private static final long _length = vm_struct.entry.find("ThreadsList", "_length").offset;
 		private static final long _threads = vm_struct.entry.find("ThreadsList", "_threads").offset;
-	}
-
-	public static class ThreadShadow
-	{
-		private static final long _pending_exception = vm_struct.entry.find("ThreadShadow", "_pending_exception").offset;
-		private static final long _exception_file = vm_struct.entry.find("ThreadShadow", "_exception_file").offset;
-		private static final long _exception_line = vm_struct.entry.find("ThreadShadow", "_exception_line").offset;
-	}
-
-	public static class Thread
-	{
-		private static final long _tlab = vm_struct.entry.find("Thread", "_tlab").offset;
-		private static final long _allocated_bytes = vm_struct.entry.find("Thread", "_allocated_bytes").offset;
-		private static final long _resource_area = vm_struct.entry.find("Thread", "_resource_area").offset;
-	}
-
-	public static class JavaThread
-	{
-		private static final long _lock_stack = vm_struct.entry.find("JavaThread", "_lock_stack").offset;
-		private static final long _threadObj = vm_struct.entry.find("JavaThread", "_threadObj").offset;
-		private static final long _vthread = vm_struct.entry.find("JavaThread", "_vthread").offset;
-		private static final long _jvmti_vthread = vm_struct.entry.find("JavaThread", "_jvmti_vthread").offset;
-		private static final long _scopedValueCache = vm_struct.entry.find("JavaThread", "_scopedValueCache").offset;
-		private static final long _anchor = vm_struct.entry.find("JavaThread", "_anchor").offset;
-		private static final long _vm_result = vm_struct.entry.find("JavaThread", "_vm_result").offset;
-		private static final long _vm_result_2 = vm_struct.entry.find("JavaThread", "_vm_result_2").offset;
-		private static final long _current_pending_monitor = vm_struct.entry.find("JavaThread", "_current_pending_monitor").offset;
-		private static final long _current_pending_monitor_is_from_java = vm_struct.entry.find("JavaThread", "_current_pending_monitor_is_from_java").offset;
-		private static final long _current_waiting_monitor = vm_struct.entry.find("JavaThread", "_current_waiting_monitor").offset;
-		private static final long _suspend_flags = vm_struct.entry.find("JavaThread", "_suspend_flags").offset;
-		private static final long _exception_oop = vm_struct.entry.find("JavaThread", "_exception_oop").offset;
-		private static final long _exception_pc = vm_struct.entry.find("JavaThread", "_exception_pc").offset;
-		private static final long _is_method_handle_return = vm_struct.entry.find("JavaThread", "_is_method_handle_return").offset;
-		private static final long _saved_exception_pc = vm_struct.entry.find("JavaThread", "_saved_exception_pc").offset;
-		private static final long _thread_state = vm_struct.entry.find("JavaThread", "_thread_state").offset;
-		private static final long _osthread = vm_struct.entry.find("JavaThread", "_osthread").offset;
-		private static final long _stack_base = vm_struct.entry.find("JavaThread", "_stack_base").offset;
-		private static final long _stack_size = vm_struct.entry.find("JavaThread", "_stack_size").offset;
-		private static final long _vframe_array_head = vm_struct.entry.find("JavaThread", "_vframe_array_head").offset;
-		private static final long _vframe_array_last = vm_struct.entry.find("JavaThread", "_vframe_array_last").offset;
-		private static final long _active_handles = vm_struct.entry.find("JavaThread", "_active_handles").offset;
-		private static final long _terminated = vm_struct.entry.find("JavaThread", "_terminated").offset;
 	}
 
 	public static class LockStack

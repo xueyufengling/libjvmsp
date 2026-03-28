@@ -282,9 +282,14 @@ public class symbols
 		return Class_classData.get(clazz);
 	}
 
+	public static final Class<?> define_hidden_class(Class<?> context_clazz, String name, byte[] bytes, ProtectionDomain pd, boolean initialize, Object class_data)
+	{
+		return class_loader.define(context_clazz, name, bytes, 0, bytes.length, pd, initialize, constants.HIDDEN_CLASS, class_data);
+	}
+
 	public static final Class<?> define_hidden_class(Class<?> context_clazz, String name, byte[] bytes, ProtectionDomain pd, boolean initialize)
 	{
-		return class_loader.define(context_clazz, name, bytes, 0, bytes.length, pd, initialize, constants.HIDDEN_CLASS, null);// 隐藏类的class_data为null
+		return define_hidden_class(context_clazz, name, bytes, pd, initialize, null);
 	}
 
 	/**
