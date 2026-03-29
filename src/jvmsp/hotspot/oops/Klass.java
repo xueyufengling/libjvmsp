@@ -9,7 +9,6 @@ import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.ClassLoaderData;
 import jvmsp.hotspot.classfile.java_lang_Class;
-import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.utilities.AccessFlags;
 
@@ -591,8 +590,8 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.ClassType;
+		return Type.ClassType;
 	}
 }

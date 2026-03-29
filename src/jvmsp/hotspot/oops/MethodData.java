@@ -1,7 +1,6 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.hotspot.vm_struct;
-import jvmsp.hotspot.memory.MetaspaceObj;
 
 public class MethodData extends Metadata
 {
@@ -49,9 +48,9 @@ public class MethodData extends Metadata
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.MethodDataType;
+		return Type.MethodDataType;
 	}
 
 }

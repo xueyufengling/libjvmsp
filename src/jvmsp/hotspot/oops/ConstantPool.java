@@ -6,7 +6,6 @@ import jvmsp.unsafe;
 import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.interpreter.Bytecodes;
-import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.oops.Array.Array_u1;
 import jvmsp.hotspot.oops.Array.Array_u2;
@@ -509,8 +508,8 @@ public class ConstantPool extends Metadata
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.ConstantPoolType;
+		return Type.ConstantPoolType;
 	}
 }

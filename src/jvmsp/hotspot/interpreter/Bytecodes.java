@@ -1,9 +1,18 @@
 package jvmsp.hotspot.interpreter;
 
+import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
+import jvmsp.hotspot.memory.AllStatic;
 
-public abstract class Bytecodes
+public class Bytecodes extends AllStatic
 {
+	public static final String type_name = "Bytecodes";
+
+	private Bytecodes()
+	{
+		super(type_name);
+	}
+
 	/**
 	 * 字节码值
 	 */
@@ -216,56 +225,56 @@ public abstract class Bytecodes
 		public static final byte _jsr_w = (byte) 201; // 0xC9
 		public static final byte _breakpoint = (byte) 202; // 0xCA
 
-		public static final int number_of_java_codes = 203; // 0xCB
+		public static final int number_of_java_codes = ((_breakpoint + 1) & cxx_type.uint8_t_mask); // 0xCB
 
 		// JVM内部字节码
 		public static final byte _fast_agetfield = (byte) number_of_java_codes; // 0xCB
-		public static final byte _fast_bgetfield = (byte) (number_of_java_codes + 1); // 0xCC
-		public static final byte _fast_cgetfield = (byte) (number_of_java_codes + 2); // 0xCD
-		public static final byte _fast_dgetfield = (byte) (number_of_java_codes + 3); // 0xCE
-		public static final byte _fast_fgetfield = (byte) (number_of_java_codes + 4); // 0xCF
-		public static final byte _fast_igetfield = (byte) (number_of_java_codes + 5); // 0xD0
-		public static final byte _fast_lgetfield = (byte) (number_of_java_codes + 6); // 0xD1
-		public static final byte _fast_sgetfield = (byte) (number_of_java_codes + 7); // 0xD2
+		public static final byte _fast_bgetfield = (byte) (_fast_agetfield + 1); // 0xCC
+		public static final byte _fast_cgetfield = (byte) (_fast_bgetfield + 1); // 0xCD
+		public static final byte _fast_dgetfield = (byte) (_fast_cgetfield + 1); // 0xCE
+		public static final byte _fast_fgetfield = (byte) (_fast_dgetfield + 1); // 0xCF
+		public static final byte _fast_igetfield = (byte) (_fast_fgetfield + 1); // 0xD0
+		public static final byte _fast_lgetfield = (byte) (_fast_igetfield + 1); // 0xD1
+		public static final byte _fast_sgetfield = (byte) (_fast_lgetfield + 1); // 0xD2
 
-		public static final byte _fast_aputfield = (byte) (number_of_java_codes + 8); // 0xD3
-		public static final byte _fast_bputfield = (byte) (number_of_java_codes + 9); // 0xD4
-		public static final byte _fast_zputfield = (byte) (number_of_java_codes + 10); // 0xD5
-		public static final byte _fast_cputfield = (byte) (number_of_java_codes + 11); // 0xD6
-		public static final byte _fast_dputfield = (byte) (number_of_java_codes + 12); // 0xD7
-		public static final byte _fast_fputfield = (byte) (number_of_java_codes + 13); // 0xD8
-		public static final byte _fast_iputfield = (byte) (number_of_java_codes + 14); // 0xD9
-		public static final byte _fast_lputfield = (byte) (number_of_java_codes + 15); // 0xDA
-		public static final byte _fast_sputfield = (byte) (number_of_java_codes + 16); // 0xDB
+		public static final byte _fast_aputfield = (byte) (_fast_sgetfield + 1); // 0xD3
+		public static final byte _fast_bputfield = (byte) (_fast_aputfield + 1); // 0xD4
+		public static final byte _fast_zputfield = (byte) (_fast_bputfield + 1); // 0xD5
+		public static final byte _fast_cputfield = (byte) (_fast_zputfield + 1); // 0xD6
+		public static final byte _fast_dputfield = (byte) (_fast_cputfield + 1); // 0xD7
+		public static final byte _fast_fputfield = (byte) (_fast_dputfield + 1); // 0xD8
+		public static final byte _fast_iputfield = (byte) (_fast_fputfield + 1); // 0xD9
+		public static final byte _fast_lputfield = (byte) (_fast_iputfield + 1); // 0xDA
+		public static final byte _fast_sputfield = (byte) (_fast_lputfield + 1); // 0xDB
 
-		public static final byte _fast_aload_0 = (byte) (number_of_java_codes + 17); // 0xDC
-		public static final byte _fast_iaccess_0 = (byte) (number_of_java_codes + 18); // 0xDD
-		public static final byte _fast_aaccess_0 = (byte) (number_of_java_codes + 19); // 0xDE
-		public static final byte _fast_faccess_0 = (byte) (number_of_java_codes + 20); // 0xDF
+		public static final byte _fast_aload_0 = (byte) (_fast_sputfield + 1); // 0xDC
+		public static final byte _fast_iaccess_0 = (byte) (_fast_aload_0 + 1); // 0xDD
+		public static final byte _fast_aaccess_0 = (byte) (_fast_iaccess_0 + 1); // 0xDE
+		public static final byte _fast_faccess_0 = (byte) (_fast_aaccess_0 + 1); // 0xDF
 
-		public static final byte _fast_iload = (byte) (number_of_java_codes + 21); // 0xE0
-		public static final byte _fast_iload2 = (byte) (number_of_java_codes + 22); // 0xE1
-		public static final byte _fast_icaload = (byte) (number_of_java_codes + 23); // 0xE2
+		public static final byte _fast_iload = (byte) (_fast_faccess_0 + 1); // 0xE0
+		public static final byte _fast_iload2 = (byte) (_fast_iload + 1); // 0xE1
+		public static final byte _fast_icaload = (byte) (_fast_iload2 + 1); // 0xE2
 
-		public static final byte _fast_invokevfinal = (byte) (number_of_java_codes + 24); // 0xE3
-		public static final byte _fast_linearswitch = (byte) (number_of_java_codes + 25); // 0xE4
-		public static final byte _fast_binaryswitch = (byte) (number_of_java_codes + 26); // 0xE5
+		public static final byte _fast_invokevfinal = (byte) (_fast_icaload + 1); // 0xE3
+		public static final byte _fast_linearswitch = (byte) (_fast_invokevfinal + 1); // 0xE4
+		public static final byte _fast_binaryswitch = (byte) (_fast_linearswitch + 1); // 0xE5
 
-		public static final byte _fast_aldc = (byte) (number_of_java_codes + 27); // 0xE6
-		public static final byte _fast_aldc_w = (byte) (number_of_java_codes + 28); // 0xE7
+		public static final byte _fast_aldc = (byte) (_fast_binaryswitch + 1); // 0xE6
+		public static final byte _fast_aldc_w = (byte) (_fast_aldc + 1); // 0xE7
 
-		public static final byte _return_register_finalizer = (byte) (number_of_java_codes + 29); // 0xE8
+		public static final byte _return_register_finalizer = (byte) (_fast_aldc_w + 1); // 0xE8
 
-		public static final byte _invokehandle = (byte) (number_of_java_codes + 30); // 0xE9
+		public static final byte _invokehandle = (byte) (_return_register_finalizer + 1); // 0xE9
 
-		public static final byte _nofast_getfield = (byte) (number_of_java_codes + 31); // 0xEA
-		public static final byte _nofast_putfield = (byte) (number_of_java_codes + 32); // 0xEB
-		public static final byte _nofast_aload_0 = (byte) (number_of_java_codes + 33); // 0xEC
-		public static final byte _nofast_iload = (byte) (number_of_java_codes + 34); // 0xED
+		public static final byte _nofast_getfield = (byte) (_invokehandle + 1); // 0xEA
+		public static final byte _nofast_putfield = (byte) (_nofast_getfield + 1); // 0xEB
+		public static final byte _nofast_aload_0 = (byte) (_nofast_putfield + 1); // 0xEC
+		public static final byte _nofast_iload = (byte) (_nofast_aload_0 + 1); // 0xED
 
-		public static final byte _shouldnotreachhere = (byte) (number_of_java_codes + 35); // 0xEE
+		public static final byte _shouldnotreachhere = (byte) (_nofast_iload + 1); // 0xEE
 
-		public static final int number_of_codes = 239; // 0xEF
+		public static final int number_of_codes = ((_shouldnotreachhere + 1) & cxx_type.uint8_t_mask); // 0xEF
 	}
 
 	public static abstract class Flags

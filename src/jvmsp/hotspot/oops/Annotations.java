@@ -69,9 +69,9 @@ public class Annotations extends MetaspaceObj
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.AnnotationsType;
+		return Type.AnnotationsType;
 	}
 
 	public String internal_name()

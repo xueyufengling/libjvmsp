@@ -12,6 +12,12 @@ public abstract class MetaspaceObj extends vm_struct
 	public static final long _shared_metaspace_base = vm_struct.entry.find(type_name, "_shared_metaspace_base").address;
 	public static final long _shared_metaspace_top = vm_struct.entry.find(type_name, "_shared_metaspace_top").address;
 
+	@Override
+	public final int allocation_type()
+	{
+		return MetaspaceObj;
+	}
+
 	public MetaspaceObj(String name, long address)
 	{
 		super(name, address);
@@ -53,7 +59,7 @@ public abstract class MetaspaceObj extends vm_struct
 	 * 
 	 * @return
 	 */
-	public abstract int type();
+	public abstract int meta_type();
 
 	/**
 	 * 元空间对象的类型

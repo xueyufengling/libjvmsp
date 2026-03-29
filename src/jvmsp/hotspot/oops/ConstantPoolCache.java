@@ -121,8 +121,8 @@ public class ConstantPoolCache extends MetaspaceObj
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.ConstantPoolCacheType;
+		return Type.ConstantPoolCacheType;
 	}
 }

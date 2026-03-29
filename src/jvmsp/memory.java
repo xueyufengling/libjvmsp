@@ -156,6 +156,26 @@ public abstract class memory
 		return reflection.first_generic_class(list_field);
 	}
 
+	public static final byte byte_flag(int bit)
+	{
+		return (byte) (1 << bit);
+	}
+
+	public static final short short_flag(int bit)
+	{
+		return (short) (1 << bit);
+	}
+
+	public static final int int_flag(int bit)
+	{
+		return (int) (1 << bit);
+	}
+
+	public static final long long_flag(int bit)
+	{
+		return (long) (1 << bit);
+	}
+
 	public static final boolean flag_bit(long flags, long flag)
 	{
 		return (flags & flag) != 0;
@@ -226,10 +246,14 @@ public abstract class memory
 	/**
 	 * 具有内存地址的对象
 	 */
-	@FunctionalInterface
 	public static interface pointer_type
 	{
 		public abstract long address();
+
+		public default boolean addr_equals(pointer_type o)
+		{
+			return this.address() == o.address();
+		}
 	}
 
 	/**
@@ -270,6 +294,12 @@ public abstract class memory
 		public void delete()
 		{
 			unsafe.free(address);
+		}
+
+		@Override
+		public boolean equals(Object o)
+		{
+			return o instanceof memory_object mo ? this.addr_equals(mo) : false;
 		}
 
 		protected long offset_addr(long offset)

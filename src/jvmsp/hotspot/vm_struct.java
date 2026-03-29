@@ -15,6 +15,7 @@ import jvmsp.structs.long_array;
 import jvmsp.symbols;
 import jvmsp.unsafe;
 import jvmsp.versions;
+import jvmsp.hotspot.vm_type.entry;
 import jvmsp.libso.libjvm;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
@@ -26,7 +27,7 @@ import static jvmsp.versions.jdk_versions;
  * hotspot虚拟机内部实现结构体访问
  */
 @SuppressWarnings("unused")
-public abstract class vm_struct extends memory_object
+public abstract class vm_struct extends memory_object implements vm_type
 {
 	public static class entry
 	{
@@ -219,21 +220,41 @@ public abstract class vm_struct extends memory_object
 		}
 	}
 
-	public static final long sizeof(String name)
+	/**
+	 * 打印类型信息
+	 * 
+	 * @param type_name
+	 */
+	public static final void print_type(String type_name)
 	{
-		vm_type t = vm_type.find(name);
-		return t == null ? 0 : t.size;
+		vm_type.entry.print_type(type_name);
+		vm_struct.entry.print_type(type_name);
 	}
 
 	/**
 	 * 导出的VMType
 	 */
-	private final vm_type type;
+	private final vm_type.entry type;
+
+	public static long sizeof(String name)
+	{
+		vm_type.entry t = vm_type.entry.find(name);
+		return t == null ? 0 : t.size;
+	}
+
+	/**
+	 * 获取VMType类型
+	 */
+	@Override
+	public final vm_type.entry type()
+	{
+		return type;
+	}
 
 	protected vm_struct(String name, long address)
 	{
 		super(address);
-		this.type = vm_type.find(name);
+		this.type = vm_type.entry.find(name);
 	}
 
 	protected vm_struct(long address)
@@ -241,44 +262,10 @@ public abstract class vm_struct extends memory_object
 		this(null, address);
 	}
 
-	/**
-	 * 该类型是否在libjvm.so中导出给Serviceability Agent
-	 * 
-	 * @return
-	 */
-	public final boolean is_exported()
+	@Override
+	public int allocation_type()
 	{
-		return this.type != null;
-	}
-
-	public final long type_size()
-	{
-		return is_exported() ? 0 : type.size;
-	}
-
-	public final String type_name()
-	{
-		return is_exported() ? null : type.type_name;
-	}
-
-	public final String super_class_name()
-	{
-		return is_exported() ? null : type.super_class_name;
-	}
-
-	public final boolean is_oop_type()
-	{
-		return is_exported() ? false : type.is_oop_type;
-	}
-
-	public final boolean is_integer_type()
-	{
-		return is_exported() ? false : type.is_integer_type;
-	}
-
-	public final boolean is_unsigned()
-	{
-		return is_exported() ? false : type.is_unsigned;
+		return CxxObj;
 	}
 
 	/**
@@ -509,13 +496,6 @@ public abstract class vm_struct extends memory_object
 		super.write_memory_object(offset, struct, size);
 	}
 
-	public static class Generation
-	{
-		private static final long _reserved = vm_struct.entry.find("Generation", "_reserved").offset;
-		private static final long _virtual_space = vm_struct.entry.find("Generation", "_virtual_space").offset;
-		private static final long _stat_record = vm_struct.entry.find("Generation", "_stat_record").offset;
-	}
-
 	public static class Generation_StatRecord
 	{
 		private static final long invocations = vm_struct.entry.find("Generation::StatRecord", "invocations").offset;
@@ -583,29 +563,6 @@ public abstract class vm_struct extends memory_object
 		private static final long end_pc = vm_struct.entry.find("ExceptionTableElement", "end_pc").offset;
 		private static final long handler_pc = vm_struct.entry.find("ExceptionTableElement", "handler_pc").offset;
 		private static final long catch_type_index = vm_struct.entry.find("ExceptionTableElement", "catch_type_index").offset;
-	}
-
-	public static class JNIid
-	{
-		private static final long _holder = vm_struct.entry.find("JNIid", "_holder").offset;
-		private static final long _next = vm_struct.entry.find("JNIid", "_next").offset;
-		private static final long _offset = vm_struct.entry.find("JNIid", "_offset").offset;
-	}
-
-	public static class ThreadLocalAllocBuffer
-	{
-		private static final long _start = vm_struct.entry.find("ThreadLocalAllocBuffer", "_start").offset;
-		private static final long _top = vm_struct.entry.find("ThreadLocalAllocBuffer", "_top").offset;
-		private static final long _end = vm_struct.entry.find("ThreadLocalAllocBuffer", "_end").offset;
-		private static final long _pf_top = vm_struct.entry.find("ThreadLocalAllocBuffer", "_pf_top").offset;
-		private static final long _desired_size = vm_struct.entry.find("ThreadLocalAllocBuffer", "_desired_size").offset;
-		private static final long _refill_waste_limit = vm_struct.entry.find("ThreadLocalAllocBuffer", "_refill_waste_limit").offset;
-		private static final long _reserve_for_allocation_prefetch = vm_struct.entry.find("ThreadLocalAllocBuffer", "_reserve_for_allocation_prefetch").address;
-		private static final long _target_refills = vm_struct.entry.find("ThreadLocalAllocBuffer", "_target_refills").address;
-		private static final long _number_of_refills = vm_struct.entry.find("ThreadLocalAllocBuffer", "_number_of_refills").offset;
-		private static final long _refill_waste = vm_struct.entry.find("ThreadLocalAllocBuffer", "_refill_waste").offset;
-		private static final long _gc_waste = vm_struct.entry.find("ThreadLocalAllocBuffer", "_gc_waste").offset;
-		private static final long _slow_allocations = vm_struct.entry.find("ThreadLocalAllocBuffer", "_slow_allocations").offset;
 	}
 
 	public static class VirtualSpace
@@ -871,13 +828,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _anchor = vm_struct.entry.find("JavaCallWrapper", "_anchor").offset;
 	}
 
-	public static class JavaFrameAnchor
-	{
-		private static final long _last_Java_sp = vm_struct.entry.find("JavaFrameAnchor", "_last_Java_sp").offset;
-		private static final long _last_Java_pc = vm_struct.entry.find("JavaFrameAnchor", "_last_Java_pc").offset;
-		private static final long _last_Java_fp = vm_struct.entry.find("JavaFrameAnchor", "_last_Java_fp").offset;
-	}
-
 	public static class Threads
 	{
 		private static final long _number_of_threads = vm_struct.entry.find("Threads", "_number_of_threads").address;
@@ -896,12 +846,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _threads = vm_struct.entry.find("ThreadsList", "_threads").offset;
 	}
 
-	public static class LockStack
-	{
-		private static final long _top = vm_struct.entry.find("LockStack", "_top").offset;
-		private static final long _base_0 = vm_struct.entry.find("LockStack", "_base[0]").offset;
-	}
-
 	public static class NamedThread
 	{
 		private static final long _name = vm_struct.entry.find("NamedThread", "_name").offset;
@@ -913,35 +857,9 @@ public abstract class vm_struct extends memory_object
 		private static final long _env = vm_struct.entry.find("CompilerThread", "_env").offset;
 	}
 
-	public static class OSThread
-	{
-		private static final long _state = vm_struct.entry.find("OSThread", "_state").offset;
-		private static final long _thread_id = vm_struct.entry.find("OSThread", "_thread_id").offset;
-		private static final long _thread_handle = vm_struct.entry.find("OSThread", "_thread_handle").offset;
-	}
-
 	public static class ImmutableOopMap
 	{
 		private static final long _count = vm_struct.entry.find("ImmutableOopMap", "_count").offset;
-	}
-
-	public static class JNIHandles
-	{
-		private static final long _global_handles = vm_struct.entry.find("JNIHandles", "_global_handles").address;
-		private static final long _weak_global_handles = vm_struct.entry.find("JNIHandles", "_weak_global_handles").address;
-	}
-
-	public static class JNIHandleBlock
-	{
-		private static final long _handles = vm_struct.entry.find("JNIHandleBlock", "_handles").offset;
-		private static final long _top = vm_struct.entry.find("JNIHandleBlock", "_top").offset;
-		private static final long _next = vm_struct.entry.find("JNIHandleBlock", "_next").offset;
-	}
-
-	public static class CompressedStream
-	{
-		private static final long _buffer = vm_struct.entry.find("CompressedStream", "_buffer").offset;
-		private static final long _position = vm_struct.entry.find("CompressedStream", "_position").offset;
 	}
 
 	public static class VMRegImpl
@@ -1058,17 +976,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _value_float = vm_struct.entry.find("ciConstant", "_value._float").offset;
 		private static final long _value_double = vm_struct.entry.find("ciConstant", "_value._double").offset;
 		private static final long _value_object = vm_struct.entry.find("ciConstant", "_value._object").offset;
-	}
-
-	public static class ObjectMonitor
-	{
-		private static final long _header = vm_struct.entry.find("ObjectMonitor", "_header").offset;
-		private static final long _object = vm_struct.entry.find("ObjectMonitor", "_object").offset;
-		private static final long _owner = vm_struct.entry.find("ObjectMonitor", "_owner").offset;
-		private static final long _next_om = vm_struct.entry.find("ObjectMonitor", "_next_om").offset;
-		private static final long _contentions = vm_struct.entry.find("ObjectMonitor", "_contentions").offset;
-		private static final long _waiters = vm_struct.entry.find("ObjectMonitor", "_waiters").offset;
-		private static final long _recursions = vm_struct.entry.find("ObjectMonitor", "_recursions").offset;
 	}
 
 	public static class BasicLock
@@ -1354,13 +1261,6 @@ public abstract class vm_struct extends memory_object
 		private static final long _num_inlined_bytecodes = vm_struct.entry.find("CompileTask", "_num_inlined_bytecodes").offset;
 		private static final long _next = vm_struct.entry.find("CompileTask", "_next").offset;
 		private static final long _prev = vm_struct.entry.find("CompileTask", "_prev").offset;
-	}
-
-	public static class vframeArray
-	{
-		private static final long _original = vm_struct.entry.find("vframeArray", "_original").offset;
-		private static final long _caller = vm_struct.entry.find("vframeArray", "_caller").offset;
-		private static final long _frames = vm_struct.entry.find("vframeArray", "_frames").offset;
 	}
 
 	public static class vframeArrayElement

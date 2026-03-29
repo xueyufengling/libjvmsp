@@ -1,7 +1,11 @@
 package jvmsp.hotspot.memory;
 
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 
+/**
+ * 内存区间
+ */
 public class MemRegion extends vm_struct
 {
 	public static final String type_name = "MemRegion";
@@ -56,5 +60,25 @@ public class MemRegion extends vm_struct
 	public void set_end(long end)
 	{
 		set_word_size(end - start());
+	}
+
+	public boolean contains(MemRegion mr2)
+	{
+		return start() <= mr2.start() && end() >= mr2.end();
+	}
+
+	public boolean contains(long addr)
+	{
+		return addr >= start() && addr < end();
+	}
+
+	public long byte_size()
+	{
+		return _word_size * vm_constant.HeapWordSize;
+	}
+
+	public boolean is_empty()
+	{
+		return word_size() == 0;
 	}
 }

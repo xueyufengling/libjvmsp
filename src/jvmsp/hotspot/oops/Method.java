@@ -4,7 +4,6 @@ import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.code.nmethod;
 import jvmsp.hotspot.interpreter.Bytecodes;
-import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.utilities.AccessFlags;
 import jvmsp.hotspot.utilities.align;
 
@@ -280,9 +279,9 @@ public class Method extends Metadata
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.MethodType;
+		return Type.MethodType;
 	}
 
 }

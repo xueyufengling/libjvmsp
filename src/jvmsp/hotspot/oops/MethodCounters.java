@@ -1,7 +1,6 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.hotspot.vm_struct;
-import jvmsp.hotspot.memory.MetaspaceObj;
 
 public class MethodCounters extends Metadata
 {
@@ -33,9 +32,9 @@ public class MethodCounters extends Metadata
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.MethodCountersType;
+		return Type.MethodCountersType;
 	}
 
 	@Override

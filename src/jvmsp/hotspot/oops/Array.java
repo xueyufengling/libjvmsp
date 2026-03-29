@@ -54,9 +54,9 @@ public abstract class Array extends MetaspaceObj
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.array_type((int) element_size);
+		return Type.array_type((int) element_size);
 	}
 
 	public static class Array_int extends Array

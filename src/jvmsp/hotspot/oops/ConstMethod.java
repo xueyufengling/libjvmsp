@@ -31,6 +31,9 @@ public class ConstMethod extends MetaspaceObj
 	// ConstMethod对象中储存字节码的偏移量
 	public static final long codes_offset = size;
 
+	public static final int MAX_IDNUM = 0xFFFE;
+	public static final int UNSET_IDNUM = 0xFFFF;
+
 	public ConstMethod(long address)
 	{
 		super(type_name, address);
@@ -514,9 +517,9 @@ public class ConstMethod extends MetaspaceObj
 	}
 
 	@Override
-	public int type()
+	public int meta_type()
 	{
-		return MetaspaceObj.Type.ConstMethodType;
+		return Type.ConstMethodType;
 	}
 
 	public String internal_name()

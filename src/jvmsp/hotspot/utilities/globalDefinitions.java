@@ -99,4 +99,23 @@ public class globalDefinitions
 			heapOopSize = oopSize;
 		}
 	}
+
+	/**
+	 * Java线程的状态
+	 */
+	public static abstract class JavaThreadState
+	{
+		public static final int _thread_uninitialized = 0;
+		public static final int _thread_new = 2;
+		public static final int _thread_new_trans = 3;
+		public static final int _thread_in_native = 4;
+		public static final int _thread_in_native_trans = 5;
+		public static final int _thread_in_vm = 6;
+		public static final int _thread_in_vm_trans = 7;
+		public static final int _thread_in_Java = 8;
+		public static final int _thread_in_Java_trans = 9;
+		public static final int _thread_blocked = 10;
+		public static final int _thread_blocked_trans = 11;
+		public static final int _thread_max_state = 12;
+	}
 }

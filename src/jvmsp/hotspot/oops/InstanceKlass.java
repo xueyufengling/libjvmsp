@@ -3,9 +3,11 @@ package jvmsp.hotspot.oops;
 import jvmsp.type.cxx_type;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.code.nmethod;
 import jvmsp.hotspot.oops.Array.Array_int;
 import jvmsp.hotspot.oops.Array.Array_pInstanceKlass;
 import jvmsp.hotspot.oops.Array.Array_pMethod;
+import jvmsp.hotspot.runtime.JavaThread;
 import jvmsp.hotspot.utilities.AccessFlags;
 import jvmsp.hotspot.utilities.align;
 import jvmsp.hotspot.utilities.globalDefinitions;
@@ -47,6 +49,39 @@ public class InstanceKlass extends Klass
 	private static final long _nest_host = _nest_members + cxx_type.pvoid.size();
 	private static final long _permitted_subclasses = _nest_host + cxx_type.pvoid.size();
 	private static final long _record_components = _permitted_subclasses + cxx_type.pvoid.size();
+
+	public abstract class ClassState
+	{
+		/**
+		 * 已分配内存，但未链接
+		 */
+		public static final byte allocated = 0;
+
+		/**
+		 * 已加载且插入了继承链，但未链接
+		 */
+		public static final byte loaded = 1;
+
+		/**
+		 * 链接、验证成功，但未初始化
+		 */
+		public static final byte linked = 2;
+
+		/**
+		 * 正在执行类初始化
+		 */
+		public static final byte being_initialized = 3;
+
+		/**
+		 * 初始化完成
+		 */
+		public static final byte fully_initialized = 4;
+
+		/**
+		 * 初始化出错
+		 */
+		public static final byte initialization_error = 5;
+	}
 
 	public InstanceKlass(long address)
 	{
@@ -113,9 +148,24 @@ public class InstanceKlass extends Klass
 		return super.read_uint16_t(_idnum_allocated_count);
 	}
 
-	public void set_idnum_allocated_count(int idnum_allocated_count)
+	public void set_initial_method_idnum(int idnum_allocated_count)
 	{
 		super.write_uint16_t(_idnum_allocated_count, idnum_allocated_count);
+	}
+
+	public int next_method_idnum()
+	{
+		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/instanceKlass.hpp#L1175
+		int idnum_allocated_count = idnum_allocated_count();
+		if (idnum_allocated_count == ConstMethod.MAX_IDNUM)
+		{
+			return ConstMethod.UNSET_IDNUM;
+		}
+		else
+		{
+			set_initial_method_idnum(idnum_allocated_count + 1);
+			return idnum_allocated_count;
+		}
 	}
 
 	/**
@@ -132,6 +182,56 @@ public class InstanceKlass extends Klass
 	public void set_init_state(byte init_state)
 	{
 		super.write(_init_state, init_state);
+	}
+
+	public boolean is_loaded()
+	{
+		return init_state() >= ClassState.loaded;
+	}
+
+	public boolean is_linked()
+	{
+		return init_state() >= ClassState.linked;
+	}
+
+	public boolean is_initialized()
+	{
+		return init_state() == ClassState.fully_initialized;
+	}
+
+	public boolean is_not_initialized()
+	{
+		return init_state() < ClassState.being_initialized;
+	}
+
+	public boolean is_being_initialized()
+	{
+		return init_state() == ClassState.being_initialized;
+	}
+
+	public boolean is_in_error_state()
+	{
+		return init_state() == ClassState.initialization_error;
+	}
+
+	/**
+	 * 获取初始化本类的线程
+	 * 
+	 * @return
+	 */
+	public JavaThread init_thread()
+	{
+		return super.read_memory_object_ptr(JavaThread.class, _init_thread);
+	}
+
+	public void set_init_thread(JavaThread init_thread)
+	{
+		super.write_memory_object_ptr(_init_thread, init_thread);
+	}
+
+	public boolean is_reentrant_initialization(jvmsp.hotspot.runtime.Thread thread)
+	{
+		return init_thread().addr_equals(thread);
 	}
 
 	/**
@@ -239,6 +339,48 @@ public class InstanceKlass extends Klass
 	public void set_breakpoints(BreakpointInfo breakpoints)
 	{
 		super.write_memory_object_ptr(_breakpoints, breakpoints);
+	}
+
+	/**
+	 * 本类第一个静态字段的JNIid。<br>
+	 * 链式存储。<br>
+	 * 
+	 * @return
+	 */
+	public JNIid jni_ids()
+	{
+		return super.read_memory_object_ptr(JNIid.class, _jni_ids);
+	}
+
+	public void set_jni_ids(JNIid jni_ids)
+	{
+		super.write_memory_object_ptr(_jni_ids, jni_ids);
+	}
+
+	/**
+	 * 返回本类所有方法的JNI的jMethodId数组，每个jMethodId实际上是一个指针。<br>
+	 * 返回数组长度为method_idnum。
+	 * 
+	 * @return
+	 */
+	public long methods_jmethod_ids()
+	{
+		return super.read_pointer(_methods_jmethod_ids);
+	}
+
+	public void set_methods_jmethod_ids(long methods_jmethod_ids)
+	{
+		super.write_pointer(_methods_jmethod_ids, methods_jmethod_ids);
+	}
+
+	public nmethod osr_nmethods_head()
+	{
+		return super.read_memory_object_ptr(nmethod.class, _osr_nmethods_head);
+	}
+
+	public void set_osr_nmethods_head(nmethod osr_nmethods_head)
+	{
+		super.write_memory_object_ptr(_osr_nmethods_head, osr_nmethods_head);
 	}
 
 	/**

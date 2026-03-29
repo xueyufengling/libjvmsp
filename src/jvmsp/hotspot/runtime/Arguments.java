@@ -2,11 +2,12 @@ package jvmsp.hotspot.runtime;
 
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.memory.AllStatic;
 
 /**
  * JVM启动参数读取
  */
-public abstract class Arguments
+public class Arguments extends AllStatic
 {
 	public static final String type_name = "Arguments";
 
@@ -18,6 +19,11 @@ public abstract class Arguments
 	private static final long _num_jvm_args = vm_struct.entry.find(type_name, "_num_jvm_args").address;
 	// 启动命令
 	private static final long _java_command = vm_struct.entry.find(type_name, "_java_command").address;
+
+	private Arguments()
+	{
+		super(type_name);
+	}
 
 	/**
 	 * JVM标志数组，标志为字符串。<br>

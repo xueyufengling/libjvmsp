@@ -3,18 +3,26 @@ package jvmsp.hotspot.classfile;
 import jvmsp.type.java_type;
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.memory.AllStatic;
 import jvmsp.hotspot.oops.CompressedKlassPointers;
 import jvmsp.hotspot.oops.CompressedOops;
 import jvmsp.hotspot.oops.InstanceKlass;
 import jvmsp.hotspot.oops.Klass;
 import jvmsp.hotspot.oops.oopDesc;
 
-public abstract class java_lang_Class
+public class java_lang_Class extends AllStatic
 {
-	private static final long _klass_offset = vm_struct.entry.find("java_lang_Class", "_klass_offset").address;
-	private static final long _array_klass_offset = vm_struct.entry.find("java_lang_Class", "_array_klass_offset").address;
-	private static final long _oop_size_offset = vm_struct.entry.find("java_lang_Class", "_oop_size_offset").address;
-	private static final long _static_oop_field_count_offset = vm_struct.entry.find("java_lang_Class", "_static_oop_field_count_offset").address;
+	public static final String type_name = "java_lang_Class";
+
+	private static final long _klass_offset = vm_struct.entry.find(type_name, "_klass_offset").address;
+	private static final long _array_klass_offset = vm_struct.entry.find(type_name, "_array_klass_offset").address;
+	private static final long _oop_size_offset = vm_struct.entry.find(type_name, "_oop_size_offset").address;
+	private static final long _static_oop_field_count_offset = vm_struct.entry.find(type_name, "_static_oop_field_count_offset").address;
+
+	private java_lang_Class()
+	{
+		super(type_name);
+	}
 
 	public static final int _klass_offset()
 	{
