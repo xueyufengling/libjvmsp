@@ -44,7 +44,7 @@ public class JNIHandleBlock extends CHeapObj implements Iterable<JNIHandleBlock>
 
 	public long _next()
 	{
-		return super.read_pointer(_next);
+		return super.read_ptr(_next);
 	}
 
 	public void set_next(JNIHandleBlock next)

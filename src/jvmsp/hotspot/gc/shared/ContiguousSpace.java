@@ -27,12 +27,12 @@ public class ContiguousSpace extends Space implements Iterable<ContiguousSpace>
 
 	public long compaction_top()
 	{
-		return super.read_pointer(_compaction_top);
+		return super.read_ptr(_compaction_top);
 	}
 
 	public void set_compaction_top(long compaction_top)
 	{
-		super.write_pointer(_compaction_top, compaction_top);
+		super.write_ptr(_compaction_top, compaction_top);
 	}
 
 	/**
@@ -42,12 +42,12 @@ public class ContiguousSpace extends Space implements Iterable<ContiguousSpace>
 	 */
 	public long _next_compaction_space()
 	{
-		return super.read_pointer(_next_compaction_space);
+		return super.read_ptr(_next_compaction_space);
 	}
 
 	public void set_next_compaction_space(long next_compaction_space)
 	{
-		super.write_pointer(_next_compaction_space, next_compaction_space);
+		super.write_ptr(_next_compaction_space, next_compaction_space);
 	}
 
 	public boolean has_next_compaction_space()
@@ -62,32 +62,32 @@ public class ContiguousSpace extends Space implements Iterable<ContiguousSpace>
 
 	public long top()
 	{
-		return super.read_pointer(_top);
+		return super.read_ptr(_top);
 	}
 
 	public void set_top(long top)
 	{
-		super.write_pointer(_top, top);
+		super.write_ptr(_top, top);
 	}
 
 	public long first_dead()
 	{
-		return super.read_pointer(_first_dead);
+		return super.read_ptr(_first_dead);
 	}
 
 	public void set_first_dead(long first_dead)
 	{
-		super.write_pointer(_first_dead, first_dead);
+		super.write_ptr(_first_dead, first_dead);
 	}
 
 	public long end_of_live()
 	{
-		return super.read_pointer(_end_of_live);
+		return super.read_ptr(_end_of_live);
 	}
 
 	public void set_end_of_live(long end_of_live)
 	{
-		super.write_pointer(_end_of_live, end_of_live);
+		super.write_ptr(_end_of_live, end_of_live);
 	}
 
 	@Override

@@ -34,17 +34,17 @@ public class ObjectMonitor extends CHeapObj
 
 	public long header()
 	{
-		return super.read_pointer(_header);
+		return super.read_ptr(_header);
 	}
 
 	public void set_header(long header)
 	{
-		super.write_pointer(_header, header);
+		super.write_ptr(_header, header);
 	}
 
 	public long _metadata()
 	{
-		return super.read_pointer(_metadata);
+		return super.read_ptr(_metadata);
 	}
 
 	public Metadata metadata()
@@ -54,96 +54,96 @@ public class ObjectMonitor extends CHeapObj
 
 	public void set_metadata(long metadata)
 	{
-		super.write_pointer(_metadata, metadata);
+		super.write_ptr(_metadata, metadata);
 	}
 
 	public long object()
 	{
-		return super.read_pointer(_object);
+		return super.read_ptr(_object);
 	}
 
 	public void set_object(long object)
 	{
-		super.write_pointer(_object, object);
+		super.write_ptr(_object, object);
 	}
 
 	public long owner()
 	{
-		return super.read_pointer(_owner);
+		return super.read_ptr(_owner);
 	}
 
 	public void set_owner(long owner)
 	{
-		super.write_pointer(_owner, owner);
+		super.write_ptr(_owner, owner);
 	}
 
 	public long next_om()
 	{
-		return super.read_pointer(_next_om);
+		return super.read_ptr(_next_om);
 	}
 
 	public void set_next_om(long next_om)
 	{
-		super.write_pointer(_next_om, next_om);
+		super.write_ptr(_next_om, next_om);
 	}
 
 	public long recursions()
 	{
-		return super.read_pointer(_recursions);
+		return super.read_ptr(_recursions);
 	}
 
 	public void set_recursions(long recursions)
 	{
-		super.write_pointer(_recursions, recursions);
+		super.write_ptr(_recursions, recursions);
 	}
 
 	public long EntryList()
 	{
-		return super.read_pointer(_EntryList);
+		return super.read_ptr(_EntryList);
 	}
 
 	public void set_EntryList(long EntryList)
 	{
-		super.write_pointer(_EntryList, EntryList);
+		super.write_ptr(_EntryList, EntryList);
 	}
 
 	public long cxq()
 	{
-		return super.read_pointer(_cxq);
+		return super.read_ptr(_cxq);
 	}
 
 	public void set_cxq(long cxq)
 	{
-		super.write_pointer(_cxq, cxq);
+		super.write_ptr(_cxq, cxq);
 	}
 
 	public long succ()
 	{
-		return super.read_pointer(_succ);
+		return super.read_ptr(_succ);
 	}
 
 	public void set_succ(long succ)
 	{
-		super.write_pointer(_succ, succ);
+		super.write_ptr(_succ, succ);
 	}
 
 	public long contentions()
 	{
-		return super.read_pointer(_contentions);
+		return super.read_ptr(_contentions);
 	}
 
 	public void set_contentions(long contentions)
 	{
-		super.write_pointer(_contentions, contentions);
+		super.write_ptr(_contentions, contentions);
 	}
 
 	public long waiters()
 	{
-		return super.read_pointer(_waiters);
+		return super.read_ptr(_waiters);
 	}
 
 	public void set_waiters(long waiters)
 	{
-		super.write_pointer(_waiters, waiters);
+		super.write_ptr(_waiters, waiters);
 	}
 }

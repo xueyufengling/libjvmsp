@@ -62,11 +62,11 @@ public class OSThread extends OSThreadBase
 	 */
 	public long thread_handle()
 	{
-		return super.read_pointer(_thread_handle);
+		return super.read_ptr(_thread_handle);
 	}
 
 	public void set_thread_handle(long thread_handle)
 	{
-		super.write_pointer(_thread_handle, thread_handle);
+		super.write_ptr(_thread_handle, thread_handle);
 	}
 }

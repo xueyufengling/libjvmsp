@@ -156,6 +156,17 @@ public abstract class memory
 		return reflection.first_generic_class(list_field);
 	}
 
+	/**
+	 * 构建右侧n个位的掩码，例如0x00001111。<br>
+	 * 
+	 * @param n
+	 * @return
+	 */
+	public static final long right_bits_mask(int n)
+	{
+		return (1L << n) - 1;
+	}
+
 	public static final byte byte_flag(int bit)
 	{
 		return (byte) (1 << bit);
@@ -356,14 +367,14 @@ public abstract class memory
 			unsafe.write(address + offset, value);
 		}
 
-		protected long read_pointer(long offset)
+		protected long read_ptr(long offset)
 		{
-			return unsafe.read_pointer(address + offset);
+			return unsafe.read_ptr(address + offset);
 		}
 
-		protected void write_pointer(long offset, long ptr)
+		protected void write_ptr(long offset, long ptr)
 		{
-			unsafe.write_pointer(address + offset, ptr);
+			unsafe.write_ptr(address + offset, ptr);
 		}
 
 		protected String read_cstr(long offset)
@@ -445,7 +456,7 @@ public abstract class memory
 
 		public static final <_MemObject extends memory_object> _MemObject as_memory_object_ptr(Class<_MemObject> clazz, long ptr_addr)
 		{
-			return as_memory_object(clazz, unsafe.read_pointer(ptr_addr));
+			return as_memory_object(clazz, unsafe.read_ptr(ptr_addr));
 		}
 
 		@SuppressWarnings("unchecked")
@@ -514,7 +525,7 @@ public abstract class memory
 
 		protected void write_memory_object_ptr(long offset, memory_object struct)
 		{
-			unsafe.write_pointer(address + offset, struct);
+			unsafe.write_ptr(address + offset, struct);
 		}
 
 		protected <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
@@ -600,15 +611,15 @@ public abstract class memory
 		}
 
 		@Override
-		public long read_pointer(long offset)
+		public long read_ptr(long offset)
 		{
-			return super.read_pointer(offset);
+			return super.read_ptr(offset);
 		}
 
 		@Override
-		public void write_pointer(long offset, long ptr)
+		public void write_ptr(long offset, long ptr)
 		{
-			super.write_pointer(offset, ptr);
+			super.write_ptr(offset, ptr);
 		}
 
 		@Override

@@ -74,7 +74,7 @@ public abstract class vm_struct extends memory_object implements vm_type
 			this.type_string = unsafe.read_cstr(struct_addr + gHotSpotVMStructEntryTypeStringOffset);
 			this.is_static = unsafe.read_cbool(struct_addr + gHotSpotVMStructEntryIsStaticOffset);
 			this.offset = unsafe.read_long(struct_addr + gHotSpotVMStructEntryOffsetOffset);
-			this.address = unsafe.read_pointer(struct_addr + gHotSpotVMStructEntryAddressOffset);
+			this.address = unsafe.read_ptr(struct_addr + gHotSpotVMStructEntryAddressOffset);
 		}
 
 		@Override
@@ -275,7 +275,7 @@ public abstract class vm_struct extends memory_object implements vm_type
 	 * @return
 	 */
 	@SafeVarargs
-	public static final long switch_offset(Supplier<Long>... values)
+	protected static final long switch_offset(Supplier<Long>... values)
 	{
 		return jdk_versions.switch_execute_existj(-1, values);
 	}
@@ -317,98 +317,98 @@ public abstract class vm_struct extends memory_object implements vm_type
 	}
 
 	@Override
-	public byte read_byte(long offset)
+	protected byte read_byte(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_byte(offset);
 	}
 
 	@Override
-	public void write(long offset, byte value)
+	protected void write(long offset, byte value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write(offset, value);
 	}
 
 	@Override
-	public short read_short(long offset)
+	protected short read_short(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_short(offset);
 	}
 
 	@Override
-	public void write(long offset, short value)
+	protected void write(long offset, short value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write(offset, value);
 	}
 
 	@Override
-	public int read_int(long offset)
+	protected int read_int(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_int(offset);
 	}
 
 	@Override
-	public void write(long offset, int value)
+	protected void write(long offset, int value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write(offset, value);
 	}
 
 	@Override
-	public long read_long(long offset)
+	protected long read_long(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_long(offset);
 	}
 
 	@Override
-	public void write(long offset, long value)
+	protected void write(long offset, long value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write(offset, value);
 	}
 
 	@Override
-	public long read_pointer(long offset)
+	protected long read_ptr(long offset)
 	{
 		this.offset_check_jdk_version(offset);
-		return super.read_pointer(offset);
+		return super.read_ptr(offset);
 	}
 
 	@Override
-	public void write_pointer(long offset, long ptr)
+	protected void write_ptr(long offset, long ptr)
 	{
 		this.offset_check_jdk_version(offset);
-		super.write_pointer(offset, ptr);
+		super.write_ptr(offset, ptr);
 	}
 
 	@Override
-	public String read_cstr(long offset)
+	protected String read_cstr(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_cstr(offset);
 	}
 
 	@Override
-	public pointer write_cstr(long offset, String str)
+	protected pointer write_cstr(long offset, String str)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.write_cstr(offset, str);
 	}
 
 	@Override
-	public int read_cint(long offset)
+	protected int read_cint(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_cint(offset);
 	}
 
 	@Override
-	public void write_cint(long offset, int value)
+	protected void write_cint(long offset, int value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write_cint(offset, value);
@@ -427,70 +427,70 @@ public abstract class vm_struct extends memory_object implements vm_type
 	}
 
 	@Override
-	public int read_uint16_t(long offset)
+	protected int read_uint16_t(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_uint16_t(offset);
 	}
 
 	@Override
-	public void write_uint16_t(long offset, int value)
+	protected void write_uint16_t(long offset, int value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write_uint16_t(offset, value);
 	}
 
 	@Override
-	public boolean read_cbool(long offset)
+	protected boolean read_cbool(long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_cbool(offset);
 	}
 
 	@Override
-	public void write_cbool(long offset, boolean value)
+	protected void write_cbool(long offset, boolean value)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write_cbool(offset, value);
 	}
 
 	@Override
-	public <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Class<_MemObject> clazz, long offset)
+	protected <_MemObject extends memory_object> _MemObject read_memory_object_ptr(Class<_MemObject> clazz, long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_memory_object_ptr(clazz, offset);
 	}
 
 	@Override
-	public <_MemObject extends memory_object> _MemObject read_memory_object_at(Class<_MemObject> clazz, long offset, long size, int idx)
+	protected <_MemObject extends memory_object> _MemObject read_memory_object_at(Class<_MemObject> clazz, long offset, long size, int idx)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_memory_object_at(clazz, offset, size, idx);
 	}
 
 	@Override
-	public <_MemObject extends memory_object> _MemObject[] read_memory_object_arr(Class<_MemObject> clazz, long offset, long size, int num)
+	protected <_MemObject extends memory_object> _MemObject[] read_memory_object_arr(Class<_MemObject> clazz, long offset, long size, int num)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_memory_object_arr(clazz, offset, size, num);
 	}
 
 	@Override
-	public <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
+	protected <_MemObject extends memory_object> _MemObject read_memory_object(Class<_MemObject> clazz, long offset)
 	{
 		this.offset_check_jdk_version(offset);
 		return super.read_memory_object(clazz, offset);
 	}
 
 	@Override
-	public void write_memory_object_ptr(long offset, memory_object struct)
+	protected void write_memory_object_ptr(long offset, memory_object struct)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write_memory_object_ptr(offset, struct);
 	}
 
 	@Override
-	public <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
+	protected <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
 	{
 		this.offset_check_jdk_version(offset);
 		super.write_memory_object(offset, struct, size);
@@ -743,7 +743,7 @@ public abstract class vm_struct extends memory_object implements vm_type
 
 		public static final long _generic_arraycopy()
 		{
-			return unsafe.read_pointer(_generic_arraycopy);
+			return unsafe.read_ptr(_generic_arraycopy);
 		}
 	}
 

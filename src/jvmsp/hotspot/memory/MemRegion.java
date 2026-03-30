@@ -29,7 +29,7 @@ public class MemRegion extends vm_struct
 
 	public long start()
 	{
-		return super.read_pointer(_start);
+		return super.read_ptr(_start);
 	}
 
 	public long word_size()
@@ -49,7 +49,7 @@ public class MemRegion extends vm_struct
 
 	public void set_start(long start)
 	{
-		super.write_pointer(_start, start);
+		super.write_ptr(_start, start);
 	}
 
 	public void set_word_size(long word_size)

@@ -139,27 +139,27 @@ public class Method extends Metadata
 
 	public long _from_interpreted_entry()
 	{
-		return super.read_pointer(_from_interpreted_entry);
+		return super.read_ptr(_from_interpreted_entry);
 	}
 
 	public long interpreter_entry()
 	{
-		return super.read_pointer(_i2i_entry);
+		return super.read_ptr(_i2i_entry);
 	}
 
 	public void set_interpreter_entry(long interpreter_entry)
 	{
 		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/method.hpp#L429
-		super.write_pointer(_i2i_entry, interpreter_entry);
+		super.write_ptr(_i2i_entry, interpreter_entry);
 		if (_from_interpreted_entry() != interpreter_entry)
 		{
-			super.write_pointer(_from_interpreted_entry, interpreter_entry);
+			super.write_ptr(_from_interpreted_entry, interpreter_entry);
 		}
 	}
 
 	public long _from_compiled_entry()
 	{
-		return super.read_pointer(_from_compiled_entry);
+		return super.read_ptr(_from_compiled_entry);
 	}
 
 	public void set_from_compiled_entry(long from_compiled_entry)

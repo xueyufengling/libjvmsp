@@ -30,22 +30,22 @@ public abstract class MetaspaceObj extends vm_struct
 
 	public static final long shared_metaspace_base()
 	{
-		return unsafe.read_pointer(_shared_metaspace_base);
+		return unsafe.read_ptr(_shared_metaspace_base);
 	}
 
 	public static final void set_shared_metaspace_base(long base)
 	{
-		unsafe.write_pointer(_shared_metaspace_base, base);
+		unsafe.write_ptr(_shared_metaspace_base, base);
 	}
 
 	public static final long shared_metaspace_top()
 	{
-		return unsafe.read_pointer(_shared_metaspace_top);
+		return unsafe.read_ptr(_shared_metaspace_top);
 	}
 
 	public static final void set_shared_metaspace_top(long top)
 	{
-		unsafe.write_pointer(_shared_metaspace_top, top);
+		unsafe.write_ptr(_shared_metaspace_top, top);
 	}
 
 	public static final void set_shared_metaspace_range(long base, long top)

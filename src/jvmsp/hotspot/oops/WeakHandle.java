@@ -23,11 +23,11 @@ public class WeakHandle extends vm_struct
 
 	public long _obj()
 	{
-		return super.read_pointer(_obj);
+		return super.read_ptr(_obj);
 	}
 
 	public void set_obj(long header)
 	{
-		super.write_pointer(_obj, header);
+		super.write_ptr(_obj, header);
 	}
 }

@@ -32,42 +32,42 @@ public class ThreadLocalAllocBuffer extends CHeapObj
 
 	public long start()
 	{
-		return super.read_pointer(_start);
+		return super.read_ptr(_start);
 	}
 
 	public void set_start(long start)
 	{
-		super.write_pointer(_start, start);
+		super.write_ptr(_start, start);
 	}
 
 	public long top()
 	{
-		return super.read_pointer(_top);
+		return super.read_ptr(_top);
 	}
 
 	public void set_top(long top)
 	{
-		super.write_pointer(_top, top);
+		super.write_ptr(_top, top);
 	}
 
 	public long end()
 	{
-		return super.read_pointer(_end);
+		return super.read_ptr(_end);
 	}
 
 	public void set_end(long end)
 	{
-		super.write_pointer(_end, end);
+		super.write_ptr(_end, end);
 	}
 
 	public long pf_top()
 	{
-		return super.read_pointer(_pf_top);
+		return super.read_ptr(_pf_top);
 	}
 
 	public void set_pf_top(long pf_top)
 	{
-		super.write_pointer(_pf_top, pf_top);
+		super.write_ptr(_pf_top, pf_top);
 	}
 
 	public long desired_size()
@@ -132,21 +132,21 @@ public class ThreadLocalAllocBuffer extends CHeapObj
 
 	public static final long reserve_for_allocation_prefetch()
 	{
-		return unsafe.read_pointer(_reserve_for_allocation_prefetch);
+		return unsafe.read_ptr(_reserve_for_allocation_prefetch);
 	}
 
 	public static final void set_reserve_for_allocation_prefetch(long reserve_for_allocation_prefetch)
 	{
-		unsafe.write_pointer(_reserve_for_allocation_prefetch, reserve_for_allocation_prefetch);
+		unsafe.write_ptr(_reserve_for_allocation_prefetch, reserve_for_allocation_prefetch);
 	}
 
 	public static final long target_refills()
 	{
-		return unsafe.read_pointer(_target_refills);
+		return unsafe.read_ptr(_target_refills);
 	}
 
 	public static final void set_target_refills(long target_refills)
 	{
-		unsafe.write_pointer(_target_refills, target_refills);
+		unsafe.write_ptr(_target_refills, target_refills);
 	}
 }

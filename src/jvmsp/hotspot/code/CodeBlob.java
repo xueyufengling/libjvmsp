@@ -42,7 +42,7 @@ public class CodeBlob extends vm_struct
 
 	public long _name()
 	{
-		return super.read_pointer(_name);
+		return super.read_ptr(_name);
 	}
 
 	public String name()

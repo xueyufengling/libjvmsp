@@ -34,12 +34,12 @@ public class Space extends CHeapObj
 	 */
 	public long bottom()
 	{
-		return super.read_pointer(_bottom);
+		return super.read_ptr(_bottom);
 	}
 
 	public void set_bottom(long bottom)
 	{
-		super.write_pointer(_bottom, bottom);
+		super.write_ptr(_bottom, bottom);
 	}
 
 	/**
@@ -49,21 +49,21 @@ public class Space extends CHeapObj
 	 */
 	public long end()
 	{
-		return super.read_pointer(_end);
+		return super.read_ptr(_end);
 	}
 
 	public void set_end(long end)
 	{
-		super.write_pointer(_end, end);
+		super.write_ptr(_end, end);
 	}
 
 	public long saved_mark_word()
 	{
-		return super.read_pointer(_saved_mark_word);
+		return super.read_ptr(_saved_mark_word);
 	}
 
 	public void set_saved_mark_word(long saved_mark_word)
 	{
-		super.write_pointer(_saved_mark_word, saved_mark_word);
+		super.write_ptr(_saved_mark_word, saved_mark_word);
 	}
 }

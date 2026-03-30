@@ -1027,7 +1027,6 @@ public abstract class reflection
 						break;
 					}
 				}
-				int cp_idx = Code.fetch_cp_idx(bytecode, targetCpIdxOffset);
 				// int cpi = _get_caller_class.constMethod().resolve_cp_cache_idx(targetCpIdx);
 				// System.out.println("targetCpIdx " + targetCpIdx + " -> " + cpi);
 				System.out.println(_get_caller_class.method_holder());

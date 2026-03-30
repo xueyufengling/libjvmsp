@@ -10,6 +10,8 @@ import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
 import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.oops.InstanceKlass;
+import jvmsp.hotspot.oops.InstanceKlass.ClassState;
 import jvmsp.hotspot.oops.Klass;
 import jvmsp.hotspot.utilities.AccessFlags;
 
@@ -370,7 +372,7 @@ public final class unsafe
 		_T o = null;
 		// unsafe方法是许多方法的前置，因此在此方法内只使用参数为基本类型的静态方法，不构造vm_struct对象，防止方法无限递归
 		long k = java_lang_Class.klass_ptr(clazz);
-		short acc = Klass._access_flags(k);
+		short acc = Klass.access_flags(k);
 		boolean is_abstract = AccessFlags.is_abstract(acc);
 		boolean is_interface = AccessFlags.is_interface(acc);// 接口同时具有is_abstract标志位，因此要先判断is_interface
 		if (is_interface)
@@ -395,6 +397,20 @@ public final class unsafe
 			o = allocate(clazz);
 		}
 		return o;
+	}
+
+	/**
+	 * 强制初始化一个类。<br>
+	 * 如果已经初始化则会重新执行初始化<clinit>。<br>
+	 * 
+	 * @param clazz
+	 */
+	public static final void force_initialize(Class<?> clazz)
+	{
+		long ik = java_lang_Class.klass_ptr(clazz);
+		if (InstanceKlass.init_state(ik) == ClassState.fully_initialized)// 如果已经初始化完成，则标记为已链接未初始化
+			InstanceKlass.set_init_state(ik, ClassState.linked);
+		ensure_class_initialized(clazz);
 	}
 
 	/**
@@ -427,7 +443,7 @@ public final class unsafe
 	 * @param offset
 	 * @param ptr
 	 */
-	public static final void write_pointer(Object base, long offset, long ptr)
+	public static final void write_ptr(Object base, long offset, long ptr)
 	{
 		try
 		{
@@ -439,14 +455,14 @@ public final class unsafe
 		}
 	}
 
-	public static final void write_pointer(long addr, long ptr)
+	public static final void write_ptr(long addr, long ptr)
 	{
-		write_pointer(null, addr, ptr);
+		write_ptr(null, addr, ptr);
 	}
 
-	public static final void write_pointer(long addr, pointer_type ptr)
+	public static final void write_ptr(long addr, pointer_type ptr)
 	{
-		write_pointer(addr, ptr.address());
+		write_ptr(addr, ptr.address());
 	}
 
 	/**
@@ -469,7 +485,7 @@ public final class unsafe
 		}
 	}
 
-	public static final long read_pointer(long addr)
+	public static final long read_ptr(long addr)
 	{
 		return read_pointer(null, addr);
 	}
@@ -525,7 +541,7 @@ public final class unsafe
 	public static final pointer write_cstr(Object base, long offset, String str)
 	{
 		pointer cstr = memory.c_str(str);
-		write_pointer(base, offset, cstr.address());
+		write_ptr(base, offset, cstr.address());
 		return cstr;
 	}
 

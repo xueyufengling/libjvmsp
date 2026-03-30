@@ -14,7 +14,7 @@ public abstract class Universe
 
 	public static final long _collectedHeap()
 	{
-		return unsafe.read_pointer(_collectedHeap);
+		return unsafe.read_ptr(_collectedHeap);
 	}
 
 	public static final CollectedHeap heap()

@@ -33,17 +33,17 @@ public class Arguments extends AllStatic
 	 */
 	public static final long _jvm_flags_array()
 	{
-		return unsafe.read_pointer(_jvm_flags_array);
+		return unsafe.read_ptr(_jvm_flags_array);
 	}
 
 	public static final long _jvm_args_array()
 	{
-		return unsafe.read_pointer(_jvm_args_array);
+		return unsafe.read_ptr(_jvm_args_array);
 	}
 
 	public static final long _java_command()
 	{
-		return unsafe.read_pointer(_java_command);
+		return unsafe.read_ptr(_java_command);
 	}
 
 	/**

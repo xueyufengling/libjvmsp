@@ -93,12 +93,12 @@ public class Thread extends ThreadShadow
 	 */
 	public long stack_base()
 	{
-		return super.read_pointer(_stack_base);
+		return super.read_ptr(_stack_base);
 	}
 
 	public void set_stack_base(long stack_base)
 	{
-		super.write_pointer(_stack_base, stack_base);
+		super.write_ptr(_stack_base, stack_base);
 	}
 
 	/**
@@ -128,11 +128,11 @@ public class Thread extends ThreadShadow
 
 	public long poll_data()
 	{
-		return super.read_pointer(_poll_data);
+		return super.read_ptr(_poll_data);
 	}
 
 	public void set_poll_data(long poll_data)
 	{
-		super.write_pointer(_poll_data, poll_data);
+		super.write_ptr(_poll_data, poll_data);
 	}
 }

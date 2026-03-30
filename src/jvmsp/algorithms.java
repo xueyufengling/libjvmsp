@@ -93,4 +93,33 @@ public class algorithms
 		}
 		return power;
 	}
+
+	/**
+	 * 查找byte[]数组中目标值第n次出现的索引。<br>
+	 * 未查找到则返回-1.<br>
+	 * 
+	 * @param array
+	 * @param target
+	 * @param n
+	 * @return
+	 */
+	public static int index_of(byte[] array, byte target, int n)
+	{
+		if (array == null || array.length == 0 || n < 1)
+		{
+			return -1;
+		}
+		int count = 0;
+		for (int i = 0; i < array.length; i++)
+		{
+			if (array[i] == target)
+			{
+				if (++count == n)
+				{
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
 }

@@ -39,7 +39,7 @@ public class JNIid extends CHeapObj implements Iterable<JNIid>
 
 	public long _next()
 	{
-		return super.read_pointer(_next);
+		return super.read_ptr(_next);
 	}
 
 	public void set_next(JNIid next)

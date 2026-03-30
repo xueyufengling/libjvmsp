@@ -52,61 +52,61 @@ public class StackOverflow extends vm_struct
 
 	public long stack_overflow_limit()
 	{
-		return super.read_pointer(_stack_overflow_limit);
+		return super.read_ptr(_stack_overflow_limit);
 	}
 
 	public void set_stack_overflow_limit(long stack_overflow_limit)
 	{
-		super.write_pointer(_stack_overflow_limit, stack_overflow_limit);
+		super.write_ptr(_stack_overflow_limit, stack_overflow_limit);
 	}
 
 	public long reserved_stack_activation()
 	{
-		return super.read_pointer(_reserved_stack_activation);
+		return super.read_ptr(_reserved_stack_activation);
 	}
 
 	public void set_reserved_stack_activation(long reserved_stack_activation)
 	{
-		super.write_pointer(_reserved_stack_activation, reserved_stack_activation);
+		super.write_ptr(_reserved_stack_activation, reserved_stack_activation);
 	}
 
 	public long shadow_zone_safe_limit()
 	{
-		return super.read_pointer(_shadow_zone_safe_limit);
+		return super.read_ptr(_shadow_zone_safe_limit);
 	}
 
 	public void set_shadow_zone_safe_limit(long shadow_zone_safe_limit)
 	{
-		super.write_pointer(_shadow_zone_safe_limit, shadow_zone_safe_limit);
+		super.write_ptr(_shadow_zone_safe_limit, shadow_zone_safe_limit);
 	}
 
 	public long shadow_zone_growth_watermark()
 	{
-		return super.read_pointer(_shadow_zone_growth_watermark);
+		return super.read_ptr(_shadow_zone_growth_watermark);
 	}
 
 	public void set_shadow_zone_growth_watermark(long shadow_zone_growth_watermark)
 	{
-		super.write_pointer(_shadow_zone_growth_watermark, shadow_zone_growth_watermark);
+		super.write_ptr(_shadow_zone_growth_watermark, shadow_zone_growth_watermark);
 	}
 
 	public long stack_base()
 	{
-		return super.read_pointer(_stack_base);
+		return super.read_ptr(_stack_base);
 	}
 
 	public void set_stack_base(long stack_base)
 	{
-		super.write_pointer(_stack_base, stack_base);
+		super.write_ptr(_stack_base, stack_base);
 	}
 
 	public long stack_end()
 	{
-		return super.read_pointer(_stack_end);
+		return super.read_ptr(_stack_end);
 	}
 
 	public void set_stack_end(long stack_end)
 	{
-		super.write_pointer(_stack_end, stack_end);
+		super.write_ptr(_stack_end, stack_end);
 	}
 }

@@ -1,6 +1,7 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.type.cxx_type;
+import jvmsp.unsafe;
 import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.java_lang_Class;
@@ -201,6 +202,16 @@ public class InstanceKlass extends Klass
 		super.write(_init_state, init_state);
 	}
 
+	public static byte init_state(long ik_ptr)
+	{
+		return unsafe.read_byte(ik_ptr + _init_state);
+	}
+
+	public static void set_init_state(long ik_ptr, byte init_state)
+	{
+		unsafe.write(ik_ptr + _init_state, init_state);
+	}
+
 	public boolean is_loaded()
 	{
 		return init_state() >= ClassState.loaded;
@@ -229,6 +240,11 @@ public class InstanceKlass extends Klass
 	public boolean is_in_error_state()
 	{
 		return init_state() == ClassState.initialization_error;
+	}
+
+	public boolean should_be_initialized()
+	{
+		return !is_initialized();
 	}
 
 	/**
@@ -382,12 +398,12 @@ public class InstanceKlass extends Klass
 	 */
 	public long methods_jmethod_ids()
 	{
-		return super.read_pointer(_methods_jmethod_ids);
+		return super.read_ptr(_methods_jmethod_ids);
 	}
 
 	public void set_methods_jmethod_ids(long methods_jmethod_ids)
 	{
-		super.write_pointer(_methods_jmethod_ids, methods_jmethod_ids);
+		super.write_ptr(_methods_jmethod_ids, methods_jmethod_ids);
 	}
 
 	public nmethod osr_nmethods_head()

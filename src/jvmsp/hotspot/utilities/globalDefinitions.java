@@ -11,6 +11,13 @@ public class globalDefinitions
 
 	public static final int oopSize = vm_constant.find_int("oopSize");
 
+	public static final int LogBitsPerByte = 3;
+	public static final int BitsPerByte = 1 << LogBitsPerByte;
+
+	public static final int LogBytesPerInt = 2;
+	public static final int BytesPerInt = 1 << LogBytesPerInt;
+	public static final int BitsPerInt = BytesPerInt * BitsPerByte;
+
 	public static final int LogBytesPerWord = vm_constant.find_int("LogBytesPerWord");
 	public static final int BytesPerWord = vm_constant.find_int("BytesPerWord");
 	public static final int BytesPerLong = vm_constant.find_int("BytesPerLong");
@@ -18,8 +25,6 @@ public class globalDefinitions
 	public static final int HeapWordSize = vm_constant.find_int("HeapWordSize");
 
 	public static final int LogHeapWordSize = vm_constant.find_int("LogHeapWordSize");
-
-	public static final int LogBitsPerByte = 3;
 
 	/**
 	 * uint32_t的最大值，用于掩码和计算32位机器最大寻址地址。

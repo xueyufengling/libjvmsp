@@ -18,21 +18,21 @@ public class JNIHandles extends AllStatic
 
 	public static final long _global_handles()
 	{
-		return unsafe.read_pointer(_global_handles);
+		return unsafe.read_ptr(_global_handles);
 	}
 
 	public static final void set_global_handles(long global_handles)
 	{
-		unsafe.write_pointer(_global_handles, global_handles);
+		unsafe.write_ptr(_global_handles, global_handles);
 	}
 
 	public static final long _weak_global_handles()
 	{
-		return unsafe.read_pointer(_weak_global_handles);
+		return unsafe.read_ptr(_weak_global_handles);
 	}
 
 	public static final void set_weak_global_handles(long weak_global_handles)
 	{
-		unsafe.write_pointer(_weak_global_handles, weak_global_handles);
+		unsafe.write_ptr(_weak_global_handles, weak_global_handles);
 	}
 }

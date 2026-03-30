@@ -136,12 +136,12 @@ public class JavaThread extends Thread
 	 */
 	public long jni_environment()
 	{
-		return super.read_pointer(_jni_environment);
+		return super.read_ptr(_jni_environment);
 	}
 
 	public void set_jni_environment(long jni_environment)
 	{
-		super.write_pointer(_jni_environment, jni_environment);
+		super.write_ptr(_jni_environment, jni_environment);
 	}
 
 	/**
@@ -151,12 +151,12 @@ public class JavaThread extends Thread
 	 */
 	public long _vframe_array_head()
 	{
-		return super.read_pointer(_vframe_array_head);
+		return super.read_ptr(_vframe_array_head);
 	}
 
 	public void set_vframe_array_head(long vframe_array_head)
 	{
-		super.write_pointer(_vframe_array_head, vframe_array_head);
+		super.write_ptr(_vframe_array_head, vframe_array_head);
 	}
 
 	/**
@@ -166,12 +166,12 @@ public class JavaThread extends Thread
 	 */
 	public long _vframe_array_last()
 	{
-		return super.read_pointer(_vframe_array_last);
+		return super.read_ptr(_vframe_array_last);
 	}
 
 	public void set_vframe_array_last(long vframe_array_last)
 	{
-		super.write_pointer(_vframe_array_last, vframe_array_last);
+		super.write_ptr(_vframe_array_last, vframe_array_last);
 	}
 
 	public int vm_result_oop()
@@ -181,17 +181,17 @@ public class JavaThread extends Thread
 
 	public void set_vm_result_oop(long vm_result_oop)
 	{
-		super.write_pointer(_vm_result_oop, vm_result_oop);
+		super.write_ptr(_vm_result_oop, vm_result_oop);
 	}
 
 	public long _vm_result_metadata()
 	{
-		return super.read_pointer(_vm_result_metadata);
+		return super.read_ptr(_vm_result_metadata);
 	}
 
 	public void set_vm_result_metadata(long vm_result_metadata)
 	{
-		super.write_pointer(_vm_result_metadata, vm_result_metadata);
+		super.write_ptr(_vm_result_metadata, vm_result_metadata);
 	}
 
 	public Metadata vm_result_metadata()
@@ -313,12 +313,12 @@ public class JavaThread extends Thread
 	 */
 	public long saved_exception_pc()
 	{
-		return super.read_pointer(_saved_exception_pc);
+		return super.read_ptr(_saved_exception_pc);
 	}
 
 	public void set_saved_exception_pc(long saved_exception_pc)
 	{
-		super.write_pointer(_saved_exception_pc, saved_exception_pc);
+		super.write_ptr(_saved_exception_pc, saved_exception_pc);
 	}
 
 	public static abstract class TerminatedTypes
@@ -421,12 +421,12 @@ public class JavaThread extends Thread
 	// jlong* _jvmci_counters;
 	public long jvmci_counters()
 	{
-		return super.read_pointer(_jvmci_counters);
+		return super.read_ptr(_jvmci_counters);
 	}
 
 	public void set_jvmci_counters(long jvmci_counters)
 	{
-		super.write_pointer(_jvmci_counters, jvmci_counters);
+		super.write_ptr(_jvmci_counters, jvmci_counters);
 	}
 
 	public long jvmci_reserved0()
@@ -463,22 +463,22 @@ public class JavaThread extends Thread
 	// StackOverflow _stack_overflow_state;
 	public long stack_overflow_limit()
 	{
-		return super.read_pointer(_stack_overflow_state_stack_overflow_limit);
+		return super.read_ptr(_stack_overflow_state_stack_overflow_limit);
 	}
 
 	public void set_stack_overflow_limit(long stack_overflow_limit)
 	{
-		super.write_pointer(_stack_overflow_state_stack_overflow_limit, stack_overflow_limit);
+		super.write_ptr(_stack_overflow_state_stack_overflow_limit, stack_overflow_limit);
 	}
 
 	public long reserved_stack_activation()
 	{
-		return super.read_pointer(_stack_overflow_state_reserved_stack_activation);
+		return super.read_ptr(_stack_overflow_state_reserved_stack_activation);
 	}
 
 	public void set_reserved_stack_activation(long reserved_stack_activation)
 	{
-		super.write_pointer(_stack_overflow_state_reserved_stack_activation, reserved_stack_activation);
+		super.write_ptr(_stack_overflow_state_reserved_stack_activation, reserved_stack_activation);
 	}
 
 	public StackOverflow stack_overflow_state()
@@ -503,22 +503,22 @@ public class JavaThread extends Thread
 	 */
 	public long exception_pc()
 	{
-		return super.read_pointer(_exception_pc);
+		return super.read_ptr(_exception_pc);
 	}
 
 	public void set_exception_pc(long exception_pc)
 	{
-		super.write_pointer(_exception_pc, exception_pc);
+		super.write_ptr(_exception_pc, exception_pc);
 	}
 
 	public long exception_handler_pc()
 	{
-		return super.read_pointer(_exception_handler_pc);
+		return super.read_ptr(_exception_handler_pc);
 	}
 
 	public void set_exception_handler_pc(long exception_handler_pc)
 	{
-		super.write_pointer(_exception_handler_pc, exception_handler_pc);
+		super.write_ptr(_exception_handler_pc, exception_handler_pc);
 	}
 
 	// volatile int _is_method_handle_return;

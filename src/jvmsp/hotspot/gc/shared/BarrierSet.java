@@ -32,6 +32,6 @@ public class BarrierSet extends CHeapObj
 
 	public static final void set_barrier_set(BarrierSet barrier_set)
 	{
-		unsafe.write_pointer(_barrier_set, barrier_set);
+		unsafe.write_ptr(_barrier_set, barrier_set);
 	}
 }

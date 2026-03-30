@@ -22,32 +22,32 @@ public class JavaFrameAnchor extends vm_struct
 
 	public long last_Java_sp()
 	{
-		return super.read_pointer(_last_Java_sp);
+		return super.read_ptr(_last_Java_sp);
 	}
 
 	public void set_last_Java_sp(long last_Java_sp)
 	{
-		super.write_pointer(_last_Java_sp, last_Java_sp);
+		super.write_ptr(_last_Java_sp, last_Java_sp);
 	}
 
 	public long last_Java_pc()
 	{
-		return super.read_pointer(_last_Java_pc);
+		return super.read_ptr(_last_Java_pc);
 	}
 
 	public void set_last_Java_pc(long last_Java_pc)
 	{
-		super.write_pointer(_last_Java_pc, last_Java_pc);
+		super.write_ptr(_last_Java_pc, last_Java_pc);
 	}
 
 	public long last_Java_fp()
 	{
-		return super.read_pointer(_last_Java_fp);
+		return super.read_ptr(_last_Java_fp);
 	}
 
 	public void set_last_Java_fp(long last_Java_fp)
 	{
-		super.write_pointer(_last_Java_fp, last_Java_fp);
+		super.write_ptr(_last_Java_fp, last_Java_fp);
 	}
 
 	public boolean has_last_Java_frame()

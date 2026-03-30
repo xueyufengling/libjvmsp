@@ -217,7 +217,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	private long _primary_supers_ptr(int idx)
 	{
-		return super.read_pointer(_primary_supers_offset(idx));
+		return super.read_ptr(_primary_supers_offset(idx));
 	}
 
 	/**
@@ -349,10 +349,10 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	public short _access_flags()
 	{
-		return _access_flags(address);
+		return access_flags(address);
 	}
 
-	public static short _access_flags(long klass_ptr)
+	public static short access_flags(long klass_ptr)
 	{
 		return unsafe.read_short(klass_ptr + _access_flags + AccessFlags._flags);
 	}
@@ -367,7 +367,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 		set_access_flags(address, flags);
 	}
 
-	public static short _kind(long klass_ptr)
+	public static short kind(long klass_ptr)
 	{
 		return unsafe.read_short(klass_ptr + _kind);
 	}
@@ -525,7 +525,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 	 */
 	public long _next_link()
 	{
-		return super.read_pointer(_next_link);
+		return super.read_ptr(_next_link);
 	}
 
 	public boolean has_next_link()

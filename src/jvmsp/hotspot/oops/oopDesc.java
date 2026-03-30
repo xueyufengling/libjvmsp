@@ -60,7 +60,7 @@ public class oopDesc extends vm_struct
 	 */
 	public static final long ptr_field(long oop, int offset)
 	{
-		return unsafe.read_pointer(field_addr(oop, offset));
+		return unsafe.read_ptr(field_addr(oop, offset));
 	}
 
 	/**

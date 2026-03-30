@@ -29,7 +29,7 @@ public class CompressedKlassPointers extends AllStatic
 
 	public static final long base()
 	{
-		return unsafe.read_pointer(_base);
+		return unsafe.read_ptr(_base);
 	}
 
 	public static final int shift()
