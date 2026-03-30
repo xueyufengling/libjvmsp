@@ -1,6 +1,7 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.memory;
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.type.cxx_type;
 
@@ -31,8 +32,8 @@ public class MethodFlags extends vm_struct
 	public static final int is_not_c2_compilable = 1 << 8;
 	public static final int is_not_c1_compilable = 1 << 9;
 	public static final int is_not_c2_osr_compilable = 1 << 10;
-	public static final int force_inline = 1 << 11;
-	public static final int dont_inline = 1 << 12;
+	public static final int force_inline = vm_constant.find_int("MethodFlags::_misc_force_inline");// 1 << 11;
+	public static final int dont_inline = vm_constant.find_int("MethodFlags::_misc_dont_inline");// 1 << 12;
 	public static final int has_loops_flag = 1 << 13;
 	public static final int has_loops_flag_init = 1 << 14;
 	public static final int on_stack_flag = 1 << 15;

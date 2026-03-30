@@ -4,6 +4,7 @@ import java.nio.charset.Charset;
 
 import jvmsp.memory;
 import jvmsp.unsafe;
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 
 public class Symbol extends vm_struct
@@ -24,6 +25,8 @@ public class Symbol extends vm_struct
 	private static final long _body = vm_struct.entry.find(type_name, "_body").offset;
 
 	private static final long _body_0 = vm_struct.entry.find(type_name, "_body[0]").offset;
+
+	public static final int max_symbol_length = vm_constant.find_int("Symbol::max_symbol_length");
 
 	public Symbol(long address)
 	{

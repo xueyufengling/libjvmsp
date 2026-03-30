@@ -8,6 +8,7 @@ import jvmsp.hotspot.oops.CompressedKlassPointers;
 import jvmsp.hotspot.oops.CompressedOops;
 import jvmsp.hotspot.oops.InstanceKlass;
 import jvmsp.hotspot.oops.Klass;
+import jvmsp.hotspot.oops.TypeArrayKlass;
 import jvmsp.hotspot.oops.oopDesc;
 
 public class java_lang_Class extends AllStatic
@@ -95,8 +96,10 @@ public class java_lang_Class extends AllStatic
 		short kind = Klass._kind(klass_ptr);
 		switch (kind)
 		{
-		case Klass.InstanceKlassKind:
+		case Klass.KlassKind.InstanceKlassKind:
 			return new InstanceKlass(klass_ptr);
+		case Klass.KlassKind.TypeArrayKlassKind:
+			return new TypeArrayKlass(klass_ptr);
 		default:
 			return null;
 		}

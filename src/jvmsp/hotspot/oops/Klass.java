@@ -2,6 +2,7 @@ package jvmsp.hotspot.oops;
 
 import java.util.Iterator;
 
+import jvmsp.algorithms;
 import jvmsp.structs.long_array;
 import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
@@ -11,6 +12,8 @@ import jvmsp.hotspot.classfile.ClassLoaderData;
 import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.utilities.AccessFlags;
+import jvmsp.hotspot.utilities.globalDefinitions;
+import jvmsp.hotspot.utilities.globalDefinitions.BasicType;
 
 public abstract class Klass extends Metadata implements Iterable<Klass>
 {
@@ -46,7 +49,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 	/**
 	 * 在JDK21中(https://github.com/openjdk/jdk/blob/jdk-21%2B35/src/hotspot/share/oops/klass.hpp#L126)，该字段还是
 	 * // Processed access flags, for use by Class.getModifiers.
-	 * jint _modifier_flags;
+	 * int _modifier_flags;
 	 * 但在JDK25中(https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L126)，该字段已经改为
 	 * // Some flags created by the JVM, not in the class file itself,
 	 * // are in _misc_flags below.
@@ -57,16 +60,30 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 	private static final long _kind = _misc_flags - cxx_type._int.size();// 12
 
 	// 继承链缓存的最大Klass数目
-	public static final int _primary_super_limit = vm_constant.Klass_primary_super_limit;
+	public static final int _primary_super_limit = vm_constant.find_int("Klass::_primary_super_limit");
+	public static final int _lh_neutral_value = vm_constant.find_int("Klass::_lh_neutral_value");
+	public static final int _lh_instance_slow_path_bit = vm_constant.find_int("Klass::_lh_instance_slow_path_bit");
+	public static final int _lh_log2_element_size_shift = vm_constant.find_int("Klass::_lh_log2_element_size_shift");
+	public static final int _lh_log2_element_size_mask = vm_constant.find_int("Klass::_lh_log2_element_size_mask");
+	public static final int _lh_element_type_shift = vm_constant.find_int("Klass::_lh_element_type_shift");
+	public static final int _lh_element_type_mask = vm_constant.find_int("Klass::_lh_element_type_mask");
+	public static final int _lh_header_size_shift = vm_constant.find_int("Klass::_lh_header_size_shift");
+	public static final int _lh_header_size_mask = vm_constant.find_int("Klass::_lh_header_size_mask");
+	public static final int _lh_array_tag_shift = vm_constant.find_int("Klass::_lh_array_tag_shift");
+	public static final int _lh_array_tag_type_value = vm_constant.find_int("Klass::_lh_array_tag_type_value");
+	public static final int _lh_array_tag_obj_value = vm_constant.find_int("Klass::_lh_array_tag_obj_value");
 
-	public static final short InstanceKlassKind = 0;
-	public static final short InstanceRefKlassKind = 1;
-	public static final short InstanceMirrorKlassKind = 2;
-	public static final short InstanceClassLoaderKlassKind = 3;
-	public static final short InstanceStackChunkKlassKind = 4;
-	public static final short TypeArrayKlassKind = 5;
-	public static final short ObjArrayKlassKind = 6;
-	public static final short UnknownKlassKind = 7;
+	public static abstract class KlassKind
+	{
+		public static final short InstanceKlassKind = 0;
+		public static final short InstanceRefKlassKind = 1;
+		public static final short InstanceMirrorKlassKind = 2;
+		public static final short InstanceClassLoaderKlassKind = 3;
+		public static final short InstanceStackChunkKlassKind = 4;
+		public static final short TypeArrayKlassKind = 5;
+		public static final short ObjArrayKlassKind = 6;
+		public static final short UnknownKlassKind = 7;
+	}
 
 	protected Klass(String name, long address)
 	{
@@ -92,7 +109,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	public static final InstanceKlass java_lang_Object = java_lang_Class.as_InstanceKlass(Object.class);
 	// java.lang.Object的对象布局
-	public static final int java_lang_Object_layout_helper = java_lang_Object._layout_helper();
+	public static final int java_lang_Object_layout_helper = java_lang_Object.layout_helper();
 
 	/**
 	 * 如果没有超类，则超类为空指针。<br>
@@ -125,7 +142,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 		}
 	};
 
-	public int _layout_helper()
+	public int layout_helper()
 	{
 		return super.read_int(_layout_helper);
 	}
@@ -135,14 +152,9 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 		super.write(_layout_helper, layout_helper);
 	}
 
-	public static int layout_helper_to_size_helper(int layout_helper)
-	{
-		return layout_helper >> vm_constant.LogBytesPerWord;
-	}
-
 	public int size_helper()
 	{
-		return layout_helper_to_size_helper(_layout_helper());
+		return layout_helper_to_size_helper(layout_helper());
 	}
 
 	/**
@@ -372,7 +384,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	public boolean is_instance_klass()
 	{
-		return _kind() <= InstanceStackChunkKlassKind;
+		return _kind() <= KlassKind.InstanceStackChunkKlassKind;
 	}
 
 	public InstanceKlass as_instance_klass()
@@ -382,42 +394,42 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	public boolean is_other_instance_klass()
 	{
-		return _kind() == InstanceKlassKind;
+		return _kind() == KlassKind.InstanceKlassKind;
 	}
 
 	public boolean is_reference_instance_klass()
 	{
-		return _kind() == InstanceRefKlassKind;
+		return _kind() == KlassKind.InstanceRefKlassKind;
 	}
 
 	public boolean is_mirror_instance_klass()
 	{
-		return _kind() == InstanceMirrorKlassKind;
+		return _kind() == KlassKind.InstanceMirrorKlassKind;
 	}
 
 	public boolean is_class_loader_instance_klass()
 	{
-		return _kind() == InstanceClassLoaderKlassKind;
+		return _kind() == KlassKind.InstanceClassLoaderKlassKind;
 	}
 
 	public boolean is_array_klass()
 	{
-		return _kind() >= TypeArrayKlassKind;
+		return _kind() >= KlassKind.TypeArrayKlassKind;
 	}
 
 	public boolean is_stack_chunk_instance_klass()
 	{
-		return _kind() == InstanceStackChunkKlassKind;
+		return _kind() == KlassKind.InstanceStackChunkKlassKind;
 	}
 
 	public boolean is_objArray_klass()
 	{
-		return _kind() == ObjArrayKlassKind;
+		return _kind() == KlassKind.ObjArrayKlassKind;
 	}
 
 	public boolean is_typeArray_klass()
 	{
-		return _kind() == TypeArrayKlassKind;
+		return _kind() == KlassKind.TypeArrayKlassKind;
 	}
 
 	public KlassFlags misc_flags()
@@ -575,7 +587,7 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 
 	public static long vtable_start_offset()
 	{
-		return InstanceKlass.header_size() * vm_constant.BytesPerWord;
+		return InstanceKlass.header_size() * globalDefinitions.BytesPerWord;
 	}
 
 	public klassVtable vtable()
@@ -593,5 +605,167 @@ public abstract class Klass extends Metadata implements Iterable<Klass>
 	public int meta_type()
 	{
 		return Type.ClassType;
+	}
+
+	// ***** Klass基类共享静态工具方法 *****
+
+	public static int layout_helper_size_in_bytes(int lh)
+	{
+		assert lh > _lh_neutral_value : "must be instance";
+		return lh & ~_lh_instance_slow_path_bit;
+	}
+
+	public static boolean layout_helper_needs_slow_path(int lh)
+	{
+		assert lh > _lh_neutral_value : "must be instance";
+		return (lh & _lh_instance_slow_path_bit) != 0;
+	}
+
+	public static boolean layout_helper_is_instance(int lh)
+	{
+		return lh > _lh_neutral_value;
+	}
+
+	public static boolean layout_helper_is_array(int lh)
+	{
+		return lh < _lh_neutral_value;
+	}
+
+	public static boolean layout_helper_is_typeArray(int lh)
+	{
+		// _lh_array_tag_type_value == (lh >> _lh_array_tag_shift);
+		return cxx_type.as_uint32_t(lh) >= cxx_type.as_uint32_t(_lh_array_tag_type_value << _lh_array_tag_shift);
+	}
+
+	public static boolean layout_helper_is_objArray(int lh)
+	{
+		// _lh_array_tag_obj_value == (lh >> _lh_array_tag_shift);
+		return lh < (_lh_array_tag_type_value << _lh_array_tag_shift);
+	}
+
+	public static int layout_helper_boolean_diffbit()
+	{
+		int zlh = array_layout_helper(BasicType.T_BOOLEAN);
+		int blh = array_layout_helper(BasicType.T_BYTE);
+		assert zlh != blh : "array layout helpers must differ";
+		int diffbit = 1;
+		while ((diffbit & (zlh ^ blh)) == 0 && (diffbit & zlh) == 0)
+		{
+			diffbit <<= 1;
+			assert diffbit != 0 : "make sure T_BOOLEAN has a different bit than T_BYTE";
+		}
+		return diffbit;
+	}
+
+	/**
+	 * ArrayKlass对象头长度。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L492<br>
+	 * 
+	 * @param lh layout_helper
+	 * @return
+	 */
+	public static int layout_helper_header_size(int lh)
+	{
+		assert lh < _lh_neutral_value : "must be array";
+		int hsize = (lh >> _lh_header_size_shift) & _lh_header_size_mask;
+		assert hsize > 0 && hsize < oopDesc.size * 3 : "sanity";
+		return hsize;
+	}
+
+	/**
+	 * 返回ArrayKlass的元素类型BasicType值。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L498<br>
+	 * 
+	 * @param lh
+	 * @return
+	 */
+	public static byte layout_helper_element_type(int lh)
+	{
+		assert lh < _lh_neutral_value : "must be array";
+		int btvalue = (lh >> _lh_element_type_shift) & _lh_element_type_mask;
+		assert btvalue >= BasicType.T_BOOLEAN && btvalue <= BasicType.T_OBJECT : "sanity";
+		return (byte) btvalue;
+	}
+
+	/**
+	 * 返回ArrayKlass元素类型大小log2的计算值，即位操作的移位数。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L519<br>
+	 * 
+	 * @param lh
+	 * @return
+	 */
+	public static int layout_helper_log2_element_size(int lh)
+	{
+		assert lh < _lh_neutral_value : "must be array";
+		int l2esz = (lh >> _lh_log2_element_size_shift) & _lh_log2_element_size_mask;
+		assert l2esz <= globalDefinitions.LogBytesPerLong : "sanity. l2esz: '" + l2esz + "' for lh: '" + lh + "'";
+		return l2esz;
+	}
+
+	/**
+	 * 构建ArrayKlass的_layout_helper值。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L526<br>
+	 * 
+	 * @param lh layout_helper
+	 * @return
+	 */
+	public static int array_layout_helper(int tag, int hsize, byte etype, int log2_esize)
+	{
+		return (tag << _lh_array_tag_shift)
+				| (hsize << _lh_header_size_shift)
+				| ((int) etype << _lh_element_type_shift)
+				| (log2_esize << _lh_log2_element_size_shift);
+	}
+
+	/**
+	 * 构建ArrayKlass的_layout_helper值。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.cpp#L311<br>
+	 * 
+	 * @param lh layout_helper
+	 * @return
+	 */
+	public static int array_layout_helper(byte etype)
+	{
+		assert (etype >= BasicType.T_BOOLEAN && etype <= BasicType.T_OBJECT);
+		int hsize = arrayOopDesc.base_offset_in_bytes(etype);
+		int esize = globalDefinitions.type2aelembytes(etype);
+		boolean isobj = (etype == BasicType.T_OBJECT);
+		int tag = isobj ? _lh_array_tag_obj_value : _lh_array_tag_type_value;
+		int lh = array_layout_helper(tag, hsize, etype, algorithms.uint64_log2(esize));
+		assert (lh < (int) _lh_neutral_value);
+		assert (layout_helper_is_array(lh));
+		assert (layout_helper_is_objArray(lh) == isobj);
+		assert (layout_helper_is_typeArray(lh) == !isobj);
+		assert (layout_helper_header_size(lh) == hsize);
+		assert (layout_helper_element_type(lh) == etype);
+		assert ((1 << layout_helper_log2_element_size(lh)) == esize);
+		return lh;
+	}
+
+	/**
+	 * 构建ArrayKlass的_layout_helper值。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L532<br>
+	 * 
+	 * @param lh layout_helper
+	 * @return
+	 */
+	public static int instance_layout_helper(int size, boolean slow_path_flag)
+	{
+		return (size << globalDefinitions.LogBytesPerWord)
+				| (slow_path_flag ? _lh_instance_slow_path_bit : 0);
+	}
+
+	/**
+	 * 根据_layout_helper值提取对象的大小。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/klass.hpp#L536<br>
+	 * 
+	 * @param lh layout_helper
+	 * @return
+	 */
+	public static int layout_helper_to_size_helper(int lh)
+	{
+		assert lh > _lh_neutral_value : "must be instance";
+		// Note that the following expression discards _lh_instance_slow_path_bit.
+		return lh >> globalDefinitions.LogBytesPerWord;
 	}
 }

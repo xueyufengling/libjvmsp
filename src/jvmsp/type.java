@@ -1026,6 +1026,9 @@ public abstract class type<_T> implements Cloneable
 		public static final cxx_type uint64_t = cxx_type.define("uint64_t", is_primitive | is_integer, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
 		public static final cxx_type size_t = cxx_type.define("size_t", is_primitive | is_integer, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
 
+		public static final cxx_type intptr_t = cxx_type.define("intptr_t", is_primitive | is_integer | is_signed, unsafe.address_size, ValueLayout.ADDRESS);
+		public static final cxx_type uintptr_t = cxx_type.define("uintptr_t", is_primitive | is_integer, unsafe.address_size, ValueLayout.ADDRESS);
+
 		/**
 		 * 定长数组类型
 		 */
@@ -1366,8 +1369,6 @@ public abstract class type<_T> implements Cloneable
 		public static final pointer_type pint64_t = pointer_type.of(int64_t);
 		public static final pointer_type puint64_t = pointer_type.of(uint64_t);
 		public static final pointer_type psize_t = pointer_type.of(size_t);
-
-		public static final cxx_type uintptr_t = cxx_type.define("uintptr_t", is_primitive | is_integer, type.sizeof(pvoid), ValueLayout.ADDRESS);
 
 		public static final long uint32_t_mask = 0xFFFFFFFFL;
 
@@ -2204,7 +2205,7 @@ public abstract class type<_T> implements Cloneable
 				else
 				{
 					Object deref_obj = virtual_machine.resolve_oop(address());
-					virtual_machine.set_klass_word(deref_obj, ref_type_klass_word);
+					object_model.set_klass_word(deref_obj, ref_type_klass_word);
 					return deref_obj;
 				}
 			}
@@ -2240,7 +2241,7 @@ public abstract class type<_T> implements Cloneable
 				if (!java_type.is_primitive(dest_type))
 				{
 					// 每次cast()的时候更新目标对象的类型
-					ref_type_klass_word = virtual_machine.get_klass_word(dest_type);
+					ref_type_klass_word = object_model.get_klass_word(dest_type);
 				}
 				return this;
 			}
@@ -2301,7 +2302,7 @@ public abstract class type<_T> implements Cloneable
 				else if (type == double.class)
 					unsafe.write(base, offset, java_type.double_value(v));
 				else
-					unsafe.memcpy(base, virtual_machine.object_header_byte_length(), v, virtual_machine.object_header_byte_length(), java_type.sizeof_object(v.getClass()) - virtual_machine.object_header_byte_length());// 只拷贝字段，不覆盖对象头
+					unsafe.memcpy(base, object_model.oop_base_offset_in_bytes(), v, object_model.oop_base_offset_in_bytes(), java_type.sizeof_object(v.getClass()) - object_model.oop_base_offset_in_bytes());// 只拷贝字段，不覆盖对象头
 				return this;
 			}
 		}
@@ -2531,29 +2532,29 @@ public abstract class type<_T> implements Cloneable
 		{
 			Class<_T> clazz = (Class<_T>) object.getClass();
 			_T o = unsafe.allocate(clazz);
-			unsafe.memcpy(o, virtual_machine.object_header_byte_length(), object, virtual_machine.object_header_byte_length(), java_type.sizeof_object(clazz) - virtual_machine.object_header_byte_length());// 只拷贝字段，不覆盖对象头
+			unsafe.memcpy(o, object_model.oop_base_offset_in_bytes(), object, object_model.oop_base_offset_in_bytes(), java_type.sizeof_object(clazz) - object_model.oop_base_offset_in_bytes());// 只拷贝字段，不覆盖对象头
 			return o;
 		}
 
 		public static final Object cast(Object obj, long cast_type_klass_word)
 		{
-			virtual_machine.set_klass_word(obj, cast_type_klass_word);
+			object_model.set_klass_word(obj, cast_type_klass_word);
 			return obj;
 		}
 
 		public static final Object cast(Object obj, Object cast_type_obj)
 		{
-			return cast(obj, virtual_machine.get_klass_word(cast_type_obj));
+			return cast(obj, object_model.get_klass_word(cast_type_obj));
 		}
 
 		public static final Object cast(Object obj, Class<?> cast_type)
 		{
-			return cast(obj, virtual_machine.get_klass_word(cast_type));
+			return cast(obj, object_model.get_klass_word(cast_type));
 		}
 
 		public static final Object cast(Object obj, String cast_type)
 		{
-			return cast(obj, virtual_machine.get_klass_word(cast_type));
+			return cast(obj, object_model.get_klass_word(cast_type));
 		}
 
 		@SuppressWarnings("unchecked")

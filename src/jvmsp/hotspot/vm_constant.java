@@ -214,9 +214,46 @@ public class vm_constant
 		return int_entry.find(name).value;
 	}
 
+	public static int find_int_or(String name, int default_value)
+	{
+		int_entry _int = int_entry.find(name);
+		if (_int != null)
+			return _int.value;
+		else
+			return default_value;
+	}
+
 	public static long find_long(String name)
 	{
 		return long_entry.find(name).value;
+	}
+
+	public static long find_long_or(String name, long default_value)
+	{
+		long_entry _long = long_entry.find(name);
+		if (_long != null)
+			return _long.value;
+		else
+			return default_value;
+	}
+
+	public static long find(String name)
+	{
+		int_entry _int = int_entry.find(name);
+		if (_int != null)
+			return _int.value;
+		else
+			return find_long(name);
+	}
+
+	public static void print_value(String name)
+	{
+		int_entry _int = int_entry.find(name);
+		if (_int != null)
+			System.out.println(_int.value);
+		long_entry _long = long_entry.find(name);
+		if (_long != null)
+			System.out.println(_long.value);
 	}
 
 	// int类型常量，其中包含部分VMStruct使用的枚举值
@@ -330,7 +367,6 @@ public class vm_constant
 		public static final int OopMapValue_narrowoop_value = find_int("OopMapValue::narrowoop_value");
 		public static final int OopMapValue_callee_saved_value = find_int("OopMapValue::callee_saved_value");
 		public static final int OopMapValue_derived_oop_value = find_int("OopMapValue::derived_oop_value");
-		public static final int JNIHandleBlock_block_size_in_oops = find_int("JNIHandleBlock::block_size_in_oops");
 		public static final int PcDesc_PCDESC_reexecute = find_int("PcDesc::PCDESC_reexecute");
 		public static final int PcDesc_PCDESC_is_method_handle_invoke = find_int("PcDesc::PCDESC_is_method_handle_invoke");
 		public static final int PcDesc_PCDESC_return_oop = find_int("PcDesc::PCDESC_return_oop");
@@ -339,89 +375,11 @@ public class vm_constant
 		public static final int vmSymbols_SID_LIMIT = find_int("vmSymbols::SID_LIMIT");
 	}
 
-	public static final int CollectedHeap_Serial = find_int("CollectedHeap::Serial");
-	public static final int CollectedHeap_Parallel = find_int("CollectedHeap::Parallel");
-	public static final int CollectedHeap_G1 = find_int("CollectedHeap::G1");
-	public static final int ASSERT = find_int("ASSERT");
-
-	public static final int oopSize = find_int("oopSize");
-
-	public static final int LogBytesPerWord = find_int("LogBytesPerWord");
-	public static final int BytesPerWord = find_int("BytesPerWord");
-	public static final int BytesPerLong = find_int("BytesPerLong");
-
-	public static final int HeapWordSize = find_int("HeapWordSize");
-
-	public static final int LogHeapWordSize = find_int("LogHeapWordSize");
 	public static final int PERFDATA_MAJOR_VERSION = find_int("PERFDATA_MAJOR_VERSION");
 	public static final int PERFDATA_MINOR_VERSION = find_int("PERFDATA_MINOR_VERSION");
 	public static final int PERFDATA_BIG_ENDIAN = find_int("PERFDATA_BIG_ENDIAN");
 	public static final int PERFDATA_LITTLE_ENDIAN = find_int("PERFDATA_LITTLE_ENDIAN");
-	public static final byte JVM_CONSTANT_Utf8 = (byte) find_int("JVM_CONSTANT_Utf8");
-	public static final byte JVM_CONSTANT_Unicode = (byte) find_int("JVM_CONSTANT_Unicode");
-	public static final byte JVM_CONSTANT_Integer = (byte) find_int("JVM_CONSTANT_Integer");
-	public static final byte JVM_CONSTANT_Float = (byte) find_int("JVM_CONSTANT_Float");
-	public static final byte JVM_CONSTANT_Long = (byte) find_int("JVM_CONSTANT_Long");
-	public static final byte JVM_CONSTANT_Double = (byte) find_int("JVM_CONSTANT_Double");
-	public static final byte JVM_CONSTANT_Class = (byte) find_int("JVM_CONSTANT_Class");
-	public static final byte JVM_CONSTANT_String = (byte) find_int("JVM_CONSTANT_String");
-	public static final byte JVM_CONSTANT_Fieldref = (byte) find_int("JVM_CONSTANT_Fieldref");
-	public static final byte JVM_CONSTANT_Methodref = (byte) find_int("JVM_CONSTANT_Methodref");
-	public static final byte JVM_CONSTANT_InterfaceMethodref = (byte) find_int("JVM_CONSTANT_InterfaceMethodref");
-	public static final byte JVM_CONSTANT_NameAndType = (byte) find_int("JVM_CONSTANT_NameAndType");
-	public static final byte JVM_CONSTANT_MethodHandle = (byte) find_int("JVM_CONSTANT_MethodHandle");
-	public static final byte JVM_CONSTANT_MethodType = (byte) find_int("JVM_CONSTANT_MethodType");
-	public static final byte JVM_CONSTANT_Dynamic = (byte) find_int("JVM_CONSTANT_Dynamic");
-	public static final byte JVM_CONSTANT_InvokeDynamic = (byte) find_int("JVM_CONSTANT_InvokeDynamic");
-	public static final byte JVM_CONSTANT_Module = (byte) find_int("JVM_CONSTANT_Module");
-	public static final byte JVM_CONSTANT_Package = (byte) find_int("JVM_CONSTANT_Package");
-	public static final byte JVM_CONSTANT_ExternalMax = (byte) find_int("JVM_CONSTANT_ExternalMax");
-	public static final byte JVM_CONSTANT_Invalid = (byte) find_int("JVM_CONSTANT_Invalid");
-	public static final byte JVM_CONSTANT_InternalMin = (byte) find_int("JVM_CONSTANT_InternalMin");
-	public static final byte JVM_CONSTANT_UnresolvedClass = (byte) find_int("JVM_CONSTANT_UnresolvedClass");
-	public static final byte JVM_CONSTANT_ClassIndex = (byte) find_int("JVM_CONSTANT_ClassIndex");
-	public static final byte JVM_CONSTANT_StringIndex = (byte) find_int("JVM_CONSTANT_StringIndex");
-	public static final byte JVM_CONSTANT_UnresolvedClassInError = (byte) find_int("JVM_CONSTANT_UnresolvedClassInError");
-	public static final byte JVM_CONSTANT_MethodHandleInError = (byte) find_int("JVM_CONSTANT_MethodHandleInError");
-	public static final byte JVM_CONSTANT_MethodTypeInError = (byte) find_int("JVM_CONSTANT_MethodTypeInError");
-	public static final byte JVM_CONSTANT_DynamicInError = (byte) find_int("JVM_CONSTANT_DynamicInError");
-	public static final byte JVM_CONSTANT_InternalMax = (byte) find_int("JVM_CONSTANT_InternalMax");
-	public static final int _thread_uninitialized = find_int("_thread_uninitialized");
-	public static final int _thread_new = find_int("_thread_new");
-	public static final int _thread_new_trans = find_int("_thread_new_trans");
-	public static final int _thread_in_native = find_int("_thread_in_native");
-	public static final int _thread_in_native_trans = find_int("_thread_in_native_trans");
-	public static final int _thread_in_vm = find_int("_thread_in_vm");
-	public static final int _thread_in_vm_trans = find_int("_thread_in_vm_trans");
-	public static final int _thread_in_Java = find_int("_thread_in_Java");
-	public static final int _thread_in_Java_trans = find_int("_thread_in_Java_trans");
-	public static final int _thread_blocked = find_int("_thread_blocked");
-	public static final int _thread_blocked_trans = find_int("_thread_blocked_trans");
-	public static final int JavaThread_not_terminated = find_int("JavaThread::_not_terminated");
-	public static final int JavaThread_thread_exiting = find_int("JavaThread::_thread_exiting");
-	public static final int ALLOCATED = find_int("ALLOCATED");
-	public static final int INITIALIZED = find_int("INITIALIZED");
-	public static final int RUNNABLE = find_int("RUNNABLE");
-	public static final int MONITOR_WAIT = find_int("MONITOR_WAIT");
-	public static final int CONDVAR_WAIT = find_int("CONDVAR_WAIT");
-	public static final int OBJECT_WAIT = find_int("OBJECT_WAIT");
-	public static final int BREAKPOINTED = find_int("BREAKPOINTED");
-	public static final int SLEEPING = find_int("SLEEPING");
-	public static final int ZOMBIE = find_int("ZOMBIE");
-	public static final int Klass_primary_super_limit = find_int("Klass::_primary_super_limit");
-	public static final int Klass_lh_neutral_value = find_int("Klass::_lh_neutral_value");
-	public static final int Klass_lh_instance_slow_path_bit = find_int("Klass::_lh_instance_slow_path_bit");
-	public static final int Klass_lh_log2_element_size_shift = find_int("Klass::_lh_log2_element_size_shift");
-	public static final int Klass_lh_log2_element_size_mask = find_int("Klass::_lh_log2_element_size_mask");
-	public static final int Klass_lh_element_type_shift = find_int("Klass::_lh_element_type_shift");
-	public static final int Klass_lh_element_type_mask = find_int("Klass::_lh_element_type_mask");
-	public static final int Klass_lh_header_size_shift = find_int("Klass::_lh_header_size_shift");
-	public static final int Klass_lh_header_size_mask = find_int("Klass::_lh_header_size_mask");
-	public static final int Klass_lh_array_tag_shift = find_int("Klass::_lh_array_tag_shift");
-	public static final int Klass_lh_array_tag_type_value = find_int("Klass::_lh_array_tag_type_value");
-	public static final int Klass_lh_array_tag_obj_value = find_int("Klass::_lh_array_tag_obj_value");
-	public static final int Method_nonvirtual_vtable_index = find_int("Method::nonvirtual_vtable_index");
-	public static final int Method_extra_stack_entries_for_jsr292 = find_int("Method::extra_stack_entries_for_jsr292");
+
 	public static final int ConstMethodFlags_misc_has_linenumber_table = find_int("ConstMethodFlags::_misc_has_linenumber_table");
 	public static final int ConstMethodFlags_misc_has_checked_exceptions = find_int("ConstMethodFlags::_misc_has_checked_exceptions");
 	public static final int ConstMethodFlags_misc_has_localvariable_table = find_int("ConstMethodFlags::_misc_has_localvariable_table");
@@ -447,31 +405,11 @@ public class vm_constant
 	public static final int DataLayout_virtual_call_type_data_tag = find_int("DataLayout::virtual_call_type_data_tag");
 	public static final int DataLayout_parameters_type_data_tag = find_int("DataLayout::parameters_type_data_tag");
 	public static final int DataLayout_speculative_trap_data_tag = find_int("DataLayout::speculative_trap_data_tag");
-	public static final int InstanceKlass_inner_class_inner_class_info_offset = find_int("InstanceKlass::inner_class_inner_class_info_offset");
-	public static final int InstanceKlass_inner_class_outer_class_info_offset = find_int("InstanceKlass::inner_class_outer_class_info_offset");
-	public static final int InstanceKlass_inner_class_inner_name_offset = find_int("InstanceKlass::inner_class_inner_name_offset");
-	public static final int InstanceKlass_inner_class_access_flags_offset = find_int("InstanceKlass::inner_class_access_flags_offset");
-	public static final int InstanceKlass_inner_class_next_offset = find_int("InstanceKlass::inner_class_next_offset");
-	public static final int InstanceKlass_enclosing_method_attribute_size = find_int("InstanceKlass::enclosing_method_attribute_size");
-	public static final int InstanceKlass_allocated = find_int("InstanceKlass::allocated");
-	public static final int InstanceKlass_loaded = find_int("InstanceKlass::loaded");
-	public static final int InstanceKlass_linked = find_int("InstanceKlass::linked");
-	public static final int InstanceKlass_being_initialized = find_int("InstanceKlass::being_initialized");
-	public static final int InstanceKlass_fully_initialized = find_int("InstanceKlass::fully_initialized");
-	public static final int InstanceKlass_initialization_error = find_int("InstanceKlass::initialization_error");
-	public static final int Symbol_max_symbol_length = find_int("Symbol::max_symbol_length");
+
 	public static final int ConstantPool_indy_bsm_offset = find_int("ConstantPool::_indy_bsm_offset");
 	public static final int ConstantPool_indy_argc_offset = find_int("ConstantPool::_indy_argc_offset");
 	public static final int ConstantPool_indy_argv_offset = find_int("ConstantPool::_indy_argv_offset");
-	public static final int JavaThreadStatus_NEW = find_int("JavaThreadStatus::NEW");
-	public static final int JavaThreadStatus_RUNNABLE = find_int("JavaThreadStatus::RUNNABLE");
-	public static final int JavaThreadStatus_SLEEPING = find_int("JavaThreadStatus::SLEEPING");
-	public static final int JavaThreadStatus_IN_OBJECT_WAIT = find_int("JavaThreadStatus::IN_OBJECT_WAIT");
-	public static final int JavaThreadStatus_IN_OBJECT_WAIT_TIMED = find_int("JavaThreadStatus::IN_OBJECT_WAIT_TIMED");
-	public static final int JavaThreadStatus_PARKED = find_int("JavaThreadStatus::PARKED");
-	public static final int JavaThreadStatus_PARKED_TIMED = find_int("JavaThreadStatus::PARKED_TIMED");
-	public static final int JavaThreadStatus_BLOCKED_ON_MONITOR_ENTER = find_int("JavaThreadStatus::BLOCKED_ON_MONITOR_ENTER");
-	public static final int JavaThreadStatus_TERMINATED = find_int("JavaThreadStatus::TERMINATED");
+
 	public static final int FieldInfo_FieldFlags_ff_initialized = find_int("FieldInfo::FieldFlags::_ff_initialized");
 	public static final int FieldInfo_FieldFlags_ff_injected = find_int("FieldInfo::FieldFlags::_ff_injected");
 	public static final int FieldInfo_FieldFlags_ff_generic = find_int("FieldInfo::FieldFlags::_ff_generic");
@@ -495,36 +433,6 @@ public class vm_constant
 	public static final int Location_on_stack = find_int("Location::on_stack");
 	public static final int Location_in_register = find_int("Location::in_register");
 
-	public static final int T_BOOLEAN = find_int("T_BOOLEAN");
-	public static final int T_CHAR = find_int("T_CHAR");
-	public static final int T_FLOAT = find_int("T_FLOAT");
-	public static final int T_DOUBLE = find_int("T_DOUBLE");
-	public static final int T_BYTE = find_int("T_BYTE");
-	public static final int T_SHORT = find_int("T_SHORT");
-	public static final int T_INT = find_int("T_INT");
-	public static final int T_LONG = find_int("T_LONG");
-	public static final int T_OBJECT = find_int("T_OBJECT");
-	public static final int T_ARRAY = find_int("T_ARRAY");
-	public static final int T_VOID = find_int("T_VOID");
-	public static final int T_ADDRESS = find_int("T_ADDRESS");
-	public static final int T_NARROWOOP = find_int("T_NARROWOOP");
-	public static final int T_METADATA = find_int("T_METADATA");
-	public static final int T_NARROWKLASS = find_int("T_NARROWKLASS");
-	public static final int T_CONFLICT = find_int("T_CONFLICT");
-	public static final int T_ILLEGAL = find_int("T_ILLEGAL");
-	public static final int T_BOOLEAN_size = find_int("T_BOOLEAN_size");
-	public static final int T_CHAR_size = find_int("T_CHAR_size");
-	public static final int T_FLOAT_size = find_int("T_FLOAT_size");
-	public static final int T_DOUBLE_size = find_int("T_DOUBLE_size");
-	public static final int T_BYTE_size = find_int("T_BYTE_size");
-	public static final int T_SHORT_size = find_int("T_SHORT_size");
-	public static final int T_INT_size = find_int("T_INT_size");
-	public static final int T_LONG_size = find_int("T_LONG_size");
-	public static final int T_OBJECT_size = find_int("T_OBJECT_size");
-	public static final int T_ARRAY_size = find_int("T_ARRAY_size");
-	public static final int T_NARROWOOP_size = find_int("T_NARROWOOP_size");
-	public static final int T_NARROWKLASS_size = find_int("T_NARROWKLASS_size");
-	public static final int T_VOID_size = find_int("T_VOID_size");
 	public static final int LM_MONITOR = find_int("LM_MONITOR");
 	public static final int LM_LEGACY = find_int("LM_LEGACY");
 	public static final int LM_LIGHTWEIGHT = find_int("LM_LIGHTWEIGHT");
@@ -537,12 +445,6 @@ public class vm_constant
 	public static final int CompLevel_full_profile = find_int("CompLevel_full_profile");
 	public static final int CompLevel_full_optimization = find_int("CompLevel_full_optimization");
 
-	public static final int vmIntrinsics_invokeBasic = find_int("vmIntrinsics::_invokeBasic");
-	public static final int vmIntrinsics_linkToVirtual = find_int("vmIntrinsics::_linkToVirtual");
-	public static final int vmIntrinsics_linkToStatic = find_int("vmIntrinsics::_linkToStatic");
-	public static final int vmIntrinsics_linkToSpecial = find_int("vmIntrinsics::_linkToSpecial");
-	public static final int vmIntrinsics_linkToInterface = find_int("vmIntrinsics::_linkToInterface");
-	public static final int vmIntrinsics_linkToNative = find_int("vmIntrinsics::_linkToNative");
 	public static final int ConcreteRegisterImpl_number_of_registers = find_int("ConcreteRegisterImpl::number_of_registers");
 	public static final int REG_COUNT = find_int("REG_COUNT");
 	public static final int SAVED_ON_ENTRY_REG_COUNT = find_int("SAVED_ON_ENTRY_REG_COUNT");

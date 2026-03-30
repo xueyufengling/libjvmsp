@@ -3,13 +3,14 @@ package jvmsp.hotspot.oops;
 import jvmsp.memory;
 import jvmsp.type.cxx_type;
 import jvmsp.unsafe;
-import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot._native.include.classfile_constants;
 import jvmsp.hotspot.interpreter.Bytecodes;
 import jvmsp.hotspot.oops.Array.Array_pKlass;
 import jvmsp.hotspot.oops.Array.Array_u1;
 import jvmsp.hotspot.oops.Array.Array_u2;
 import jvmsp.hotspot.utilities.align;
+import jvmsp.hotspot.utilities.globalDefinitions;
 
 /**
  * 常量池。<br>
@@ -389,7 +390,7 @@ public class ConstantPool extends Metadata
 
 	public void symbol_at_put(int cp_index, Symbol s)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Utf8);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Utf8);
 		unsafe.write_pointer(symbol_at_addr(cp_index), s);
 	}
 
@@ -400,61 +401,61 @@ public class ConstantPool extends Metadata
 
 	public void klass_index_at_put(int cp_index, int name_index)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_ClassIndex);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_ClassIndex);
 		unsafe.write(int_at_addr(cp_index), name_index);
 	}
 
 	public void method_handle_index_at_put(int cp_index, int ref_kind, int ref_index)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_MethodHandle);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_MethodHandle);
 		unsafe.write(int_at_addr(cp_index), ref_index << 16 | ref_kind);
 	}
 
 	public void method_type_index_at_put(int cp_index, int ref_index)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_MethodType);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_MethodType);
 		unsafe.write(int_at_addr(cp_index), ref_index);
 	}
 
 	public void dynamic_constant_at_put(int cp_index, int bsms_attribute_index, int name_and_type_index)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Dynamic);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Dynamic);
 		unsafe.write(int_at_addr(cp_index), name_and_type_index << 16 | bsms_attribute_index);
 	}
 
 	public void invoke_dynamic_at_put(int cp_index, int bsms_attribute_index, int name_and_type_index)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_InvokeDynamic);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_InvokeDynamic);
 		unsafe.write(int_at_addr(cp_index), name_and_type_index << 16 | bsms_attribute_index);
 	}
 
 	public void unresolved_string_at_put(int cp_index, Symbol s)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_String);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_String);
 		unsafe.write(symbol_at_addr(cp_index), s.address());
 	}
 
 	public void int_at_put(int cp_index, int i)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Integer);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Integer);
 		unsafe.write(int_at_addr(cp_index), i);
 	}
 
 	public void long_at_put(int cp_index, long l)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Long);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Long);
 		unsafe.write(long_at_addr(cp_index), l);
 	}
 
 	public void float_at_put(int cp_index, float f)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Float);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Float);
 		unsafe.write(float_at_addr(cp_index), f);
 	}
 
 	public void double_at_put(int cp_index, double d)
 	{
-		tag_at_put(cp_index, vm_constant.JVM_CONSTANT_Double);
+		tag_at_put(cp_index, classfile_constants.JVM_CONSTANT_Double);
 		unsafe.write(double_at_addr(cp_index), d);
 	}
 
@@ -487,7 +488,7 @@ public class ConstantPool extends Metadata
 	 */
 	public static final int header_size()
 	{
-		return (int) (align.align_up(size, vm_constant.BytesPerWord) / vm_constant.BytesPerWord);
+		return (int) (align.align_up(size, globalDefinitions.BytesPerWord) / globalDefinitions.BytesPerWord);
 	}
 
 	public static final int size(int length)

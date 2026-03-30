@@ -517,11 +517,6 @@ public abstract class vm_struct extends memory_object implements vm_type
 		private static final long _old_gen_spec = vm_struct.entry.find("GenCollectedHeap", "_old_gen_spec").offset;
 	}
 
-	public static class BarrierSet
-	{
-		private static final long _barrier_set = vm_struct.entry.find("BarrierSet", "_barrier_set").address;
-	}
-
 	public static class CompiledICHolder
 	{
 		private static final long _holder_metadata = vm_struct.entry.find("CompiledICHolder", "_holder_metadata").offset;
@@ -535,11 +530,6 @@ public abstract class vm_struct extends memory_object implements vm_type
 		private static final long _header_struct_bci = vm_struct.entry.find("DataLayout", "_header._struct._bci").offset;
 		private static final long _header_struct_traps = vm_struct.entry.find("DataLayout", "_header._struct._traps").offset;
 		private static final long _cells_0 = vm_struct.entry.find("DataLayout", "_cells[0]").offset;
-	}
-
-	public static class TypeArrayKlass
-	{
-		private static final long _max_length = vm_struct.entry.find("TypeArrayKlass", "_max_length").offset;
 	}
 
 	public static class CheckedExceptionElement
@@ -628,18 +618,6 @@ public abstract class vm_struct extends memory_object implements vm_type
 	public static class ClassLoaderDataGraph
 	{
 		private static final long _head = vm_struct.entry.find("ClassLoaderDataGraph", "_head").address;
-	}
-
-	public static class Array_Klass_
-	{
-		private static final long _length = vm_struct.entry.find("Array<Klass*>", "_length").offset;
-		private static final long _data_0 = vm_struct.entry.find("Array<Klass*>", "_data[0]").offset;
-	}
-
-	public static class Array_ResolvedIndyEntry_
-	{
-		private static final long _length = vm_struct.entry.find("Array<ResolvedIndyEntry>", "_length").offset;
-		private static final long _data_0 = vm_struct.entry.find("Array<ResolvedIndyEntry>", "_data[0]").offset;
 	}
 
 	public static class GrowableArrayBase

@@ -11,7 +11,7 @@ public class OopMapCache extends CHeapObj
 	public static final int probe_depth = 3; // probe depth in case of collisions
 
 	public static final cxx_type OopMapCache = cxx_type.define(type_name)
-			.decl_field("_flags", cxx_type.pvoid.array(array_size))
+			.decl_field("_array", cxx_type.pvoid.array(array_size))
 			.resolve();
 
 	public static final long size = OopMapCache.size();

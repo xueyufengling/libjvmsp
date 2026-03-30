@@ -24,6 +24,12 @@ public class ArrayKlass extends Klass
 		this(type_name, address);
 	}
 
+	@Override
+	public String toString()
+	{
+		return '[' + super.toString();
+	}
+
 	public int dimension()
 	{
 		return super.read_cint(_dimension);
@@ -58,5 +64,21 @@ public class ArrayKlass extends Klass
 	public long size()
 	{
 		return 0;
+	}
+
+	public int array_header_in_bytes()
+	{
+		return layout_helper_header_size(layout_helper());
+	}
+
+	public int log2_element_size()
+	{
+		return layout_helper_log2_element_size(layout_helper());
+	}
+
+	// type of elements (T_OBJECT for both oop arrays and array-arrays)
+	public byte element_type()
+	{
+		return layout_helper_element_type(layout_helper());
 	}
 }

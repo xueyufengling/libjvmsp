@@ -6,6 +6,7 @@ import jvmsp.hotspot.code.nmethod;
 import jvmsp.hotspot.interpreter.Bytecodes;
 import jvmsp.hotspot.utilities.AccessFlags;
 import jvmsp.hotspot.utilities.align;
+import jvmsp.hotspot.utilities.globalDefinitions;
 
 /**
  * 方法的运行时数据
@@ -31,6 +32,17 @@ public class Method extends Metadata
 	private static final long _code = vm_struct.entry.find(type_name, "_code").offset;
 	private static final long _from_interpreted_entry = vm_struct.entry.find(type_name, "_from_interpreted_entry").offset;
 
+	public static abstract class VtableIndexFlag
+	{
+		public static final int itable_index_max = -10; // first itable index, growing downward
+		public static final int pending_itable_index = -9; // itable index will be assigned
+		public static final int invalid_vtable_index = vm_constant.find_int("Method::invalid_vtable_index");// -4; // distinct from any valid vtable index
+		public static final int garbage_vtable_index = -3; // not yet linked; no vtable layout yet
+		public static final int nonvirtual_vtable_index = vm_constant.find_int("Method::nonvirtual_vtable_index");// -2
+	}
+
+	public static final int extra_stack_entries_for_jsr292 = vm_constant.find_int("Method::extra_stack_entries_for_jsr292");// 1
+
 	public Method(long address)
 	{
 		super(type_name, address);
@@ -55,6 +67,12 @@ public class Method extends Metadata
 	public ConstMethod constMethod()
 	{
 		return super.read_memory_object_ptr(ConstMethod.class, _constMethod);
+	}
+
+	public void print_code()
+	{
+		System.out.println(method_holder().toString() + name() + signature());
+		constMethod().print_code();
 	}
 
 	public void set_constMethod(ConstMethod xconst)
@@ -247,7 +265,7 @@ public class Method extends Metadata
 	 */
 	public long signature_handler_addr()
 	{
-		return native_function_addr() + vm_constant.BytesPerWord;
+		return native_function_addr() + globalDefinitions.BytesPerWord;
 	}
 
 	// 拓展方法
@@ -258,12 +276,12 @@ public class Method extends Metadata
 
 	public int method_size()
 	{
-		return (int) (size / vm_constant.BytesPerWord + (is_native() ? 2 : 0));
+		return (int) (size / globalDefinitions.BytesPerWord + (is_native() ? 2 : 0));
 	}
 
 	public static final int header_size()
 	{
-		return (int) (align.align_up((int) size, vm_constant.BytesPerWord) / vm_constant.BytesPerWord);
+		return (int) (align.align_up((int) size, globalDefinitions.BytesPerWord) / globalDefinitions.BytesPerWord);
 	}
 
 	@Override

@@ -232,6 +232,7 @@ public final class unsafe
 	}
 
 	public static final int os_arch;
+	public static final boolean lp64;
 
 	static
 	{
@@ -251,6 +252,10 @@ public final class unsafe
 			os_arch = 16;
 		else
 			os_arch = 0;// 未知
+		if (os_arch == 64)
+			lp64 = true;
+		else
+			lp64 = false;
 	}
 
 	public static final class methods
@@ -2211,7 +2216,7 @@ public final class unsafe
 	public static final <_T> long bottom_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return virtual_machine.object_header_byte_length();// 即便没有字段，也要计算对象头的偏移量
+			return object_model.oop_base_offset_in_bytes();// 即便没有字段，也要计算对象头的偏移量
 		Field last = last_memory_member_field(clazz);
 		if (last == null)
 			return bottom_offset(clazz.getSuperclass());
@@ -2229,7 +2234,7 @@ public final class unsafe
 	public static final <_T> long top_offset(Class<_T> clazz)
 	{
 		if (clazz == Object.class)
-			return virtual_machine.object_header_byte_length();
+			return object_model.oop_base_offset_in_bytes();
 		Field first = first_memory_member_field(clazz);
 		if (first == null)
 			return bottom_offset(clazz.getSuperclass());

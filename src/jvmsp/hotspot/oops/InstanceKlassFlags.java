@@ -1,6 +1,7 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.memory;
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.type.cxx_type;
 
@@ -23,8 +24,8 @@ public class InstanceKlassFlags extends vm_struct
 	public static final short has_nonstatic_fields = 1 << 1;
 	public static final short should_verify_class = 1 << 2;
 	public static final short is_contended = 1 << 3;
-	public static final short has_nonstatic_concrete_methods = 1 << 4;
-	public static final short declares_nonstatic_concrete_methods = 1 << 5;
+	public static final short has_nonstatic_concrete_methods = (short) vm_constant.find_int("InstanceKlassFlags::_misc_has_nonstatic_concrete_methods");// 1 << 4;
+	public static final short declares_nonstatic_concrete_methods = (short) vm_constant.find_int("InstanceKlassFlags::_misc_has_nonstatic_concrete_methods"); // 1 << 5;
 	public static final short shared_loading_failed = 1 << 6;
 	public static final short is_shared_boot_class = 1 << 7;
 	public static final short is_shared_platform_class = 1 << 8;

@@ -211,7 +211,7 @@ public abstract class Array extends MetaspaceObj
 		public static final long size = Array_int.size;
 
 		private static final long _length = Array_int._length;
-		private static final long _data = vm_struct.entry.find("Array<Method*>", "_data").offset;// 指针类型的Array::data[]地址
+		private static final long _data = vm_struct.entry.find("Array<ResolvedIndyEntry>", "_data").offset;// 指针类型的Array::data[]地址
 
 		Class<_T> struct_clazz;
 
@@ -250,7 +250,7 @@ public abstract class Array extends MetaspaceObj
 
 	public static class Array_ResolvedFieldEntry extends Array_VMStruct<ResolvedFieldEntry>
 	{
-		public static final String type_name = "Array<ResolvedIndyEntry*>";
+		public static final String type_name = "Array<ResolvedFieldEntry*>";
 		public static final long size = sizeof(type_name);
 
 		public Array_ResolvedFieldEntry(long address)
@@ -261,7 +261,7 @@ public abstract class Array extends MetaspaceObj
 
 	public static class Array_ResolvedMethodEntry extends Array_VMStruct<ResolvedMethodEntry>
 	{
-		public static final String type_name = "Array<ResolvedIndyEntry*>";
+		public static final String type_name = "Array<ResolvedMethodEntry*>";
 		public static final long size = sizeof(type_name);
 
 		public Array_ResolvedMethodEntry(long address)

@@ -1,7 +1,7 @@
 package jvmsp.hotspot.memory;
 
-import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.utilities.globalDefinitions;
 
 /**
  * 内存区间
@@ -74,7 +74,7 @@ public class MemRegion extends vm_struct
 
 	public long byte_size()
 	{
-		return _word_size * vm_constant.HeapWordSize;
+		return _word_size * globalDefinitions.HeapWordSize;
 	}
 
 	public boolean is_empty()

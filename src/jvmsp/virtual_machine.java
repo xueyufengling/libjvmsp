@@ -18,7 +18,7 @@ import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 
-import jvmsp.object_layout.object_header_layout;
+import jvmsp.object_model.header_layout;
 import jvmsp.type.cxx_type;
 import jvmsp.type.java_type;
 import jvmsp.hotspot.classfile.java_lang_Class;
@@ -262,46 +262,6 @@ public class virtual_machine
 
 	public static final boolean UseCompressedClassPointers = virtual_machine.get_bool_option_or("UseCompressedClassPointers", false);
 
-	public static final object_header_layout header_layout;
-
-	static
-	{
-		// 对象头信息内存布局
-		switch (vm_arch)
-		{
-		case 32:
-		{
-			header_layout = object_header_layout.Uncompressed32;
-			break;
-		}
-		case 64:
-		{
-			if (UseCompactObjectHeaders)
-			{
-				header_layout = object_header_layout.Compact;
-			}
-			else if (UseCompressedOops && UseCompressedClassPointers)
-			{
-				header_layout = object_header_layout.Compressed;
-			}
-			else
-			{
-				header_layout = object_header_layout.Uncompressed64;
-			}
-			break;
-		}
-		default:
-		{
-			throw new java.lang.InternalError("unknown native jvm bit-version '" + vm_arch + "'");
-		}
-		}
-	}
-
-	public static final int object_header_byte_length()
-	{
-		return header_layout.header_byte_length;
-	}
-
 	/**
 	 * 堆上的地址
 	 * 
@@ -413,7 +373,7 @@ public class virtual_machine
 	 */
 	public static final long encode_narrow_klass(long klass_ptr)
 	{
-		return object_header_layout.encode_narrow_klass(klass_ptr);
+		return header_layout.encode_narrow_klass(klass_ptr);
 	}
 
 	/**
@@ -426,7 +386,7 @@ public class virtual_machine
 	 */
 	public static final long decode_narrow_klass(int narrow_klass)
 	{
-		return object_header_layout.decode_narrow_klass(narrow_klass);
+		return header_layout.decode_narrow_klass(narrow_klass);
 	}
 
 	/**
@@ -438,26 +398,6 @@ public class virtual_machine
 	public static final long klass_pointer_of(Class<?> clazz)
 	{
 		return java_lang_Class.klass_ptr(clazz);
-	}
-
-	public static final long get_klass_word(Class<?> clazz)
-	{
-		return java_lang_Class.klass_word(clazz);
-	}
-
-	public static final long get_klass_word(Object obj)
-	{
-		return header_layout.get_klass_word(obj);
-	}
-
-	public static final void set_klass_word(Object obj, long klass_word)
-	{
-		header_layout.set_klass_word(obj, klass_word);
-	}
-
-	public static final void set_klass_word(long oop, long klass_word)
-	{
-		header_layout.set_klass_word(oop, klass_word);
 	}
 
 	/**

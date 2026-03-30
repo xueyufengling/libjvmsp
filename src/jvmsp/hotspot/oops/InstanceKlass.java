@@ -1,6 +1,7 @@
 package jvmsp.hotspot.oops;
 
 import jvmsp.type.cxx_type;
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.code.nmethod;
@@ -50,37 +51,53 @@ public class InstanceKlass extends Klass
 	private static final long _permitted_subclasses = _nest_host + cxx_type.pvoid.size();
 	private static final long _record_components = _permitted_subclasses + cxx_type.pvoid.size();
 
-	public abstract class ClassState
+	public static abstract class InnerClassAttributeOffset
+	{
+		public static final int inner_class_inner_class_info_offset = vm_constant.find_int("InstanceKlass::inner_class_inner_class_info_offset");// 0
+		public static final int inner_class_outer_class_info_offset = vm_constant.find_int("InstanceKlass::inner_class_outer_class_info_offset");// 1
+		public static final int inner_class_inner_name_offset = vm_constant.find_int("InstanceKlass::inner_class_inner_name_offset");// 2
+		public static final int inner_class_access_flags_offset = vm_constant.find_int("InstanceKlass::inner_class_access_flags_offset");// 3
+		public static final int inner_class_next_offset = vm_constant.find_int("InstanceKlass::inner_class_next_offset");// 4
+	}
+
+	public static abstract class EnclosingMethodAttributeOffset
+	{
+		public static final int enclosing_method_class_index_offset = 0;
+		public static final int enclosing_method_method_index_offset = 1;
+		public static final int enclosing_method_attribute_size = vm_constant.find_int("InstanceKlass::enclosing_method_attribute_size");// 2
+	};
+
+	public static abstract class ClassState
 	{
 		/**
 		 * 已分配内存，但未链接
 		 */
-		public static final byte allocated = 0;
+		public static final byte allocated = (byte) vm_constant.find_int("InstanceKlass::allocated");// 0
 
 		/**
 		 * 已加载且插入了继承链，但未链接
 		 */
-		public static final byte loaded = 1;
+		public static final byte loaded = (byte) vm_constant.find_int("InstanceKlass::loaded");// 1
 
 		/**
 		 * 链接、验证成功，但未初始化
 		 */
-		public static final byte linked = 2;
+		public static final byte linked = (byte) vm_constant.find_int("InstanceKlass::linked");// 2
 
 		/**
 		 * 正在执行类初始化
 		 */
-		public static final byte being_initialized = 3;
+		public static final byte being_initialized = (byte) vm_constant.find_int("InstanceKlass::being_initialized");// 3
 
 		/**
 		 * 初始化完成
 		 */
-		public static final byte fully_initialized = 4;
+		public static final byte fully_initialized = (byte) vm_constant.find_int("InstanceKlass::fully_initialized");// 4
 
 		/**
 		 * 初始化出错
 		 */
-		public static final byte initialization_error = 5;
+		public static final byte initialization_error = (byte) vm_constant.find_int("InstanceKlass::initialization_error");// 5
 	}
 
 	public InstanceKlass(long address)

@@ -2,6 +2,7 @@ package jvmsp.hotspot.runtime;
 
 import jvmsp.memory;
 import jvmsp.type.cxx_type;
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.oops.Metadata;
 import jvmsp.hotspot.oops.OopHandle;
@@ -322,8 +323,8 @@ public class JavaThread extends Thread
 
 	public static abstract class TerminatedTypes
 	{
-		public static final int _not_terminated = 0xDEAD - 3;
-		public static final int _thread_exiting = _not_terminated + 1;
+		public static final int _not_terminated = vm_constant.find_int("JavaThread::_not_terminated");// 0xDEAD - 3;
+		public static final int _thread_exiting = vm_constant.find_int("JavaThread::_thread_exiting");// _not_terminated + 1;
 		public static final int _thread_gc_barrier_detached = _thread_exiting + 1;
 		public static final int _thread_terminated = _thread_gc_barrier_detached + 1;
 		public static final int _vm_exited = _thread_terminated + 1;

@@ -2,6 +2,7 @@ package jvmsp.hotspot.oops;
 
 import jvmsp.unsafe;
 import jvmsp.hotspot.vm_struct;
+import jvmsp.hotspot.interpreter.Bytecodes;
 import jvmsp.hotspot.memory.MetaspaceObj;
 import jvmsp.hotspot.oops.Array.Array_u1;
 import jvmsp.hotspot.utilities.globalDefinitions;
@@ -173,9 +174,13 @@ public class ConstMethod extends MetaspaceObj
 		int code_size = code_size();
 		if (code_size > 0)
 		{
-			set_code_size(bytecode.length);
 			unsafe.memcpy(code_base(), bytecode, 0, code_size);
 		}
+	}
+
+	public void print_code()
+	{
+		System.out.println(Bytecodes.to_string(code()));
 	}
 
 	/**

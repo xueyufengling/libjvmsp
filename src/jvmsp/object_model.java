@@ -1,5 +1,6 @@
 package jvmsp;
 
+import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.oops.CompressedKlassPointers;
 
 /**
@@ -19,7 +20,7 @@ import jvmsp.hotspot.oops.CompressedKlassPointers;
  * oop可以通过JNIHandles::make_local()等函数转换成jobject，jobject通过JNIHandles::resolve()可转换为oop。<br>
  * 对于local的jobject，jobject正是指向oop的指针。对于global和weak global的引用，则需要通过NativeAccess<>::oop_load(weak_global_ptr(jobject))函数获取oop。<br>
  */
-public class object_layout
+public class object_model
 {
 	/**
 	 * 对象头压缩/Klass压缩是指将对象头的Klass Word从64位压缩到32位的narrowKlass。<br>
@@ -199,7 +200,7 @@ public class object_layout
 
 	}
 
-	public static enum object_header_layout
+	public static enum header_layout
 	{
 		/**
 		 * JDK 24+<br>
@@ -261,6 +262,10 @@ public class object_layout
 		 */
 		public final int header_length;
 
+		/**
+		 * 对象头的总长度，亦即对象真正的成员字段起始偏移量。<br>
+		 * 等价于ObjLayout::_oop_base_offset_in_bytes。<br>
+		 */
 		public final int header_byte_length;
 
 		public static final long decode_narrow_klass(int narrow_klass)
@@ -284,7 +289,7 @@ public class object_layout
 		 * 此值为OpenJDk中硬编码的固定值，与OOP压缩的位移位数可能不同。<br>
 		 */
 
-		private object_header_layout(boolean has_klass_gap, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
+		private header_layout(boolean has_klass_gap, int markword_length, int klass_word_offset, int klass_word_length, int header_length)
 		{
 			this.has_klass_gap = has_klass_gap;
 			this.markword_length = markword_length;
@@ -356,5 +361,71 @@ public class object_layout
 				throw new java.lang.InternalError("set klass word of oop '" + addr + "' to '" + klass_word + "' failed");
 			}
 		}
+	}
+
+	public static final header_layout object_header_layout;
+
+	static
+	{
+		// 对象头信息内存布局
+		switch (virtual_machine.vm_arch)
+		{
+		case 32:
+		{
+			assert !virtual_machine.UseCompactObjectHeaders : "COH unsupported on 32-bit";
+			object_header_layout = header_layout.Uncompressed32;
+			break;
+		}
+		case 64:
+		{
+			if (virtual_machine.UseCompactObjectHeaders)
+			{
+				object_header_layout = header_layout.Compact;
+			}
+			else if (virtual_machine.UseCompressedOops && virtual_machine.UseCompressedClassPointers)
+			{
+				object_header_layout = header_layout.Compressed;
+			}
+			else
+			{
+				object_header_layout = header_layout.Uncompressed64;
+			}
+			break;
+		}
+		default:
+		{
+			throw new java.lang.InternalError("unknown native jvm bit-version '" + virtual_machine.vm_arch + "'");
+		}
+		}
+	}
+
+	public static final boolean oop_has_klass_gap()
+	{
+		return object_header_layout.has_klass_gap;
+	}
+
+	public static final int oop_base_offset_in_bytes()
+	{
+		return object_header_layout.header_byte_length;
+	}
+
+	public static final long get_klass_word(Class<?> clazz)
+	{
+		return java_lang_Class.klass_word(clazz);
+	}
+
+	public static final long get_klass_word(Object obj)
+	{
+		return object_header_layout.get_klass_word(obj);
+	}
+
+	public static final void set_klass_word(Object obj, long klass_word)
+	{
+		object_header_layout.set_klass_word(obj, klass_word);
+	}
+
+	public static final void set_klass_word(long oop, long klass_word)
+	{
+		object_header_layout.set_klass_word(oop, klass_word);
 	}
 }

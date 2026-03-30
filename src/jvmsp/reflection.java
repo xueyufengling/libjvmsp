@@ -24,6 +24,7 @@ import java.util.function.Function;
 
 import jvmsp.type.java_type;
 import jvmsp.hotspot.interpreter.Bytecodes;
+import jvmsp.hotspot.interpreter.Bytecodes.Code;
 import jvmsp.hotspot.oops.InstanceKlass;
 import sun.reflect.ReflectionFactory;
 
@@ -1026,7 +1027,7 @@ public abstract class reflection
 						break;
 					}
 				}
-				int targetCpIdx = (bytecode[targetCpIdxOffset] << 8) | (bytecode[targetCpIdxOffset + 1] & 0xFF);
+				int cp_idx = Code.fetch_cp_idx(bytecode, targetCpIdxOffset);
 				// int cpi = _get_caller_class.constMethod().resolve_cp_cache_idx(targetCpIdx);
 				// System.out.println("targetCpIdx " + targetCpIdx + " -> " + cpi);
 				System.out.println(_get_caller_class.method_holder());

@@ -2,6 +2,7 @@ package jvmsp.hotspot.runtime;
 
 import java.util.Iterator;
 
+import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.memory.CHeapObj;
 
@@ -14,7 +15,7 @@ public class JNIHandleBlock extends CHeapObj implements Iterable<JNIHandleBlock>
 	private static final long _top = vm_struct.entry.find(type_name, "_top").offset;
 	private static final long _next = vm_struct.entry.find(type_name, "_next").offset;
 
-	public static final int block_size_in_oops = 32; // Number of handles per handle block
+	public static final int block_size_in_oops = vm_constant.find_int("JNIHandleBlock::block_size_in_oops"); // Number of handles per handle block
 
 	public JNIHandleBlock(long address)
 	{
