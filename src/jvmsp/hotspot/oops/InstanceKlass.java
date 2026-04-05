@@ -6,6 +6,7 @@ import jvmsp.hotspot.vm_constant;
 import jvmsp.hotspot.vm_struct;
 import jvmsp.hotspot.classfile.java_lang_Class;
 import jvmsp.hotspot.code.nmethod;
+import jvmsp.hotspot.interpreter.OopMapCache;
 import jvmsp.hotspot.oops.Array.Array_int;
 import jvmsp.hotspot.oops.Array.Array_pInstanceKlass;
 import jvmsp.hotspot.oops.Array.Array_pMethod;
@@ -265,6 +266,16 @@ public class InstanceKlass extends Klass
 	public boolean is_reentrant_initialization(jvmsp.hotspot.runtime.Thread thread)
 	{
 		return init_thread().addr_equals(thread);
+	}
+
+	public OopMapCache oop_map_cache()
+	{
+		return super.read_memory_object_ptr(OopMapCache.class, _oop_map_cache);
+	}
+
+	public void set_oop_map_cache(OopMapCache oop_map_cache)
+	{
+		super.write_memory_object_ptr(_oop_map_cache, oop_map_cache);
 	}
 
 	/**

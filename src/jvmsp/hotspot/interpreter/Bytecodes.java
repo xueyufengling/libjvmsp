@@ -435,7 +435,7 @@ public class Bytecodes extends AllStatic
 		}
 		else
 		{
-			return (op1 & cxx_type.uint8_t_mask << 8) | (op2 & cxx_type.uint8_t_mask);
+			return (op1 << 8) | (op2 & cxx_type.uint8_t_mask);
 		}
 	}
 

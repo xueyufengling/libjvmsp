@@ -1,14 +1,18 @@
 package jvmsp;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import jvmsp.type.cxx_type;
+import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
 import jvmsp.libso.libc;
+import jvmsp.libso.win.libkernel32;
+import jvmsp.libso.win.winnt;
 
 public abstract class memory
 {
@@ -704,6 +708,80 @@ public abstract class memory
 		public <_MemObject extends memory_object> void write_memory_object(long offset, memory_object struct, long size)
 		{
 			super.write_memory_object(offset, struct, size);
+		}
+	}
+
+	/**
+	 * 具有执行权限的内存。<br>
+	 * 执行权限的管理是因操作系统而异的，无法通过标准C API直接分配。<br>
+	 */
+	public static final class exec_memory
+	{
+		private long mem;
+		private long mem_size;
+
+		private exec_memory(long mem, long mem_size)
+		{
+			this.mem = mem;
+			this.mem_size = mem_size;
+		}
+
+		public final long size()
+		{
+			return mem_size;
+		}
+
+		public final long mem()
+		{
+			return mem;
+		}
+
+		public final void free()
+		{
+			switch (virtual_machine.platform.host)
+			{
+			case windows:
+				libkernel32.VirtualFree(mem, 0, winnt.MEM_RELEASE);
+			case linux:
+			case macos:
+			default:
+			}
+		}
+
+		public final void copy_from(long offset, byte[] bytes)
+		{
+			unsafe.memcpy(mem + offset, bytes, 0, bytes.length);
+		}
+
+		/**
+		 * 将本内存视作机器码数组转换为可以调用的函数指针
+		 * 
+		 * @param machine_code
+		 * @param signature
+		 * @return
+		 */
+		public final MethodHandle func(long offset, function_signature signature)
+		{
+			return shared_object.func(mem + offset, signature);
+		}
+
+		/**
+		 * 分配具有执行权限的内存
+		 * 
+		 * @param size
+		 * @return
+		 */
+		public static final exec_memory alloc_exec_memory(long size)
+		{
+			switch (virtual_machine.platform.host)
+			{
+			case windows:
+				return new exec_memory(libkernel32.VirtualAlloc(0, size, winnt.MEM_COMMIT | winnt.MEM_RESERVE, winnt.PAGE_EXECUTE_READWRITE), size);
+			case linux:
+			case macos:
+			default:
+				return null;
+			}
 		}
 	}
 }

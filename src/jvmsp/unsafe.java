@@ -408,7 +408,7 @@ public final class unsafe
 	public static final void force_initialize(Class<?> clazz)
 	{
 		long ik = java_lang_Class.klass_ptr(clazz);
-		if (InstanceKlass.init_state(ik) == ClassState.fully_initialized)// 如果已经初始化完成，则标记为已链接未初始化
+		if (InstanceKlass.init_state(ik) >= ClassState.fully_initialized)// 如果已经初始化完成或初始化错误，则标记为已链接未初始化
 			InstanceKlass.set_init_state(ik, ClassState.linked);
 		ensure_class_initialized(clazz);
 	}

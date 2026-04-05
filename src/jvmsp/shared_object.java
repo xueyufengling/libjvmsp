@@ -1,5 +1,7 @@
 package jvmsp;
 
+import static jvmsp.versions.jdk_versions;
+
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.invoke.MethodHandle;
@@ -12,8 +14,6 @@ import java.util.Set;
 
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
-
-import static jvmsp.versions.jdk_versions;
 
 /**
  * 加载so库以及符号查找
