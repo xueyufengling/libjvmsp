@@ -524,7 +524,7 @@ public abstract class type<_T> implements Cloneable
 			 */
 			public final MethodHandle callable(long base_addr)
 			{
-				return symbols.bind(shared_object.stub_function((cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
+				return symbols.bind(abi.stub_function((cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
 			}
 		}
 

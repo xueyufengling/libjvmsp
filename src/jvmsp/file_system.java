@@ -25,6 +25,8 @@ import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
 import java.util.stream.Stream;
 
+import jvmsp.arch.os;
+
 public class file_system
 {
 
@@ -99,7 +101,7 @@ public class file_system
 		if (path == null || path.equals(""))
 			return "/";
 		char ch = path.charAt(0);// 检查开头有没有多余的路径分隔符
-		boolean is_windows = virtual_machine.platform.host == virtual_machine.platform.windows;
+		boolean is_windows = os.host == os.windows;
 		if (ch == File.separatorChar || ch == '/')
 		{
 			if (is_windows)

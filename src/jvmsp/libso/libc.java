@@ -2,10 +2,10 @@ package jvmsp.libso;
 
 import java.lang.invoke.MethodHandle;
 
+import jvmsp.arch.os;
 import jvmsp.shared_object;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
-import jvmsp.virtual_machine;
 
 /**
  * libc.so库相关函数封装
@@ -33,15 +33,15 @@ public class libc
 	static
 	{
 		String libc_filename = null;
-		switch (virtual_machine.platform.host)
+		switch (os.host)
 		{
-		case virtual_machine.platform.linux:
+		case os.linux:
 			libc_filename = "c";
 			break;
-		case virtual_machine.platform.macos:
+		case os.macos:
 			libc_filename = "System";
 			break;
-		case virtual_machine.platform.windows:
+		case os.windows:
 			libc_filename = "msvcrt";
 			break;
 		}

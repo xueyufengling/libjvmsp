@@ -1,5 +1,6 @@
 package jvmsp.hotspot.runtime;
 
+import jvmsp.arch.os;
 import jvmsp.virtual_machine;
 import jvmsp.hotspot.vm_struct;
 
@@ -31,7 +32,7 @@ public class OSThread extends OSThreadBase
 	 */
 	public long thread_id()
 	{
-		switch (virtual_machine.platform.host)
+		switch (os.host)
 		{
 		case linux:// pid_t
 		case windows:// unsigned long
@@ -45,7 +46,7 @@ public class OSThread extends OSThreadBase
 
 	public void set_thread_id(long thread_id)
 	{
-		switch (virtual_machine.platform.host)
+		switch (os.host)
 		{
 		case linux:
 		case windows:

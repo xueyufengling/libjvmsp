@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import jvmsp.arch.os;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
@@ -738,7 +739,7 @@ public abstract class memory
 
 		public final void free()
 		{
-			switch (virtual_machine.platform.host)
+			switch (os.host)
 			{
 			case windows:
 				libkernel32.VirtualFree(mem, 0, winnt.MEM_RELEASE);
@@ -773,7 +774,7 @@ public abstract class memory
 		 */
 		public static final exec_memory alloc_exec_memory(long size)
 		{
-			switch (virtual_machine.platform.host)
+			switch (os.host)
 			{
 			case windows:
 				return new exec_memory(libkernel32.VirtualAlloc(0, size, winnt.MEM_COMMIT | winnt.MEM_RESERVE, winnt.PAGE_EXECUTE_READWRITE), size);
