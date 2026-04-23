@@ -1774,7 +1774,8 @@ public final class unsafe
 		return read_reference(static_field_base(f), static_field_offset(f));
 	}
 
-	public static final void write(Object obj, Field field, long value)
+	// byte
+	public static final void write(Object obj, Field field, byte value)
 	{
 		if (Modifier.isStatic(field.getModifiers()))
 			write(static_field_base(field), static_field_offset(field), value);
@@ -1782,51 +1783,175 @@ public final class unsafe
 			write(obj, object_field_offset(field), value);
 	}
 
-	public static final void write(Object obj, String field, long value)
+	public static final void write(Object obj, String field, byte value)
 	{
 		write(obj, reflection.find_declared_field(obj, field), value);
 	}
 
-	public static final void write(Class<?> clazz, String field, long value)
+	public static final void write(Class<?> clazz, String field, byte value)
 	{
 		write(null, reflection.find_declared_field(clazz, field), value);
 	}
 
-	public static final long read_long(Object obj, Field field)
-	{
-		if (Modifier.isStatic(field.getModifiers()))
-			return read_long(static_field_base(field), static_field_offset(field));
-		else
-			return read_long(obj, object_field_offset(field));
-	}
-
-	public static final long read_long(Object obj, String field)
-	{
-		return read_long(obj, reflection.find_declared_field(obj, field));
-	}
-
-	public static final long read_long(Class<?> clazz, String field)
-	{
-		return read_long(null, reflection.find_declared_field(clazz, field));
-	}
-
-	/**
-	 * 获取指定对象声明的类成员long
-	 * 
-	 * @param obj
-	 * @param field
-	 * @return
-	 */
-	public static final long read_member_long(Object obj, String field)
-	{
-		return read_long(obj, object_field_offset(obj.getClass(), field));
-	}
-
-	public static final void write_member(Object obj, String field, long value)
+	public static final void write_member(Object obj, String field, byte value)
 	{
 		write(obj, object_field_offset(obj.getClass(), field), value);
 	}
 
+	public static final void write_static(Class<?> clazz, String field, byte value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
+	}
+
+	public static final byte read_byte(Object obj, Field field)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			return read_byte(static_field_base(field), static_field_offset(field));
+		else
+			return read_byte(obj, object_field_offset(field));
+	}
+
+	public static final byte read_byte(Object obj, String field)
+	{
+		return read_byte(obj, reflection.find_declared_field(obj, field));
+	}
+
+	public static final byte read_byte(Class<?> clazz, String field)
+	{
+		return read_byte(null, reflection.find_declared_field(clazz, field));
+	}
+
+	public static final byte read_member_byte(Object obj, String field)
+	{
+		return read_byte(obj, object_field_offset(obj.getClass(), field));
+	}
+
+	public static final byte read_static_byte(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_byte(static_field_base(f), static_field_offset(f));
+	}
+
+	// short
+	public static final void write(Object obj, Field field, short value)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			write(static_field_base(field), static_field_offset(field), value);
+		else
+			write(obj, object_field_offset(field), value);
+	}
+
+	public static final void write(Object obj, String field, short value)
+	{
+		write(obj, reflection.find_declared_field(obj, field), value);
+	}
+
+	public static final void write(Class<?> clazz, String field, short value)
+	{
+		write(null, reflection.find_declared_field(clazz, field), value);
+	}
+
+	public static final void write_member(Object obj, String field, short value)
+	{
+		write(obj, object_field_offset(obj.getClass(), field), value);
+	}
+
+	public static final void write_static(Class<?> clazz, String field, short value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
+	}
+
+	public static final short read_short(Object obj, Field field)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			return read_short(static_field_base(field), static_field_offset(field));
+		else
+			return read_short(obj, object_field_offset(field));
+	}
+
+	public static final short read_short(Object obj, String field)
+	{
+		return read_short(obj, reflection.find_declared_field(obj, field));
+	}
+
+	public static final short read_short(Class<?> clazz, String field)
+	{
+		return read_short(null, reflection.find_declared_field(clazz, field));
+	}
+
+	public static final short read_member_short(Object obj, String field)
+	{
+		return read_short(obj, object_field_offset(obj.getClass(), field));
+	}
+
+	public static final short read_static_short(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_short(static_field_base(f), static_field_offset(f));
+	}
+
+	// char
+	public static final void write(Object obj, Field field, char value)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			write(static_field_base(field), static_field_offset(field), value);
+		else
+			write(obj, object_field_offset(field), value);
+	}
+
+	public static final void write(Object obj, String field, char value)
+	{
+		write(obj, reflection.find_declared_field(obj, field), value);
+	}
+
+	public static final void write(Class<?> clazz, String field, char value)
+	{
+		write(null, reflection.find_declared_field(clazz, field), value);
+	}
+
+	public static final void write_member(Object obj, String field, char value)
+	{
+		write(obj, object_field_offset(obj.getClass(), field), value);
+	}
+
+	public static final void write_static(Class<?> clazz, String field, char value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
+	}
+
+	public static final char read_char(Object obj, Field field)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			return read_char(static_field_base(field), static_field_offset(field));
+		else
+			return read_char(obj, object_field_offset(field));
+	}
+
+	public static final char read_char(Object obj, String field)
+	{
+		return read_char(obj, reflection.find_declared_field(obj, field));
+	}
+
+	public static final char read_char(Class<?> clazz, String field)
+	{
+		return read_char(null, reflection.find_declared_field(clazz, field));
+	}
+
+	public static final char read_member_char(Object obj, String field)
+	{
+		return read_char(obj, object_field_offset(obj.getClass(), field));
+	}
+
+	public static final char read_static_char(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_char(static_field_base(f), static_field_offset(f));
+	}
+
+	// boolean
 	public static final void write(Object obj, Field field, boolean value)
 	{
 		if (Modifier.isStatic(field.getModifiers()))
@@ -1885,6 +2010,7 @@ public final class unsafe
 		return read_bool(static_field_base(f), static_field_offset(f));
 	}
 
+	// int
 	public static final void write(Object obj, Field field, int value)
 	{
 		if (Modifier.isStatic(field.getModifiers()))
@@ -1937,6 +2063,131 @@ public final class unsafe
 		return read_int(obj, object_field_offset(obj.getClass(), field));
 	}
 
+	public static final int read_static_int(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_int(static_field_base(f), static_field_offset(f));
+	}
+
+	// long
+	public static final void write(Object obj, Field field, long value)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			write(static_field_base(field), static_field_offset(field), value);
+		else
+			write(obj, object_field_offset(field), value);
+	}
+
+	public static final void write(Object obj, String field, long value)
+	{
+		write(obj, reflection.find_declared_field(obj, field), value);
+	}
+
+	public static final void write(Class<?> clazz, String field, long value)
+	{
+		write(null, reflection.find_declared_field(clazz, field), value);
+	}
+
+	public static final void write_member(Object obj, String field, long value)
+	{
+		write(obj, object_field_offset(obj.getClass(), field), value);
+	}
+
+	public static final void write_static(Class<?> clazz, String field, long value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
+	}
+
+	public static final long read_long(Object obj, Field field)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			return read_long(static_field_base(field), static_field_offset(field));
+		else
+			return read_long(obj, object_field_offset(field));
+	}
+
+	public static final long read_long(Object obj, String field)
+	{
+		return read_long(obj, reflection.find_declared_field(obj, field));
+	}
+
+	public static final long read_long(Class<?> clazz, String field)
+	{
+		return read_long(null, reflection.find_declared_field(clazz, field));
+	}
+
+	public static final long read_member_long(Object obj, String field)
+	{
+		return read_long(obj, object_field_offset(obj.getClass(), field));
+	}
+
+	public static final long read_static_long(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_long(static_field_base(f), static_field_offset(f));
+	}
+
+	// float
+	public static final void write(Object obj, Field field, float value)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			write(static_field_base(field), static_field_offset(field), value);
+		else
+			write(obj, object_field_offset(field), value);
+	}
+
+	public static final void write(Object obj, String field, float value)
+	{
+		write(obj, reflection.find_declared_field(obj, field), value);
+	}
+
+	public static final void write(Class<?> clazz, String field, float value)
+	{
+		write(null, reflection.find_declared_field(clazz, field), value);
+	}
+
+	public static final void write_member(Object obj, String field, float value)
+	{
+		write(obj, object_field_offset(obj.getClass(), field), value);
+	}
+
+	public static final void write_static(Class<?> clazz, String field, float value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
+	}
+
+	public static final float read_float(Object obj, Field field)
+	{
+		if (Modifier.isStatic(field.getModifiers()))
+			return read_float(static_field_base(field), static_field_offset(field));
+		else
+			return read_float(obj, object_field_offset(field));
+	}
+
+	public static final float read_float(Object obj, String field)
+	{
+		return read_float(obj, reflection.find_declared_field(obj, field));
+	}
+
+	public static final float read_float(Class<?> clazz, String field)
+	{
+		return read_float(null, reflection.find_declared_field(clazz, field));
+	}
+
+	public static final float read_member_float(Object obj, String field)
+	{
+		return read_float(obj, object_field_offset(obj.getClass(), field));
+	}
+
+	public static final float read_static_float(Class<?> clazz, String field)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_float(static_field_base(f), static_field_offset(f));
+	}
+
+	// double
 	public static final void write(Object obj, Field field, double value)
 	{
 		if (Modifier.isStatic(field.getModifiers()))
@@ -1953,6 +2204,17 @@ public final class unsafe
 	public static final void write(Class<?> clazz, String field, double value)
 	{
 		write(null, reflection.find_declared_field(clazz, field), value);
+	}
+
+	public static final void write_member(Object obj, String field, double value)
+	{
+		write(obj, object_field_offset(obj.getClass(), field), value);
+	}
+
+	public static final void write_static(Class<?> clazz, String field, double value)
+	{
+		Field f = reflection.find_declared_field(clazz, field);
+		write(static_field_base(f), static_field_offset(f), value);
 	}
 
 	public static final double read_double(Object obj, Field field)
@@ -1973,40 +2235,15 @@ public final class unsafe
 		return read_double(null, reflection.find_declared_field(clazz, field));
 	}
 
-	public static final void write(Object obj, Field field, float value)
+	public static final double read_member_double(Object obj, String field)
 	{
-		if (Modifier.isStatic(field.getModifiers()))
-			write(static_field_base(field), static_field_offset(field), value);
-		else
-			write(obj, object_field_offset(field), value);
+		return read_double(obj, object_field_offset(obj.getClass(), field));
 	}
 
-	public static final void write(Object obj, String field, float value)
+	public static final double read_static_double(Class<?> clazz, String field)
 	{
-		write(obj, reflection.find_declared_field(obj, field), value);
-	}
-
-	public static final void write(Class<?> clazz, String field, float value)
-	{
-		write(null, reflection.find_declared_field(clazz, field), value);
-	}
-
-	public static final float read_float(Object obj, Field field)
-	{
-		if (Modifier.isStatic(field.getModifiers()))
-			return read_float(static_field_base(field), static_field_offset(field));
-		else
-			return read_float(obj, object_field_offset(field));
-	}
-
-	public static final float read_float(Object obj, String field)
-	{
-		return read_float(obj, reflection.find_declared_field(obj, field));
-	}
-
-	public static final float read_float(Class<?> clazz, String field)
-	{
-		return read_float(null, reflection.find_declared_field(clazz, field));
+		Field f = reflection.find_declared_field(clazz, field);
+		return read_double(static_field_base(f), static_field_offset(f));
 	}
 
 	/**

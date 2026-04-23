@@ -1,36 +1,41 @@
 package jvmsp;
 
-import java.lang.foreign.FunctionDescriptor;
-import java.lang.foreign.Linker;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
 
-import jvmsp.arch.storage;
+import jvmsp.arch.storage_type;
 import jvmsp.type.cxx_type;
+import jvmsp.type.cxx_type.function_signature;
+import jvmsp.type.cxx_type.function_type;
 
 import static jvmsp.versions.jdk_versions;
 
 /**
  * 调用约定，用于不同架构和操作系统的函数参数、返回值传递
- * JVM内部使用的ABIDescriptor对象 https://github.com/openjdk/jdk/blob/a69409b0b7bcb4eb9a66327e1c6c53b3361ea1e9/src/hotspot/cpu/x86/foreignGlobals_x86_64.cpp#L46
+ * JVM内部使用的ABIDescriptor对象 https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/cpu/x86/foreignGlobals_x86_64.cpp#L46
  */
-@SuppressWarnings("preview")
-public enum abi
+public class abi
 {
-	x86_64_CSysV("x64.sysv", "CallArranger", "CSysV"),
-	x86_64_CWindows("x64.windows", "CallArranger", "CWindows"),
-	aarch64_CLinux("aarch64", "CallArranger", "C", true, "LINUX", false),
-	aarch64_CMacOS("aarch64", "CallArranger", "C", true, "MACOS", false),
-	aarch64_CWindows("aarch64.windows", "WindowsAArch64CallArranger", "WindowsAArch64AbiDescriptor", true, "aarch64", "CallArranger", "WINDOWS", false),
-	ppc64_C("ppc64", "CallArranger", "C", false, "ABIv2", false),
-	riscv64_CLinux("riscv64.linux", "LinuxRISCV64CallArranger", "CLinux"),
-	s390_CLinux("s390.linux", "LinuxS390CallArranger", "CLinux");
+	private final arch target_arch;
+	private final Object descriptor;
 
-	public static final abi host;
+	private abi(arch target_arch, Object descriptor)
+	{
+		this.target_arch = target_arch;
+		this.descriptor = descriptor;
+	}
+
+	public final arch target_arch()
+	{
+		return target_arch;
+	}
+
+	public final Object descriptor()
+	{
+		return descriptor;
+	}
 
 	private static Class<?> jdk_internal_foreign_CABI;
 
@@ -69,6 +74,73 @@ public enum abi
 	}
 
 	/**
+	 * JDK自带的调用约定
+	 */
+
+	private static final Object jdk_internal_abi(String abi_pkg_name, String abi_context_name, String abi_instance_name, boolean is_abi_static, String call_arranger_pkg_name, String call_arranger_name, String call_arranger_instance_name, boolean is_get_bindings_static)
+	{
+		try
+		{
+			// ABIDescriptor需要与CallArranger一起使用，CallArranger负责计算参数位置和重排以符合ABI
+			Class<?> _internal_abi_context_class = Class.forName("jdk.internal.foreign.abi." + abi_pkg_name + "." + abi_context_name);
+			Class<?> _internal_call_arranger_class = Class.forName("jdk.internal.foreign.abi." + call_arranger_pkg_name + "." + call_arranger_name);
+			Object _internal_call_arranger_instance = null;
+			if (!is_abi_static || !is_get_bindings_static)
+			{
+				if (call_arranger_instance_name == null)
+				{
+					throw new java.lang.InternalError("call arranger instance name of '" + abi_pkg_name + "' cannot be null");
+				}
+				else
+				{
+					// CallArranger的实例一定是静态单例
+					_internal_call_arranger_instance = unsafe.read_reference(_internal_call_arranger_class, call_arranger_instance_name);
+				}
+			}
+			if (is_abi_static)
+			{
+				return unsafe.read_reference(_internal_abi_context_class, abi_instance_name);
+			}
+			else
+			{
+				Field _internal_descriptor_field = reflection.find_declared_field(_internal_abi_context_class, abi_instance_name);
+				return unsafe.read_reference(_internal_call_arranger_instance, _internal_descriptor_field);
+			}
+		}
+		catch (ClassNotFoundException ex)
+		{
+			throw new java.lang.InternalError("get internal abi descriptor of '" + abi_pkg_name + "' failed", ex);
+		}
+	}
+
+	private static final Object jdk_internal_abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String abi_instance_name, boolean is_abi_static, String call_arranger_instance_name, boolean is_get_bindings_static)
+	{
+		return jdk_internal_abi(abi_call_arranger_pkg_name, abi_context_call_arranger_name, abi_instance_name, is_abi_static, abi_call_arranger_pkg_name, abi_context_call_arranger_name, call_arranger_instance_name, is_get_bindings_static);
+	}
+
+	private static final Object jdk_internal_abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String static_abi_instance_name, String static_call_arranger_instance_name)
+	{
+		return jdk_internal_abi(abi_call_arranger_pkg_name, abi_context_call_arranger_name, static_abi_instance_name, true, static_call_arranger_instance_name, true);
+	}
+
+	private static final Object jdk_internal_abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String static_abi_instance_name)
+	{
+		return jdk_internal_abi(abi_call_arranger_pkg_name, abi_context_call_arranger_name, static_abi_instance_name, null);
+	}
+
+	public static final abi x86_64_CSysV = new abi(arch.x86_64, jdk_internal_abi("x64.sysv", "CallArranger", "CSysV"));
+	public static final abi x86_64_CWindows = new abi(arch.x86_64, jdk_internal_abi("x64.windows", "CallArranger", "CWindows"));
+
+	public static final abi aarch64_CLinux = new abi(arch.aarch64, jdk_internal_abi("aarch64", "CallArranger", "C", true, "LINUX", false));
+	public static final abi aarch64_CMacOS = new abi(arch.aarch64, jdk_internal_abi("aarch64", "CallArranger", "C", true, "MACOS", false));
+	public static final abi aarch64_CWindows = new abi(arch.aarch64, jdk_internal_abi("aarch64.windows", "WindowsAArch64CallArranger", "WindowsAArch64AbiDescriptor", true, "aarch64", "CallArranger", "WINDOWS", false));
+	public static final abi ppc64_C = new abi(arch.ppc64, jdk_internal_abi("ppc64", "CallArranger", "C", false, "ABIv2", false));
+	public static final abi riscv64_CLinux = new abi(arch.riscv64, jdk_internal_abi("riscv64.linux", "LinuxRISCV64CallArranger", "CLinux"));
+	public static final abi s390_CLinux = new abi(arch.s390, jdk_internal_abi("s390.linux", "LinuxS390CallArranger", "CLinux"));
+
+	public static final abi host;
+
+	/**
 	 * 获取宿主机的架构ABI
 	 * 
 	 * @return
@@ -105,343 +177,165 @@ public enum abi
 		host = get_host_abi_descriptor();
 	}
 
-	private Object _internal_descriptor = null;
+	private static Class<?> jdk_internal_foreign_abi_ABIDescriptor;
 
-	Class<?> _internal_abi_context_class;
-	Class<?> _internal_call_arranger_class;
-	Class<?> _internal_bindings_class;
+	private static Field ABIDescriptor_inputStorage;
+	private static Field ABIDescriptor_outputStorage;
 
-	_get_bindings _get_bindings;
-
-	private static abstract class _get_bindings
-	{
-		protected Object _internal_call_arranger_instance = null;
-		protected MethodHandle CallArranger_getBindings;
-
-		protected _get_bindings(Object _internal_call_arranger_instance, MethodHandle CallArranger_getBindings)
-		{
-			this._internal_call_arranger_instance = _internal_call_arranger_instance;
-			this.CallArranger_getBindings = CallArranger_getBindings;
-		}
-
-		abstract Object call(FunctionDescriptor fd, boolean for_upcall, Object options);
-	}
-
-	private static class _static_get_bindings extends _get_bindings
-	{
-		protected _static_get_bindings(MethodHandle CallArranger_getBindings)
-		{
-			super(null, CallArranger_getBindings);
-		}
-
-		@Override
-		Object call(FunctionDescriptor fd, boolean for_upcall, Object options)
-		{
-			try
-			{
-				return CallArranger_getBindings.invoke(fd.toMethodType(), fd, for_upcall, options);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("static get bindings of '" + fd + "' failed", ex);
-			}
-		}
-	}
-
-	private static class _member_get_bindings extends _get_bindings
-	{
-		protected _member_get_bindings(Object _internal_call_arranger_instance, MethodHandle CallArranger_getBindings)
-		{
-			super(_internal_call_arranger_instance, CallArranger_getBindings);
-		}
-
-		@Override
-		Object call(FunctionDescriptor fd, boolean for_upcall, Object options)
-		{
-			try
-			{
-				return CallArranger_getBindings.invoke(_internal_call_arranger_instance, fd.toMethodType(), fd, for_upcall, options);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("member get bindings of '" + fd + "' failed", ex);
-			}
-		}
-	}
-
-	private static class __jdk_classes
-	{
-		private static Class<?> jdk_internal_foreign_abi_LinkerOptions;
-
-		static
-		{
-			try
-			{
-				jdk_internal_foreign_abi_LinkerOptions = Class.forName("jdk.internal.foreign.abi.LinkerOptions");
-			}
-			catch (ClassNotFoundException ex)
-			{
-				ex.printStackTrace();
-			}
-		}
-	}
-
-	private abi(String abi_pkg_name, String abi_context_name, String abi_instance_name, boolean is_abi_static, String call_arranger_pkg_name, String call_arranger_name, String call_arranger_instance_name, boolean is_get_bindings_static)
+	static
 	{
 		try
 		{
-			// ABIDescriptor需要与CallArranger一起使用，CallArranger负责计算参数位置和重排以符合ABI
-			_internal_abi_context_class = Class.forName("jdk.internal.foreign.abi." + abi_pkg_name + "." + abi_context_name);
-			_internal_call_arranger_class = Class.forName("jdk.internal.foreign.abi." + call_arranger_pkg_name + "." + call_arranger_name);
-			_internal_bindings_class = Class.forName(_internal_call_arranger_class.getName() + "$Bindings");
-			Object _internal_call_arranger_instance = null;
-			if (!is_abi_static || !is_get_bindings_static)
-			{
-				if (call_arranger_instance_name == null)
-				{
-					throw new java.lang.InternalError("call arranger instance name of '" + this.name() + "' cannot be null");
-				}
-				else
-				{
-					// CallArranger的实例一定是静态单例
-					_internal_call_arranger_instance = unsafe.read_reference(_internal_call_arranger_class, call_arranger_instance_name);
-				}
-			}
-			if (is_abi_static)
-			{
-				_internal_descriptor = unsafe.read_reference(_internal_abi_context_class, abi_instance_name);
-			}
-			else
-			{
-				Field _internal_descriptor_field = reflection.find_declared_field(_internal_abi_context_class, abi_instance_name);
-				_internal_descriptor = unsafe.read_reference(_internal_call_arranger_instance, _internal_descriptor_field);
-			}
-			if (is_get_bindings_static)
-			{
-				// getBindings()为静态方法
-				_get_bindings = new _static_get_bindings(symbols.find_static_method(_internal_call_arranger_class, "getBindings", _internal_bindings_class, MethodType.class, FunctionDescriptor.class, boolean.class, __jdk_classes.jdk_internal_foreign_abi_LinkerOptions));
-			}
-			else
-			{
-				// getBindings()为实例方法
-				_get_bindings = new _member_get_bindings(_internal_call_arranger_instance, symbols.find_special_method(_internal_call_arranger_class, "getBindings", _internal_bindings_class, MethodType.class, FunctionDescriptor.class, boolean.class, __jdk_classes.jdk_internal_foreign_abi_LinkerOptions));
-			}
+			jdk_internal_foreign_abi_ABIDescriptor = Class.forName("jdk.internal.foreign.abi.ABIDescriptor");
+			ABIDescriptor_inputStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "inputStorage");
+			ABIDescriptor_outputStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "outputStorage");
 		}
 		catch (ClassNotFoundException ex)
 		{
-			throw new java.lang.InternalError("get internal abi descriptor of '" + this.name() + "' failed", ex);
+			ex.printStackTrace();
 		}
 	}
 
-	private abi(String abi_pkg_name, String abi_context_name, String abi_instance_name, String call_arranger_pkg_name, String call_arranger_name, String call_arranger_instance_name)
-	{
-		this(abi_pkg_name, abi_context_name, abi_instance_name, true, call_arranger_pkg_name, call_arranger_name, call_arranger_instance_name, true);
-	}
-
-	private abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String abi_instance_name, boolean is_abi_static, String call_arranger_instance_name, boolean is_get_bindings_static)
-	{
-		this(abi_call_arranger_pkg_name, abi_context_call_arranger_name, abi_instance_name, is_abi_static, abi_call_arranger_pkg_name, abi_context_call_arranger_name, call_arranger_instance_name, is_get_bindings_static);
-	}
-
-	private abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String static_abi_instance_name, String static_call_arranger_instance_name)
-	{
-		this(abi_call_arranger_pkg_name, abi_context_call_arranger_name, static_abi_instance_name, true, static_call_arranger_instance_name, true);
-	}
-
-	private abi(String abi_call_arranger_pkg_name, String abi_context_call_arranger_name, String static_abi_instance_name)
-	{
-		this(abi_call_arranger_pkg_name, abi_context_call_arranger_name, static_abi_instance_name, null);
-	}
-
-	public final Object descriptor()
-	{
-		return _internal_descriptor;
-	}
-
-	private static MethodHandle LinkerOptions_constructor;
-
-	static
-	{
-		LinkerOptions_constructor = symbols.find_constructor(__jdk_classes.jdk_internal_foreign_abi_LinkerOptions, Map.class);
-	}
-
 	/**
-	 * 创建jdk.internal.foreign.abi.LinkerOptions对象
+	 * ABI的调用参数存储寄存器，按顺序排布
 	 * 
-	 * @param options
+	 * @param abi
 	 * @return
 	 */
-	public static Object link_options(Map<Class<?>, Linker.Option> options)
+	public static final Object[][] arg_regs(Object abi)
 	{
 		try
 		{
-			return LinkerOptions_constructor.invoke(options);
+			return (Object[][]) unsafe.read_reference(abi, ABIDescriptor_inputStorage);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("create link options '" + options + "' failed", ex);
+			throw new java.lang.InternalError("get arg regs of abi '" + abi + "' failed", ex);
 		}
+	}
+
+	public static final Object[] arg_int_regs(Object abi)
+	{
+		return arg_regs(abi)[0];
+	}
+
+	public static final Object[] arg_vec_regs(Object abi)
+	{
+		return arg_regs(abi)[1];
+	}
+
+	public static final Object[][] ret_regs(Object abi)
+	{
+		try
+		{
+			return (Object[][]) unsafe.read_reference(abi, ABIDescriptor_outputStorage);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get ret regs of abi '" + abi + "' failed", ex);
+		}
+	}
+
+	public static final Object[] ret_int_regs(Object abi)
+	{
+		return ret_regs(abi)[0];
+	}
+
+	public static final Object[] ret_vec_regs(Object abi)
+	{
+		return ret_regs(abi)[1];
 	}
 
 	/**
-	 * 无特殊的Linker设置
+	 * NativeMethodHandle与stub函数之间的调用约定
 	 */
-	public static final Object none_link_options;
-
-	static
+	public static class nmh_call_convention
 	{
-		none_link_options = link_options(Map.of());
+		public static Object[] resolve_arg_ops(abi abi, boolean is_stub, cxx_type... arg_types)
+		{
+			int stack_top = 0;// 栈顶偏移量
+			int insert_delta = 0;// 插入目标函数指针后的索引增量
+			Object[] arg_regs = arg_int_regs(abi.descriptor);
+			Object[] arg_ops = storage_type.new_array(is_stub ? arg_types.length + 1 : arg_types.length);
+			if (is_stub)
+			{
+				insert_delta = 1;
+				arg_ops[0] = abi.target_arch.placeholder((short) cxx_type.pvoid.size(), 0);// 将传入NativeMethodHandle的第一个参数移入PLACEHOLDER偏移量为0的内存
+			}
+			for (int idx = 0; idx < arg_types.length; ++idx)
+			{
+				cxx_type type = arg_types[idx];
+				if (idx < arg_regs.length)
+				{
+					// 前n个参数用寄存器传递
+					arg_ops[idx + insert_delta] = arg_regs[idx];
+				}
+				else
+				{
+					// 剩下的参数用栈传递
+					short arg_size = (short) type.size();
+					arg_ops[idx + insert_delta] = abi.target_arch.stack(arg_size, stack_top);
+					stack_top += arg_size;
+				}
+			}
+			return arg_ops;
+		}
+
+		public static Object[] resolve_ret_ops(abi abi, cxx_type ret_type)
+		{
+			if (ret_type == cxx_type._void)
+			{
+				return storage_type.new_array(0);// 无返回值
+			}
+			else
+			{
+				Object[] ret_regs = ret_int_regs(abi.descriptor);
+				Object[] ret_ops = storage_type.new_array(1);
+				ret_ops[0] = ret_regs[0];
+				return ret_ops;
+			}
+		}
 	}
 
-	public static class constraint
+	public static class nmh_constraint
 	{
-		private static Class<?> jdk_internal_foreign_abi_VMStorage;
+		private function_type func_type;
+		private MethodType stub_method_type;
 
-		private static Class<?> jdk_internal_foreign_abi_CallingSequence;
-		private static Class<?> jdk_internal_foreign_abi_Binding$Move;
-		private static Class<?> jdk_internal_foreign_abi_aarch64_CallArranger$Bindings;// 虽然此处是aarch64 ABI的，但实际上各自架构的CallArranger$Bindings定义都一样
-
-		private static VarHandle CallingSequence_calleeMethodType;
-		private static VarHandle CallingSequence_needsReturnBuffer;
-		private static VarHandle CallingSequence_returnBufferSize;
-		private static VarHandle CallingSequence_allocationSize;
-
-		private static MethodHandle CallingSequence_needsTransition;
-		private static MethodHandle CallingSequence_capturedStateMask;
-
-		private static VarHandle CallingSequence_returnBindings;
-		private static VarHandle CallingSequence_argumentBindings;
-
-		private static MethodHandle Binding$Move_storage;
-
-		private static long Bindings_callingSequence;
-		private static long Bindings_isInMemoryReturn;
-
-		static
+		public nmh_constraint(function_type func_type)
 		{
-			try
-			{
-				jdk_internal_foreign_abi_VMStorage = Class.forName("jdk.internal.foreign.abi.VMStorage");
-				jdk_internal_foreign_abi_CallingSequence = Class.forName("jdk.internal.foreign.abi.CallingSequence");
-				jdk_internal_foreign_abi_Binding$Move = Class.forName("jdk.internal.foreign.abi.Binding$Move");
-				jdk_internal_foreign_abi_aarch64_CallArranger$Bindings = Class.forName("jdk.internal.foreign.abi.aarch64.CallArranger$Bindings");
-			}
-			catch (ClassNotFoundException ex)
-			{
-				ex.printStackTrace();
-			}
-
-			CallingSequence_calleeMethodType = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "calleeMethodType", MethodType.class);
-			CallingSequence_needsReturnBuffer = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "needsReturnBuffer", boolean.class);
-			CallingSequence_returnBufferSize = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "returnBufferSize", long.class);
-			CallingSequence_allocationSize = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "allocationSize", long.class);
-			CallingSequence_needsTransition = symbols.find_special_method(jdk_internal_foreign_abi_CallingSequence, "needsTransition", boolean.class);
-			CallingSequence_capturedStateMask = symbols.find_special_method(jdk_internal_foreign_abi_CallingSequence, "capturedStateMask", int.class);
-
-			CallingSequence_returnBindings = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "returnBindings", List.class);
-			CallingSequence_argumentBindings = symbols.find_var(jdk_internal_foreign_abi_CallingSequence, "argumentBindings", List.class);
-
-			Binding$Move_storage = symbols.find_virtual_method(jdk_internal_foreign_abi_Binding$Move, "storage", jdk_internal_foreign_abi_VMStorage);
-
-			Bindings_callingSequence = unsafe.object_field_offset(jdk_internal_foreign_abi_aarch64_CallArranger$Bindings, "callingSequence");
-			Bindings_isInMemoryReturn = unsafe.object_field_offset(jdk_internal_foreign_abi_aarch64_CallArranger$Bindings, "isInMemoryReturn");
-		}
-
-		/**
-		 * 获取jdk.internal.foreign.abi.Binding.Move的storage()参数
-		 * 
-		 * @param move
-		 * @return
-		 */
-		public static final Object get_binding_move_storage(Object move)
-		{
-			try
-			{
-				return Binding$Move_storage.invoke(move);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("get storage of '" + move + "' failed", ex);
-			}
-		}
-
-		private Object calling_sequence;
-		private boolean is_in_memory_return;
-
-		private constraint(Object calling_sequence, boolean is_in_memory_return)
-		{
-			this.calling_sequence = calling_sequence;
-			this.is_in_memory_return = is_in_memory_return;
-		}
-
-		/**
-		 * 从CallArranger.Bindings转换为constraint
-		 * 
-		 * @param bindings
-		 * @return
-		 */
-		private constraint(Object bindings)
-		{
-			this(unsafe.read_reference(bindings, Bindings_callingSequence), (boolean) unsafe.read_bool(bindings, Bindings_isInMemoryReturn));
-		}
-
-		public String toString()
-		{
-			return calling_sequence.toString();
-		}
-
-		public final Object calling_sequence()
-		{
-			return calling_sequence;
+			this.func_type = func_type;
+			this.stub_method_type = func_type.to_method_type().insertParameterTypes(0, long.class);// 添加一个函数指针首参数，指向实际待执行的函数
 		}
 
 		public final boolean is_in_memory_return()
 		{
-			return is_in_memory_return;
+			return false;
 		}
 
 		public final MethodType stub_method_type()
 		{
-			return (MethodType) CallingSequence_calleeMethodType.get(calling_sequence);
+			return stub_method_type;
 		}
 
 		public final boolean needs_return_buffer()
 		{
-			return (boolean) CallingSequence_needsReturnBuffer.get(calling_sequence);
+			return false;
 		}
 
 		public final long return_buffer_size()
 		{
-			return (long) CallingSequence_returnBufferSize.get(calling_sequence);
-		}
-
-		public final long allocation_size()
-		{
-			return (long) CallingSequence_allocationSize.get(calling_sequence);
+			return 0;
 		}
 
 		public final boolean needs_transition()
 		{
-			try
-			{
-				return (boolean) CallingSequence_needsTransition.invoke(calling_sequence);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("check needs transition of '" + calling_sequence + "' failed", ex);
-			}
+			return false;
 		}
 
 		public final int captured_state_mask()
 		{
-			try
-			{
-				return (int) CallingSequence_capturedStateMask.invoke(calling_sequence);
-			}
-			catch (Throwable ex)
-			{
-				throw new java.lang.InternalError("get captured state mask of '" + calling_sequence + "' failed", ex);
-			}
+			return 0;
 		}
 
 		/**
@@ -449,13 +343,9 @@ public enum abi
 		 * 
 		 * @return
 		 */
-		public final Object[] ret_vm_storage()
+		public final Object[] ret_vm_storage(abi abi)
 		{
-			List<Object> ret_bindings = (List<Object>) CallingSequence_returnBindings.get(calling_sequence);
-			return ret_bindings.stream()
-					.filter(jdk_internal_foreign_abi_Binding$Move::isInstance)
-					.map(constraint::get_binding_move_storage)
-					.toArray(storage._new);
+			return nmh_call_convention.resolve_ret_ops(abi, func_type.return_type());
 		}
 
 		/**
@@ -463,33 +353,15 @@ public enum abi
 		 * 
 		 * @return
 		 */
-		public final Object[] args_vm_storage()
+		public final Object[] args_vm_storage(abi abi, boolean is_stub)
 		{
-			List<List<Object>> args_bindings = (List<List<Object>>) CallingSequence_argumentBindings.get(calling_sequence);
-			return args_bindings.stream().flatMap(List::stream)
-					.filter(jdk_internal_foreign_abi_Binding$Move::isInstance)
-					.map(constraint::get_binding_move_storage)
-					.toArray(storage._new);
+			return nmh_call_convention.resolve_arg_ops(abi, is_stub, func_type.argument_types());
 		}
-	}
 
-	/**
-	 * 为函数的参数进行C->Java的类型替换处理和重排以符合ABI标准
-	 * 
-	 * @param fd
-	 * @param for_upcall 对于调用C/C++的downcall为false，否则为true
-	 * @param options
-	 * @return
-	 */
-	public final constraint resolve_constraints(FunctionDescriptor fd, boolean for_upcall, Object options)
-	{
-		return new constraint(_get_bindings.call(fd, for_upcall, options));
-
-	}
-
-	public final constraint resolve_constraints(FunctionDescriptor fd)
-	{
-		return resolve_constraints(fd, false, none_link_options);
+		public final Object[] args_vm_storage(abi abi)
+		{
+			return args_vm_storage(abi, true);
+		}
 	}
 
 	/**
@@ -497,63 +369,53 @@ public enum abi
 	 */
 
 	private static Class<?> jdk_internal_foreign_abi_NativeEntryPoint;
-	private static Class<?> java_lang_invoke_NativeMethodHandle;
 
-	private static Class<?> jdk_internal_foreign_abi_ABIDescriptor;
 	private static Class<?> jdk_internal_foreign_abi_VMStorage;
 
+	private static MethodHandle NativeEntryPoint_ctor;
 	private static MethodHandle NativeEntryPoint_makeDowncallStub;
 	private static MethodHandle NativeEntryPoint_freeDowncallStub0;
 	private static MethodHandle NativeEntryPoint_make;
-	private static MethodHandle NativeMethodHandle_make;
+
+	private static VarHandle NativeEntryPoint_methodType;
 
 	static
 	{
 		try
 		{
 			jdk_internal_foreign_abi_NativeEntryPoint = Class.forName("jdk.internal.foreign.abi.NativeEntryPoint");
-			java_lang_invoke_NativeMethodHandle = Class.forName("java.lang.invoke.NativeMethodHandle");
-			jdk_internal_foreign_abi_ABIDescriptor = Class.forName("jdk.internal.foreign.abi.ABIDescriptor");
 			jdk_internal_foreign_abi_VMStorage = Class.forName("jdk.internal.foreign.abi.VMStorage");
 		}
 		catch (ClassNotFoundException ex)
 		{
 			ex.printStackTrace();
 		}
-		NativeEntryPoint_makeDowncallStub = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "makeDowncallStub", long.class,
-				MethodType.class, jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), boolean.class, int.class, boolean.class);
+		NativeEntryPoint_ctor = symbols.find_constructor(jdk_internal_foreign_abi_NativeEntryPoint, MethodType.class, long.class);
+		NativeEntryPoint_methodType = symbols.find_var(jdk_internal_foreign_abi_NativeEntryPoint, "methodType", MethodType.class);
 		NativeEntryPoint_freeDowncallStub0 = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "freeDowncallStub0", boolean.class, long.class);
+
+		NativeEntryPoint_makeDowncallStub = jdk_versions.switch_execute_nonnull(
+				// JDK21
+				() -> symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "makeDowncallStub", long.class,
+						MethodType.class, jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), boolean.class, int.class, boolean.class),
+				// JDK25 新增参数 usingAddressPairs
+				() -> symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "makeDowncallStub", long.class,
+						MethodType.class, jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), boolean.class, int.class, boolean.class, boolean.class));
 
 		NativeEntryPoint_make = jdk_versions.switch_execute_nonnull(
 				// JDK21
-				() -> NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
+				() -> symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
 						jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class),
 				// JDK25 新增参数 usingAddressPairs
-				() -> NativeEntryPoint_make = symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
+				() -> symbols.find_static_method(jdk_internal_foreign_abi_NativeEntryPoint, "make", jdk_internal_foreign_abi_NativeEntryPoint,
 						jdk_internal_foreign_abi_ABIDescriptor, jdk_internal_foreign_abi_VMStorage.arrayType(), jdk_internal_foreign_abi_VMStorage.arrayType(), MethodType.class, boolean.class, int.class, boolean.class, boolean.class));
-		NativeMethodHandle_make = symbols.find_static_method(java_lang_invoke_NativeMethodHandle, "make", MethodHandle.class, jdk_internal_foreign_abi_NativeEntryPoint);
 	}
 
-	/**
-	 * 为指定类型的函数创建stub函数并返回其指针。<br>
-	 * JVM调用so库中的函数时，首先为目标函数类型创建一个能调用目标函数类型的C函数，即stub函数。stub函数比目标函数多了一个首参数，即要调用的目标函数指针的地址，类型为long。<br>
-	 * stub函数中全部的C/C++指针类型均为long，Java类型则为对应的Class<?>。<br>
-	 * stub函数创建完成以后，可以使用NativeEntryPoint.make()和NativeMethodHandle.make()创建stub函数的MethodHandle。<br>
-	 * 但在FFM实现中这个Handle是隐藏类中定义的，不能直接访问，因为JVM的FFM API实现中要将指针地址绑定到MemorySegment，
-	 * 故内部实现为jdk.internal.foreign.abi.BindingSpecializer。specializeHelper()在运行时生成字节码定义一个隐藏类，
-	 * 而该隐藏类调用了NativeMethodHandle.make()生成的stub函数的句柄。<br>
-	 * 
-	 * @param method_type             JVM层stub方法的类型。如果是C++指针类型则传入long。第一个参数必须是long，代表函数指针地址，后面按顺序传入参数
-	 * @param abi_descriptor          ABI描述符
-	 * @param vm_storage_arg_moves    传入参数的保存位置
-	 * @param vm_storage_return_moves 接收返回值的保存位置
-	 * @param needs_return_buffer     返回值是否需要缓冲区
-	 * @param captured_state_mask
-	 * @param needs_transition
-	 * @return
-	 */
 	// @formatter:off
-	/* 例如，对于JNI_GetCreatedJavaVMs()函数生成的隐藏类字节码为   
+	/* 
+	 * FFI使用动态生成机器码来生成native调用的stub，该stub负责传入MethodHandle.invoke()的参数的处理和返回值移交。
+	 * stub函数的第一个参数必须是目标函数的函数指针，且只要函数签名相同，都使用同一个stub，区别只在于函数指针不同。
+	 * 例如，对于JNI_GetCreatedJavaVMs()函数生成的隐藏类字节码为   
 	public final class jdk.internal.foreign.abi.DowncallStub
 	  minor version: 0
 	  major version: 65
@@ -833,16 +695,56 @@ public enum abi
 	}
 	*/
 	// @formatter:on
-	public static final long downcall_stub(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves_enc_arg_moves, Object[] vm_storage_enc_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)
+
+	/**
+	 * 为指定类型的函数创建stub函数并返回其指针。<br>
+	 * JVM调用so库中的函数时，首先为目标函数类型创建一个能调用目标函数类型的C函数，即stub函数。stub函数比目标函数多了一个首参数，即要调用的目标函数指针的地址，类型为long，且此参数不占用寄存器而是储存在PLACEHOLDER内存上偏移量为0处。<br>
+	 * stub函数中全部的C/C++指针类型均为long，Java类型则为对应的Class<?>。<br>
+	 * stub函数创建完成以后，可以使用NativeEntryPoint.make()和NativeMethodHandle.make()创建stub函数的MethodHandle。<br>
+	 * 但在FFM实现中这个Handle是隐藏类中定义的，不能直接访问，因为JVM的FFM API实现中要将指针地址绑定到MemorySegment，
+	 * 故内部实现为jdk.internal.foreign.abi.BindingSpecializer。specializeHelper()在运行时生成字节码定义一个隐藏类，
+	 * 而该隐藏类调用了NativeMethodHandle.make()生成的stub函数的句柄。<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/nativeEntryPoint.cpp#L37<br>
+	 * 关于vm_storage_enc_arg_moves、vm_storage_enc_return_moves的处理参见 https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/cpu/x86/downcallLinker_x86_64.cpp#L39<br>
+	 * 关于具体生成机器码的逻辑参见 https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/downcallLinker.hpp#L64<br>
+	 * https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/cpu/x86/downcallLinker_x86_64.cpp#L143<br>
+	 * 
+	 * @param method_type              JVM层stub方法的类型。如果是C++指针类型则传入long。第一个参数必须是long，代表函数指针地址，后面按顺序传入参数
+	 * @param abi_descriptor           ABI描述符
+	 * @param vm_storage_enc_arg_moves 传入参数的按顺序的保存位置，对应的Java层的Binding是VMStore
+	 * @param vm_storage_enc_ret_moves 接收返回值的保存位置，对应的Java层的Binding是VMLoad
+	 * @param needs_return_buffer      返回值是否需要缓冲区
+	 * @param captured_state_mask
+	 * @param needs_transition
+	 * @return
+	 */
+	public static final long downcall_stub(MethodType method_type, Object abi_descriptor, Object[] vm_storage_enc_arg_moves, Object[] vm_storage_enc_ret_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition, boolean nusing_address_pairs)
 	{
-		try
-		{
-			return (long) NativeEntryPoint_makeDowncallStub.invoke(method_type, abi_descriptor, vm_storage_arg_moves_enc_arg_moves, vm_storage_enc_return_moves, needs_return_buffer, captured_state_mask, needs_transition);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("get downcall stub of type '" + method_type.toString() + "' failed", ex);
-		}
+		return jdk_versions.switch_execute_nonnull(
+				() ->
+				{
+					try
+					{
+						return (long) NativeEntryPoint_makeDowncallStub.invoke(method_type, abi_descriptor, vm_storage_enc_arg_moves, vm_storage_enc_ret_moves, needs_return_buffer, captured_state_mask, needs_transition);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("get downcall stub of type '" + method_type.toString() + "' failed [jdk21]", ex);
+					}
+				}, // JDK21
+				() ->
+				{
+					try
+					{
+						// 新增参数using_address_pairs
+						return (long) NativeEntryPoint_makeDowncallStub.invoke(method_type, abi_descriptor, vm_storage_enc_arg_moves, vm_storage_enc_ret_moves, needs_return_buffer, captured_state_mask, needs_transition, nusing_address_pairs);
+					}
+					catch (Throwable ex)
+					{
+						throw new java.lang.InternalError("get downcall stub of type '" + method_type.toString() + "' failed [jdk25]", ex);
+					}
+				}// JDK25
+		);
 	}
 
 	public static final boolean free_downcall_stub(long downcall_stub)
@@ -862,49 +764,96 @@ public enum abi
 	 * 
 	 * @return
 	 */
-	public static final MethodHandle stub_function(cxx_type.function_type func_type)
+	public static final MethodHandle stub_function(abi abi, cxx_type.function_type func_type)
 	{
-		return stub_function(abi.host.native_entry(abi.host.resolve_constraints(func_type.to_function_descriptor())));
+		return native_entry_handle(stub_native_entry(abi, new nmh_constraint(func_type)));
 	}
 
-	public static final MethodHandle stub_function(cxx_type.function_pointer_type func_ptr_type)
+	public static final MethodHandle stub_function(abi abi, cxx_type.function_pointer_type func_ptr_type)
 	{
-		return stub_function(func_ptr_type.pointed_to_type());
+		return stub_function(abi, func_ptr_type.pointed_to_type());
 	}
 
-	public static final MethodHandle stub_function(Object downcall_entry)
+	// @formatter:off
+	/*
+	 * JVM调用native代码见https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/cpu/x86/methodHandles_x86.cpp#L247
+	 * void MethodHandles::jump_to_native_invoker(MacroAssembler* _masm, Register nep_reg, Register temp_target) {
+	 *   BLOCK_COMMENT("jump_to_native_invoker {");
+	 *     assert_different_registers(nep_reg, temp_target);
+	 *     assert(nep_reg != noreg, "required register");
+	 *     // Load the invoker, as NEP -> .invoker
+	 *     __ verify_oop(nep_reg);
+	 *     __ access_load_at(T_ADDRESS, IN_HEAP, temp_target, Address(nep_reg, NONZERO(jdk_internal_foreign_abi_NativeEntryPoint::downcall_stub_address_offset_in_bytes())), noreg);
+	 *     __ jmp(temp_target);
+	 *   BLOCK_COMMENT("} jump_to_native_invoker");
+	 * }
+	 * 即直接让控制流跳转到NativeEntryPoint.downcallStubAddress字段
+	 * 在generate_method_handle_dispatch()方法中（https://github.com/openjdk/jdk/blob/76a44b3e0341a9c59eaff0bfe8884ad104bda8d5/src/hotspot/cpu/x86/methodHandles_x86.cpp#L359）
+	 * 将根据MethodHandle的vmIntrinsicsID决定如何调用MethodHandle，如下
+	 * if (iid == vmIntrinsics::_invokeBasic) {
+	 *   // indirect through MH.form.vmentry.vmtarget
+	 *   jump_to_lambda_form(_masm, receiver_reg, rbx_method, temp1, for_compiler_entry);
+	 * } else if (iid == vmIntrinsics::_linkToNative) {
+	 *   assert(for_compiler_entry, "only compiler entry is supported");
+	 *   jump_to_native_invoker(_masm, member_reg, temp1);
+	 * } else ...
+	 * 
+	 */
+	// @formatter:on
+	/**
+	 * 构建一个指定机器码地址的NativeEntryPoint。<br>
+	 * method_type实际仅在NativeMethodHandle.make()中使用以生成可调用的MethodHandle。<br>
+	 * 需要包装为NativeMethodHandle才能调用。<br>
+	 * 
+	 * @param method_type 函数类型
+	 * @param mc_address  跳转目标点地址
+	 * @return
+	 */
+	public static final Object native_entry(MethodType method_type, long mc_address)
 	{
 		try
 		{
-			return (MethodHandle) NativeMethodHandle_make.invoke(downcall_entry);
+			return NativeEntryPoint_ctor.invoke(method_type, mc_address);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("wrap native function of '" + downcall_entry.toString() + "' failed", ex);
+			throw new java.lang.InternalError("wrap native entry pointer of address '" + mc_address + "' failed", ex);
+		}
+	}
+
+	public static final MethodType native_entry_method_type(Object nep)
+	{
+		try
+		{
+			return (MethodType) NativeEntryPoint_methodType.get(nep);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get method type of native entry '" + nep + "' failed", ex);
 		}
 	}
 
 	/**
-	 * 为指定类型的函数创建入口点stub并缓存。<br>
+	 * 为指定类型的函数创建入口点stub并缓存，stub函数中包含参数的传递和返回。<br>
 	 * 
-	 * @param method_type             JVM层stub方法的类型。如果是C++指针类型则传入long。第一个参数必须是long，代表函数指针地址，后面按顺序传入参数
-	 * @param abi_descriptor          ABI描述符
-	 * @param vm_storage_arg_moves    传入参数的保存位置
-	 * @param vm_storage_return_moves 接收返回值的保存位置
-	 * @param needs_return_buffer     返回值是否需要缓冲区
+	 * @param method_type          JVM层stub方法的类型。如果是C++指针类型则传入long。第一个参数必须是long，代表函数指针地址，后面按顺序传入参数
+	 * @param abi_descriptor       ABI描述符
+	 * @param vm_storage_arg_moves 传入参数的保存位置
+	 * @param vm_storage_ret_moves 接收返回值的保存位置
+	 * @param needs_return_buffer  返回值是否需要缓冲区
 	 * @param captured_state_mask
 	 * @param needs_transition
-	 * @param using_address_pairs     JDK25+新增参数，如果当前低于该版本则忽略此参数
+	 * @param using_address_pairs  JDK25+新增参数，如果当前低于该版本则忽略此参数
 	 * @return
 	 */
-	public static final Object native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition, boolean using_address_pairs)
+	public static final Object stub_native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_ret_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition, boolean using_address_pairs)
 	{
 		return jdk_versions.switch_execute_nonnull(
 				() ->
 				{
 					try
 					{
-						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition);
+						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_ret_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition);
 					}
 					catch (Throwable ex)
 					{
@@ -916,7 +865,7 @@ public enum abi
 					try
 					{
 						// 新增参数using_address_pairs
-						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition, using_address_pairs);
+						return NativeEntryPoint_make.invoke(abi_descriptor, vm_storage_arg_moves, vm_storage_ret_moves, method_type, needs_return_buffer, captured_state_mask, needs_transition, using_address_pairs);
 					}
 					catch (Throwable ex)
 					{
@@ -926,19 +875,83 @@ public enum abi
 		);
 	}
 
-	public static final Object native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_return_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)
+	public static final Object stub_native_entry(MethodType method_type, Object abi_descriptor, Object[] vm_storage_arg_moves, Object[] vm_storage_ret_moves, boolean needs_return_buffer, int captured_state_mask, boolean needs_transition)
 	{
-		return native_entry(method_type, abi_descriptor, vm_storage_arg_moves, vm_storage_return_moves, needs_return_buffer, captured_state_mask, needs_transition, false);
+		return stub_native_entry(method_type, abi_descriptor, vm_storage_arg_moves, vm_storage_ret_moves, needs_return_buffer, captured_state_mask, needs_transition, false);
 	}
 
-	public final Object native_entry(constraint resolved_constraint)
+	/**
+	 * stub函数的NativeEntryPoint
+	 * 
+	 * @param arch
+	 * @param abi
+	 * @param resolved_constraint
+	 * @return
+	 */
+	public static final Object stub_native_entry(abi abi, nmh_constraint resolved_constraint)
 	{
-		return native_entry(resolved_constraint.stub_method_type(),
-				this.descriptor(),
-				resolved_constraint.args_vm_storage(),
-				resolved_constraint.ret_vm_storage(),
+		return stub_native_entry(resolved_constraint.stub_method_type(),
+				abi.descriptor,
+				resolved_constraint.args_vm_storage(abi, true),
+				resolved_constraint.ret_vm_storage(abi),
 				resolved_constraint.needs_return_buffer(),
 				resolved_constraint.captured_state_mask(),
 				resolved_constraint.needs_transition());
+	}
+
+	/**
+	 * NativeEntryPoint包装为NativeMethodHandle
+	 */
+
+	private static Class<?> java_lang_invoke_NativeMethodHandle;
+	private static Class<?> java_lang_invoke_LambdaForm;
+
+	private static MethodHandle NativeMethodHandle_ctor;
+	private static MethodHandle NativeMethodHandle_preparedLambdaForm;
+
+	static
+	{
+		try
+		{
+			java_lang_invoke_NativeMethodHandle = Class.forName("java.lang.invoke.NativeMethodHandle");
+			java_lang_invoke_LambdaForm = Class.forName("java.lang.invoke.LambdaForm");
+			NativeMethodHandle_ctor = symbols.find_constructor(java_lang_invoke_NativeMethodHandle, MethodType.class, java_lang_invoke_LambdaForm, jdk_internal_foreign_abi_NativeEntryPoint);
+			NativeMethodHandle_preparedLambdaForm = symbols.find_static_method(java_lang_invoke_NativeMethodHandle, "preparedLambdaForm", java_lang_invoke_LambdaForm, MethodType.class);
+		}
+		catch (ClassNotFoundException ex)
+		{
+			ex.printStackTrace();
+		}
+	}
+
+	public static final MethodHandle native_entry_handle(Object nep)
+	{
+		MethodType mt = native_entry_method_type(nep);
+		try
+		{
+			// preparedLambdaForm用于生成MethodHandle的调用字节码
+			return (MethodHandle) NativeMethodHandle_ctor.invoke(mt, NativeMethodHandle_preparedLambdaForm.invoke(mt), nep);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("wrap native method handle of '" + nep + "' with type '" + mt + "' failed", ex);
+		}
+	}
+
+	/**
+	 * 将指定地址解析为函数指针
+	 * 
+	 * @param fun_addr
+	 * @param signature
+	 * @return
+	 */
+	public static final MethodHandle func(long fun_addr, abi cabi, function_signature signature)
+	{
+		return symbols.bind(abi.stub_function(cabi, signature.func_type), 0, fun_addr);
+	}
+
+	public static final MethodHandle func(long fun_addr, function_signature signature)
+	{
+		return func(fun_addr, host, signature);
 	}
 }

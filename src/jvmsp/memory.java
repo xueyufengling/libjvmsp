@@ -150,6 +150,15 @@ public abstract class memory
 	}
 
 	@SuppressWarnings("unchecked")
+	public static final <_T> _T[] cat(_T[] arr, _T... ts)
+	{
+		Object[] result = new Object[ts.length + arr.length];
+		System.arraycopy(arr, 0, result, 0, arr.length);
+		System.arraycopy(ts, 0, result, arr.length, ts.length);
+		return (_T[]) result;
+	}
+
+	@SuppressWarnings("unchecked")
 	public static final <_T> _T[] to_array(Class<_T> c, List<_T> list)
 	{
 		_T[] arr = (_T[]) Array.newInstance(c, list.size());
@@ -761,9 +770,14 @@ public abstract class memory
 		 * @param signature
 		 * @return
 		 */
+		public final MethodHandle func(long offset, abi cabi, function_signature signature)
+		{
+			return abi.func(mem + offset, cabi, signature);
+		}
+
 		public final MethodHandle func(long offset, function_signature signature)
 		{
-			return shared_object.func(mem + offset, signature);
+			return func(offset, abi.host, signature);
 		}
 
 		/**
@@ -783,6 +797,13 @@ public abstract class memory
 			default:
 				return null;
 			}
+		}
+
+		public static final exec_memory of(byte[] mc)
+		{
+			exec_memory exec_mem = exec_memory.alloc_exec_memory(mc.length);
+			exec_mem.copy_from(0, mc);
+			return exec_mem;
 		}
 	}
 }

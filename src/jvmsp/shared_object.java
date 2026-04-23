@@ -245,31 +245,23 @@ public class shared_object
 	}
 
 	/**
-	 * 将指定地址解析为函数指针
-	 * 
-	 * @param fun_addr
-	 * @param signature
-	 * @return
-	 */
-	public static final MethodHandle func(long fun_addr, function_signature signature)
-	{
-		return symbols.bind(abi.stub_function(signature.func_type), 0, fun_addr);
-	}
-
-	/**
 	 * 查找指定签名的函数
 	 * 
 	 * @param handle
 	 * @param signature
 	 * @return
 	 */
-	public static final MethodHandle dlsym(long handle, function_signature signature)
+	public static final MethodHandle dlsym(long handle, abi cabi, function_signature signature)
 	{
 		long addr = dlsym(handle, signature.function_name);
 		if (addr == 0)
 			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
 		else
-			return func(addr, signature);
+			return abi.func(addr, cabi, signature);
 	}
 
+	public static final MethodHandle dlsym(long handle, function_signature signature)
+	{
+		return dlsym(handle, abi.host, signature);
+	}
 }

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import jvmsp.abi;
 import jvmsp.memory;
 import jvmsp.shared_object;
 import jvmsp.type.cxx_type;
@@ -187,7 +188,7 @@ public class vm_address
 
 		static
 		{
-			vm_message = shared_object.func(JVMCIRuntime_vm_message, function_signature.of("vm_message", cxx_type._void, cxx_type.jboolean, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong));
+			vm_message = abi.func(JVMCIRuntime_vm_message, function_signature.of("vm_message", cxx_type._void, cxx_type.jboolean, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong));
 		}
 
 		public static final void vm_message(boolean vmError, long format_cstr, long v1, long v2, long v3)

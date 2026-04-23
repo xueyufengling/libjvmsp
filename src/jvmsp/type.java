@@ -1,9 +1,7 @@
 package jvmsp;
 
-import java.lang.foreign.FunctionDescriptor;
-import java.lang.foreign.MemoryLayout;
-import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -14,7 +12,6 @@ import java.util.Objects;
 
 import jvmsp.memory.memory_object;
 
-@SuppressWarnings("preview")
 public abstract class type<_T> implements Cloneable
 {
 	@Override
@@ -36,7 +33,8 @@ public abstract class type<_T> implements Cloneable
 	public static final int is_integer = memory.int_flag(1);
 	public static final int is_float = memory.int_flag(2);
 	public static final int is_signed = memory.int_flag(3);
-	public static final int is_undefinable‌ = memory.int_flag(4);
+	public static final int is_bool = memory.int_flag(4);
+	public static final int is_undefinable‌ = memory.int_flag(5);
 
 	public static final int struct_flags = 0;
 
@@ -85,6 +83,16 @@ public abstract class type<_T> implements Cloneable
 	public final boolean signed()
 	{
 		return memory.flag_bit(flags, is_signed);
+	}
+
+	/**
+	 * 该类型是否是布尔类型的
+	 * 
+	 * @return
+	 */
+	public final boolean is_bool()
+	{
+		return memory.flag_bit(flags, is_bool);
 	}
 
 	/**
@@ -255,71 +263,16 @@ public abstract class type<_T> implements Cloneable
 		return (obj instanceof type type) && this.typename.equals(type.typename);
 	}
 
-	protected MemoryLayout memory_layout;
-
-	public final MemoryLayout memory_layout()
-	{
-		resolve();
-		return memory_layout;
-	}
-
-	public static enum memory_layout_type
-	{
-		PRIMITIVE_INT, PRIMITIVE_FLOAT, STRUCT;
-
-		public static final MemoryLayout of(long size, memory_layout_type layout_type)
-		{
-			switch (layout_type)
-			{
-			case PRIMITIVE_INT:
-				switch ((int) size)
-				{
-				case 1:
-					return ValueLayout.JAVA_BYTE;
-				case 2:
-					return ValueLayout.JAVA_SHORT_UNALIGNED;
-				case 4:
-					return ValueLayout.JAVA_INT_UNALIGNED;
-				case 8:
-					return ValueLayout.JAVA_LONG_UNALIGNED;
-				}
-			case PRIMITIVE_FLOAT:
-				switch ((int) size)
-				{
-				case 4:
-					return ValueLayout.JAVA_FLOAT_UNALIGNED;
-				case 8:
-					return ValueLayout.JAVA_DOUBLE_UNALIGNED;
-				}
-			case STRUCT:
-				return MemoryLayout.structLayout(MemoryLayout.sequenceLayout(size, ValueLayout.JAVA_BYTE)).withByteAlignment(1);
-			}
-			throw new java.lang.InternalError("memory layout type '" + layout_type + "' size cannot be " + size);
-		}
-	}
-
-	protected type(String name, int flags, long size, MemoryLayout memory_layout)
+	protected type(String name, int flags, long size)
 	{
 		this.typename = name;
 		this.flags = flags;
-		this.memory_layout = memory_layout;
 		this.size = size;
 	}
 
-	protected type(String name, long size, memory_layout_type layout_type)
-	{
-		this(name, struct_flags, size, memory_layout_type.of(size, layout_type));
-	}
-
-	/**
-	 * 仅用于定义非基本类型
-	 * 
-	 * @param name
-	 * @param size
-	 */
 	protected type(String name, long size)
 	{
-		this(name, size, memory_layout_type.STRUCT);
+		this(name, struct_flags, size);
 	}
 
 	/**
@@ -522,9 +475,14 @@ public abstract class type<_T> implements Cloneable
 			 * @param base_addr
 			 * @return
 			 */
+			public final MethodHandle callable(abi cabi, long base_addr)
+			{
+				return symbols.bind(abi.stub_function(cabi, (cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
+			}
+
 			public final MethodHandle callable(long base_addr)
 			{
-				return symbols.bind(abi.stub_function((cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
+				return callable(abi.host, base_addr);
 			}
 		}
 
@@ -544,18 +502,12 @@ public abstract class type<_T> implements Cloneable
 			return defined_types.get(type_name);
 		}
 
-		public static cxx_type typedef(cxx_type type_alias, String type_name, MemoryLayout memory_layout)
+		public static cxx_type typedef(cxx_type type_alias, String type_name)
 		{
 			cxx_type alias = type_alias.clone();
 			alias.typename = type_name;
-			alias.memory_layout = memory_layout;
 			defined_types.put(type_name, alias);
 			return alias;
-		}
-
-		public static cxx_type typedef(cxx_type type_alias, String type_name)
-		{
-			return typedef(type_alias, type_name, type_alias.memory_layout);
 		}
 
 		/**
@@ -665,18 +617,13 @@ public abstract class type<_T> implements Cloneable
 			return define(type_name, Long.MAX_VALUE, base_types);
 		}
 
-		private cxx_type(String name, int flags, long size, MemoryLayout memory_layout)
+		private cxx_type(String name, int flags, long size)
 		{
-			super(name, flags, size, memory_layout);
+			super(name, flags, size);
 			this.align_size = size;
 			this.default_align_size = size;
 			this.pragma_pack = size;
 			defined_types.put(name, this);
-		}
-
-		private cxx_type(String name, int flags, long size, memory_layout_type layout_type)
-		{
-			this(name, flags, size, memory_layout_type.of(size, layout_type));
 		}
 
 		private cxx_type(String name, long pragma_pack, cxx_type... base_types)
@@ -691,14 +638,9 @@ public abstract class type<_T> implements Cloneable
 			defined_types.put(name, this);
 		}
 
-		private static final cxx_type define(String type_name, int flags, long size, MemoryLayout memory_layout)
+		private static final cxx_type define(String type_name, int flags, long size)
 		{
-			return new cxx_type(type_name, flags, size, memory_layout);
-		}
-
-		private static final cxx_type define(String type_name, int flags, long size, memory_layout_type layout_type)
-		{
-			return new cxx_type(type_name, flags, size, layout_type);
+			return new cxx_type(type_name, flags, size);
 		}
 
 		/**
@@ -756,11 +698,6 @@ public abstract class type<_T> implements Cloneable
 			}
 		}
 
-		private void resolve_memory_layout()
-		{
-			memory_layout = MemoryLayout.sequenceLayout(size(), ValueLayout.JAVA_BYTE);// 对于C++类型均使用以字节为单位的SequenceLayout
-		}
-
 		/**
 		 * 更新数据，包括对齐大小、偏移量、占用内存尺寸
 		 * 
@@ -770,7 +707,6 @@ public abstract class type<_T> implements Cloneable
 		protected void resolve_type_info()
 		{
 			resolve_offset_and_size();
-			resolve_memory_layout();// 生成Java FFI API使用的MemoryLayout
 		}
 
 		/**
@@ -859,7 +795,8 @@ public abstract class type<_T> implements Cloneable
 			if (!is_primitive())
 			{
 				for (int idx = 0; idx < fields.size(); ++idx)
-				{// 优先使用派生类的字段
+				{
+					// 优先使用派生类的字段
 					field f = fields.get(idx);
 					if (f.name().equals(field_name))
 						return f;
@@ -1003,31 +940,31 @@ public abstract class type<_T> implements Cloneable
 			mem_layout_printer.print_mem_layout(this);
 		}
 
-		public static final cxx_type _char = cxx_type.define("char", is_primitive | is_integer | is_signed, 1, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type unsigned_char = cxx_type.define("unsigned char", is_primitive | is_integer, type.sizeof(_char), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type _short = cxx_type.define("short", is_primitive | is_integer | is_signed, 2, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type unsigned_short = cxx_type.define("unsigned short", is_primitive | is_integer, type.sizeof(_short), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type _int = cxx_type.define("int", is_primitive | is_integer | is_signed, 4, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type unsigned_int = cxx_type.define("unsigned int", is_primitive | is_integer, type.sizeof(_int), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type bool = cxx_type.define("bool", is_primitive | is_integer, type.sizeof(_int), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type _long_long = cxx_type.define("long long", is_primitive | is_integer | is_signed, 8, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type unsigned_long_long = cxx_type.define("unsigned long long", is_primitive | is_integer, type.sizeof(_long_long), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type _float = cxx_type.define("float", is_primitive | is_float | is_signed, type.sizeof(_int), memory_layout_type.PRIMITIVE_FLOAT);
-		public static final cxx_type _double = cxx_type.define("double", is_primitive | is_float | is_signed, type.sizeof(_long_long), memory_layout_type.PRIMITIVE_FLOAT);
-		public static final cxx_type _void = cxx_type.define("void", is_primitive | is_undefinable‌, 0, (MemoryLayout) null);
+		public static final cxx_type _char = cxx_type.define("char", is_primitive | is_integer | is_signed, 1);
+		public static final cxx_type unsigned_char = cxx_type.define("unsigned char", is_primitive | is_integer, type.sizeof(_char));
+		public static final cxx_type _short = cxx_type.define("short", is_primitive | is_integer | is_signed, 2);
+		public static final cxx_type unsigned_short = cxx_type.define("unsigned short", is_primitive | is_integer, type.sizeof(_short));
+		public static final cxx_type _int = cxx_type.define("int", is_primitive | is_integer | is_signed, 4);
+		public static final cxx_type unsigned_int = cxx_type.define("unsigned int", is_primitive | is_integer, type.sizeof(_int));
+		public static final cxx_type bool = cxx_type.define("bool", is_primitive | is_integer, type.sizeof(_int));
+		public static final cxx_type _long_long = cxx_type.define("long long", is_primitive | is_integer | is_signed, 8);
+		public static final cxx_type unsigned_long_long = cxx_type.define("unsigned long long", is_primitive | is_integer, type.sizeof(_long_long));
+		public static final cxx_type _float = cxx_type.define("float", is_primitive | is_float | is_signed, type.sizeof(_int));
+		public static final cxx_type _double = cxx_type.define("double", is_primitive | is_float | is_signed, type.sizeof(_long_long));
+		public static final cxx_type _void = cxx_type.define("void", is_primitive | is_undefinable‌, 0);
 
-		public static final cxx_type int8_t = cxx_type.define("int8_t", is_primitive | is_integer | is_signed, 1, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type uint8_t = cxx_type.define("uint8_t", is_primitive | is_integer, type.sizeof(int8_t), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type int16_t = cxx_type.define("int16_t", is_primitive | is_integer | is_signed, 2, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type uint16_t = cxx_type.define("uint16_t", is_primitive | is_integer, type.sizeof(int16_t), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type int32_t = cxx_type.define("int32_t", is_primitive | is_integer | is_signed, 4, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type uint32_t = cxx_type.define("uint32_t", is_primitive | is_integer, type.sizeof(int32_t), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type int64_t = cxx_type.define("int64_t", is_primitive | is_integer | is_signed, 8, memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type uint64_t = cxx_type.define("uint64_t", is_primitive | is_integer, type.sizeof(int64_t), memory_layout_type.PRIMITIVE_INT);
-		public static final cxx_type size_t = cxx_type.define("size_t", is_primitive | is_integer, type.sizeof(uint64_t), memory_layout_type.PRIMITIVE_INT);
+		public static final cxx_type int8_t = cxx_type.define("int8_t", is_primitive | is_integer | is_signed, 1);
+		public static final cxx_type uint8_t = cxx_type.define("uint8_t", is_primitive | is_integer, type.sizeof(int8_t));
+		public static final cxx_type int16_t = cxx_type.define("int16_t", is_primitive | is_integer | is_signed, 2);
+		public static final cxx_type uint16_t = cxx_type.define("uint16_t", is_primitive | is_integer, type.sizeof(int16_t));
+		public static final cxx_type int32_t = cxx_type.define("int32_t", is_primitive | is_integer | is_signed, 4);
+		public static final cxx_type uint32_t = cxx_type.define("uint32_t", is_primitive | is_integer, type.sizeof(int32_t));
+		public static final cxx_type int64_t = cxx_type.define("int64_t", is_primitive | is_integer | is_signed, 8);
+		public static final cxx_type uint64_t = cxx_type.define("uint64_t", is_primitive | is_integer, type.sizeof(int64_t));
+		public static final cxx_type size_t = cxx_type.define("size_t", is_primitive | is_integer, type.sizeof(uint64_t));
 
-		public static final cxx_type intptr_t = cxx_type.define("intptr_t", is_primitive | is_integer | is_signed, unsafe.address_size, ValueLayout.ADDRESS);
-		public static final cxx_type uintptr_t = cxx_type.define("uintptr_t", is_primitive | is_integer, unsafe.address_size, ValueLayout.ADDRESS);
+		public static final cxx_type intptr_t = cxx_type.define("intptr_t", is_primitive | is_integer | is_signed, unsafe.address_size);
+		public static final cxx_type uintptr_t = cxx_type.define("uintptr_t", is_primitive | is_integer, unsafe.address_size);
 
 		/**
 		 * 定长数组类型
@@ -1038,7 +975,7 @@ public abstract class type<_T> implements Cloneable
 
 			protected array_type(String array_type_name, cxx_type element_type, int size)
 			{
-				super(array_type_name, element_type.flags(), size * element_type.size(), MemoryLayout.sequenceLayout(size, element_type.memory_layout()));
+				super(array_type_name, element_type.flags(), size * element_type.size());
 				this.element_type = element_type;
 			}
 
@@ -1093,7 +1030,7 @@ public abstract class type<_T> implements Cloneable
 
 			protected enum_type(String enum_type_name, cxx_type enum_value_type)
 			{
-				super(enum_type_name, enum_value_type.flags(), enum_value_type.size(), enum_value_type.memory_layout());
+				super(enum_type_name, enum_value_type.flags(), enum_value_type.size());
 				int integer_size = (int) enum_value_type.size();
 				switch (integer_size)
 				{
@@ -1171,6 +1108,43 @@ public abstract class type<_T> implements Cloneable
 		}
 
 		/**
+		 * Java层的传入类型
+		 * 
+		 * @param type
+		 * @return
+		 */
+		public Class<?> java_carrier_type()
+		{
+			if (this.is_undefinable())
+				return void.class;
+			switch ((int) size())
+			{
+			case 1:
+				if (this.is_bool())
+					return boolean.class;
+				else
+					return byte.class;
+			case 2:
+				return short.class;
+			case 4:
+				if (this.is_float())
+					return float.class;
+				else if (this.is_bool())
+					return boolean.class;
+				else
+					return int.class;
+			case 8:
+				if (this.is_float())
+					return double.class;
+				else
+					return long.class;
+			default:
+				// 非基本类型，则是结构体，只能传指针
+				return long.class;
+			}
+		}
+
+		/**
 		 * 函数类型
 		 */
 		public static class function_type extends cxx_type
@@ -1180,7 +1154,7 @@ public abstract class type<_T> implements Cloneable
 
 			protected function_type(String func_type_name, cxx_type ret_type, cxx_type[] arg_types)
 			{
-				super(func_type_name, is_undefinable‌, 0, (MemoryLayout) null);// 函数类型不同于变量类型，本身不可被声明，仅储存了返回值和参数类型信息
+				super(func_type_name, is_undefinable‌, 0);// 函数类型不同于变量类型，本身不可被声明，仅储存了返回值和参数类型信息
 				this.ret_type = ret_type;
 				this.arg_types = arg_types;
 			}
@@ -1205,20 +1179,25 @@ public abstract class type<_T> implements Cloneable
 				return new function_type(ret_type, arg_types);
 			}
 
-			/**
-			 * 将函数类型转换为FunctionDescriptor，供FFI API使用
-			 * 
-			 * @return
-			 */
-			public final FunctionDescriptor to_function_descriptor()
+			public final function_type insert_arg_types(int idx, cxx_type... arg_types)
 			{
-				MemoryLayout[] arg_layouts = new MemoryLayout[arg_types.length];
+				return new function_type(ret_type, memory.cat(arg_types, arg_types));
+			}
+
+			public MethodType to_method_type()
+			{
+				Class<?>[] args = new Class<?>[arg_types.length];
 				for (int idx = 0; idx < arg_types.length; ++idx)
-					arg_layouts[idx] = arg_types[idx].memory_layout();
-				if (ret_type == cxx_type._void)
-					return FunctionDescriptor.ofVoid(arg_layouts);
-				else
-					return FunctionDescriptor.of(ret_type.memory_layout(), arg_layouts);
+				{
+					args[idx] = arg_types[idx].java_carrier_type();
+				}
+				return MethodType.methodType(ret_type.java_carrier_type(), args);
+			}
+
+			@Override
+			public final Class<?> java_carrier_type()
+			{
+				return void.class;
 			}
 		}
 
@@ -1232,7 +1211,7 @@ public abstract class type<_T> implements Cloneable
 
 			protected pointer_type(String ptr_type_name, cxx_type pointed_to_type)
 			{
-				super(ptr_type_name, is_primitive | is_integer, unsafe.address_size, ValueLayout.ADDRESS);
+				super(ptr_type_name, is_primitive | is_integer, unsafe.address_size);
 				this.pointed_to_type = pointed_to_type;
 			}
 
@@ -1270,6 +1249,12 @@ public abstract class type<_T> implements Cloneable
 			{
 				return new pointer_type(type);
 			}
+
+			@Override
+			public final Class<?> java_carrier_type()
+			{
+				return long.class;
+			}
 		}
 
 		public static class function_pointer_type extends pointer_type
@@ -1288,11 +1273,6 @@ public abstract class type<_T> implements Cloneable
 			public final cxx_type.function_type pointed_to_type()
 			{
 				return ((cxx_type.function_type) pointed_to_type);
-			}
-
-			public final FunctionDescriptor to_function_descriptor()
-			{
-				return pointed_to_type().to_function_descriptor();
 			}
 
 			public static final function_pointer_type of(cxx_type.function_type func_type)
@@ -1425,12 +1405,15 @@ public abstract class type<_T> implements Cloneable
 		{
 			public object(pointer ptr)
 			{
-				super(ptr.address());
+				this(ptr.address());
 			}
 
 			public object(long addr)
 			{
 				super(addr);
+				// 禁止构造不可定义的类型
+				if (cxx_type.this.is_undefinable())
+					throw new java.lang.InternalError("type '" + cxx_type.this + "' is undefinable");
 			}
 
 			/**
@@ -1558,14 +1541,24 @@ public abstract class type<_T> implements Cloneable
 				write(get_field(field_name), x);
 			}
 
+			public final MethodHandle callable(abi cabi, field f)
+			{
+				return f.callable(cabi, address);
+			}
+
 			public final MethodHandle callable(field f)
 			{
 				return f.callable(address);
 			}
 
+			public final MethodHandle callable(abi cabi, String field_name)
+			{
+				return callable(cabi, type().field(field_name));
+			}
+
 			public final MethodHandle callable(String field_name)
 			{
-				return callable(type().field(field_name));
+				return callable(abi.host, field_name);
 			}
 		}
 
@@ -1594,30 +1587,21 @@ public abstract class type<_T> implements Cloneable
 		public static final cxx_type jdoubleArray = typedef(jarray, "jdoubleArray");
 		public static final cxx_type jobjectArray = typedef(jarray, "jobjectArray");
 
-		public static final cxx_type jboolean = typedef(uint8_t, "jboolean", ValueLayout.JAVA_BOOLEAN);
-		public static final cxx_type jbyte = typedef(int8_t, "jbyte", ValueLayout.JAVA_BYTE);
-		public static final cxx_type jchar = typedef(uint16_t, "jchar", ValueLayout.JAVA_CHAR);
-		public static final cxx_type jshort = typedef(int16_t, "jshort", ValueLayout.JAVA_SHORT);
-		public static final cxx_type jint = typedef(int32_t, "jint", ValueLayout.JAVA_INT);
-		public static final cxx_type juint = typedef(int32_t, "juint", ValueLayout.JAVA_INT);
+		public static final cxx_type jboolean = typedef(uint8_t, "jboolean");
+		public static final cxx_type jbyte = typedef(int8_t, "jbyte");
+		public static final cxx_type jchar = typedef(uint16_t, "jchar");
+		public static final cxx_type jshort = typedef(int16_t, "jshort");
+		public static final cxx_type jint = typedef(int32_t, "jint");
+		public static final cxx_type juint = typedef(int32_t, "juint");
 		public static final cxx_type jsize = typedef(jint, "jsize");
-		public static final cxx_type jlong = typedef(int64_t, "jlong", ValueLayout.JAVA_LONG);
-		public static final cxx_type jfloat = typedef(_float, "jfloat", ValueLayout.JAVA_FLOAT);
-		public static final cxx_type jdouble = typedef(_double, "jdouble", ValueLayout.JAVA_DOUBLE);
+		public static final cxx_type jlong = typedef(int64_t, "jlong");
+		public static final cxx_type jfloat = typedef(_float, "jfloat");
+		public static final cxx_type jdouble = typedef(_double, "jdouble");
 
 		public static final cxx_type jobjectRefType = typedef(_int, "jobjectRefType");
 
-		private static final MemoryLayout _jvalue_layout = MemoryLayout.unionLayout(
-				ValueLayout.JAVA_BOOLEAN.withName("z"),
-				ValueLayout.JAVA_BYTE.withName("b"),
-				ValueLayout.JAVA_CHAR.withName("c"),
-				ValueLayout.JAVA_SHORT.withName("s"),
-				ValueLayout.JAVA_INT.withName("i"),
-				ValueLayout.JAVA_LONG.withName("j"),
-				ValueLayout.JAVA_FLOAT.withName("f"),
-				ValueLayout.JAVA_DOUBLE.withName("d"),
-				ValueLayout.ADDRESS.withName("l"));
-		public static final cxx_type jvalue = define("jvalue", is_primitive | is_integer | is_float | is_signed, _jvalue_layout.byteSize(), _jvalue_layout);
+		// public static final cxx_type jvalue = define("jvalue", is_primitive | is_integer | is_float | is_signed, _jvalue_layout.byteSize(), _jvalue_layout);
+		public static final cxx_type jvalue = define("jvalue", is_primitive | is_integer | is_float | is_signed, 8);
 
 		public static final pointer_type pjboolean = pointer_type.of(jboolean);
 		public static final pointer_type pjbyte = pointer_type.of(jbyte);
