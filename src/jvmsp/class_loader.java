@@ -218,8 +218,7 @@ public class class_loader
 	/**
 	 * 不经过安全检查直接获取classLoader
 	 * 
-	 * @param storage_target
-	 * @param parent
+	 * @param clazz
 	 * @return
 	 */
 	public static final ClassLoader get_class_loader(Class<?> clazz)

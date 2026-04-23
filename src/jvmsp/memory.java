@@ -725,20 +725,83 @@ public abstract class memory
 	 * 具有执行权限的内存。<br>
 	 * 执行权限的管理是因操作系统而异的，无法通过标准C API直接分配。<br>
 	 */
-	public static final class exec_memory
+	public static final class os_memory
 	{
-		private long mem;
-		private long mem_size;
+		// 内存权限与标志常量
+		public static final int MEM_PROT_NOACC = 0x0;
+		public static final int MEM_PROT_READ = int_flag(0);
+		public static final int MEM_PROT_WRITE = int_flag(1);
+		public static final int MEM_PROT_EXEC = int_flag(2);
+		public static final int MEM_PROT_RW = MEM_PROT_READ | MEM_PROT_WRITE;
+		public static final int MEM_PROT_RX = MEM_PROT_READ | MEM_PROT_EXEC;
+		public static final int MEM_PROT_RWX = MEM_PROT_READ | MEM_PROT_WRITE | MEM_PROT_EXEC;
 
-		private exec_memory(long mem, long mem_size)
+		// Windows标志
+		public static final int MEM_FLAG_TOP_DOWN = int_flag(3);
+		public static final int MEM_FLAG_LARGE_PAGES = int_flag(4);
+		public static final int MEM_FLAG_PHYSICAL = int_flag(5);
+		public static final int MEM_FLAG_RESET = int_flag(6);
+
+		// Linux标志
+		public static final int MEM_FLAG_LOCKED = int_flag(7);
+		public static final int MEM_FLAG_HUGETLB = int_flag(8);
+		public static final int MEM_FLAG_POPULATE = int_flag(9);
+		public static final int MEM_FLAG_FIXED = int_flag(10);
+		public static final int MEM_FLAG_SHARED = int_flag(11);
+
+		private static long __windows_to_os_mem_protect(int flags)
+		{
+			boolean read = flag_bit(flags, MEM_PROT_READ);
+			boolean write = flag_bit(flags, MEM_PROT_WRITE);
+			boolean exec = flag_bit(flags, MEM_PROT_EXEC);
+			if (read && write && exec)
+				return winnt.PAGE_EXECUTE_READWRITE;
+			if (read && write && !exec)
+				return winnt.PAGE_READWRITE;
+			if (read && !write && exec)
+				return winnt.PAGE_EXECUTE_READ;
+			if (read && !write && !exec)
+				return winnt.PAGE_READONLY;
+			if (!read && !write && exec)
+				return winnt.PAGE_EXECUTE;
+			return winnt.PAGE_NOACCESS;
+		}
+
+		private static long __windows_to_os_mem_flags(int flags)
+		{
+			long result = winnt.MEM_COMMIT | winnt.MEM_RESERVE; // 预留内存并立即分配
+			if (flag_bit(flags, MEM_FLAG_TOP_DOWN))
+				result |= winnt.MEM_TOP_DOWN;
+			if (flag_bit(flags, MEM_FLAG_LARGE_PAGES))
+				result |= winnt.MEM_LARGE_PAGES;
+			if (flag_bit(flags, MEM_FLAG_PHYSICAL))
+				result |= winnt.MEM_PHYSICAL;
+			if (flag_bit(flags, MEM_FLAG_RESET))
+				result |= winnt.MEM_RESET;
+			return result;
+		}
+
+		private long mem;
+
+		private os_memory(long raw_mem, long size)
+		{
+			unsafe.write(raw_mem, size);// 内存头写入内存大小
+			this.mem = raw_mem + cxx_type.size_t.size();
+		}
+
+		private os_memory(long mem)
 		{
 			this.mem = mem;
-			this.mem_size = mem_size;
+		}
+
+		public final long header()
+		{
+			return mem - cxx_type.size_t.size();
 		}
 
 		public final long size()
 		{
-			return mem_size;
+			return unsafe.read_long(header());
 		}
 
 		public final long mem()
@@ -751,7 +814,7 @@ public abstract class memory
 			switch (os.host)
 			{
 			case windows:
-				libkernel32.VirtualFree(mem, 0, winnt.MEM_RELEASE);
+				libkernel32.VirtualFree(header(), 0, winnt.MEM_RELEASE);
 			case linux:
 			case macos:
 			default:
@@ -786,12 +849,12 @@ public abstract class memory
 		 * @param size
 		 * @return
 		 */
-		public static final exec_memory alloc_exec_memory(long size)
+		public static final os_memory os_alloc(long size, int flags)
 		{
 			switch (os.host)
 			{
 			case windows:
-				return new exec_memory(libkernel32.VirtualAlloc(0, size, winnt.MEM_COMMIT | winnt.MEM_RESERVE, winnt.PAGE_EXECUTE_READWRITE), size);
+				return new os_memory(libkernel32.VirtualAlloc(0, size + cxx_type.size_t.size(), __windows_to_os_mem_flags(flags), __windows_to_os_mem_protect(flags)), size);
 			case linux:
 			case macos:
 			default:
@@ -799,11 +862,16 @@ public abstract class memory
 			}
 		}
 
-		public static final exec_memory of(byte[] mc)
+		public static final os_memory of(byte[] arr, int flags)
 		{
-			exec_memory exec_mem = exec_memory.alloc_exec_memory(mc.length);
-			exec_mem.copy_from(0, mc);
+			os_memory exec_mem = os_memory.os_alloc(arr.length, flags);
+			exec_mem.copy_from(0, arr);
 			return exec_mem;
+		}
+
+		public static final os_memory of(byte[] arr)
+		{
+			return of(arr, MEM_PROT_RWX);
 		}
 	}
 }
