@@ -10,6 +10,7 @@ import jvmsp.memory;
 import jvmsp.shared_object;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
+import jvmsp.type.cxx_type.function_type;
 import jvmsp.type.cxx_type.object;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.unsafe;
@@ -188,7 +189,7 @@ public class vm_address
 
 		static
 		{
-			vm_message = abi.func(JVMCIRuntime_vm_message, function_signature.of("vm_message", cxx_type._void, cxx_type.jboolean, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong));
+			vm_message = abi.func(JVMCIRuntime_vm_message, function_type.of(cxx_type._void, cxx_type.jboolean, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong, cxx_type.jlong));
 		}
 
 		public static final void vm_message(boolean vmError, long format_cstr, long v1, long v2, long v3)

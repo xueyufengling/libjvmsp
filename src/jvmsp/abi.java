@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 
 import jvmsp.arch.storage_type;
 import jvmsp.type.cxx_type;
-import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.function_type;
 
 import static jvmsp.versions.jdk_versions;
@@ -179,21 +178,109 @@ public class abi
 
 	private static Class<?> jdk_internal_foreign_abi_ABIDescriptor;
 
+	private static Field ABIDescriptor_arch;
 	private static Field ABIDescriptor_inputStorage;
 	private static Field ABIDescriptor_outputStorage;
+	private static Field ABIDescriptor_volatileStorage;
+	private static Field ABIDescriptor_stackAlignment;
+	private static Field ABIDescriptor_shadowSpace;
+	private static Field ABIDescriptor_scratch1;
+	private static Field ABIDescriptor_scratch2;
+	private static Field ABIDescriptor_targetAddrStorage;
+	private static Field ABIDescriptor_retBufAddrStorage;
+	private static Field ABIDescriptor_capturedStateStorage;
 
 	static
 	{
 		try
 		{
 			jdk_internal_foreign_abi_ABIDescriptor = Class.forName("jdk.internal.foreign.abi.ABIDescriptor");
+			ABIDescriptor_arch = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "arch");
 			ABIDescriptor_inputStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "inputStorage");
 			ABIDescriptor_outputStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "outputStorage");
+			ABIDescriptor_volatileStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "volatileStorage");
+			ABIDescriptor_stackAlignment = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "stackAlignment");
+			ABIDescriptor_shadowSpace = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "shadowSpace");
+			ABIDescriptor_scratch1 = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "scratch1");
+			ABIDescriptor_scratch2 = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "scratch2");
+			ABIDescriptor_targetAddrStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "targetAddrStorage");
+			ABIDescriptor_retBufAddrStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "retBufAddrStorage");
+			ABIDescriptor_capturedStateStorage = reflection.find_declared_field(jdk_internal_foreign_abi_ABIDescriptor, "capturedStateStorage");
 		}
 		catch (ClassNotFoundException ex)
 		{
 			ex.printStackTrace();
 		}
+	}
+
+	/**
+	 * jdk.internal.foreign.abi.StubLocations
+	 */
+	public static enum stub_locations
+	{
+		TARGET_ADDRESS,
+		RETURN_BUFFER,
+		CAPTURED_STATE_BUFFER;
+
+		public final Object storage(byte type)
+		{
+			return storage_type._new(type, (short) 8, ordinal(), this.name());
+		}
+
+		public final Object storage(storage_type type)
+		{
+			return storage(type.type_id());
+		}
+
+		public final Object storage(arch arch, storage_type.classify_type type)
+		{
+			return storage(arch.storage(type));
+		}
+	}
+
+	public static final Object abi_descriptor(Object internal_arch, Object[][] input_storage, Object[][] output_storage,
+			Object[][] volatile_storage, int stack_alignment, int shadow_space,
+			Object scratch1, Object scratch2,
+			Object target_addr_storage, Object ret_buf_addr_storage,
+			Object captured_state_storage)
+	{
+		Object abi = unsafe.allocate(jdk_internal_foreign_abi_ABIDescriptor);
+		unsafe.write(abi, ABIDescriptor_arch, internal_arch);
+		unsafe.write(abi, ABIDescriptor_inputStorage, input_storage);
+		unsafe.write(abi, ABIDescriptor_outputStorage, output_storage);
+		unsafe.write(abi, ABIDescriptor_volatileStorage, volatile_storage);
+		unsafe.write(abi, ABIDescriptor_stackAlignment, stack_alignment);
+		unsafe.write(abi, ABIDescriptor_shadowSpace, shadow_space);
+		unsafe.write(abi, ABIDescriptor_scratch1, scratch1);
+		unsafe.write(abi, ABIDescriptor_scratch2, scratch2);
+		unsafe.write(abi, ABIDescriptor_targetAddrStorage, target_addr_storage);
+		unsafe.write(abi, ABIDescriptor_retBufAddrStorage, ret_buf_addr_storage);
+		unsafe.write(abi, ABIDescriptor_capturedStateStorage, captured_state_storage);
+		return abi;
+	}
+
+	public static final Object abi_descriptor(arch arch,
+			Object[] arg_int_regs,
+			Object[] arg_vec_regs,
+			Object[] ret_int_regs,
+			Object[] ret_vec_regs,
+			Object[] volatile_int_regs,
+			Object[] volatile_vec_regs,
+			int stack_alignment,
+			int shadow_space,
+			Object scratch1, Object scratch2)
+	{
+		return abi_descriptor(
+				arch.internal_arch(),
+				storage_type.new_2d_array(arg_int_regs, arg_vec_regs),
+				storage_type.new_2d_array(ret_int_regs, ret_vec_regs),
+				storage_type.new_2d_array(volatile_int_regs, volatile_vec_regs),
+				stack_alignment,
+				shadow_space,
+				scratch1, scratch2,
+				stub_locations.TARGET_ADDRESS.storage(arch, storage_type.classify_type.PLACEHOLDER),
+				stub_locations.RETURN_BUFFER.storage(arch, storage_type.classify_type.PLACEHOLDER),
+				stub_locations.CAPTURED_STATE_BUFFER.storage(arch, storage_type.classify_type.PLACEHOLDER));
 	}
 
 	/**
@@ -247,7 +334,8 @@ public class abi
 	}
 
 	/**
-	 * NativeMethodHandle与stub函数之间的调用约定
+	 * NativeMethodHandle与stub函数之间的调用约定。<br>
+	 * 此外，JVM层生成stub函数时需要使用ABIDescriptor的_shadow_space_bytes、_scratch1等参数。<br>
 	 */
 	public static class nmh_call_convention
 	{
@@ -297,15 +385,23 @@ public class abi
 		}
 	}
 
-	public static class nmh_constraint
+	/**
+	 * stub函数的约束，类似GCC的内联汇编，需要指定参数和返回值存放位置
+	 */
+	public static class nmh_stub_constraint
 	{
 		private function_type func_type;
 		private MethodType stub_method_type;
 
-		public nmh_constraint(function_type func_type)
+		public nmh_stub_constraint(function_type func_type)
 		{
 			this.func_type = func_type;
 			this.stub_method_type = func_type.to_method_type().insertParameterTypes(0, long.class);// 添加一个函数指针首参数，指向实际待执行的函数
+		}
+
+		public final function_type func_type()
+		{
+			return func_type;
 		}
 
 		public final boolean is_in_memory_return()
@@ -353,14 +449,9 @@ public class abi
 		 * 
 		 * @return
 		 */
-		public final Object[] args_vm_storage(abi abi, boolean is_stub)
-		{
-			return nmh_call_convention.resolve_arg_ops(abi, is_stub, func_type.argument_types());
-		}
-
 		public final Object[] args_vm_storage(abi abi)
 		{
-			return args_vm_storage(abi, true);
+			return nmh_call_convention.resolve_arg_ops(abi, true, func_type.argument_types());
 		}
 	}
 
@@ -766,7 +857,7 @@ public class abi
 	 */
 	public static final MethodHandle stub_function(abi abi, cxx_type.function_type func_type)
 	{
-		return native_entry_handle(stub_native_entry(abi, new nmh_constraint(func_type)));
+		return native_entry_handle(stub_native_entry(abi, new nmh_stub_constraint(func_type)));
 	}
 
 	public static final MethodHandle stub_function(abi abi, cxx_type.function_pointer_type func_ptr_type)
@@ -888,11 +979,11 @@ public class abi
 	 * @param resolved_constraint
 	 * @return
 	 */
-	public static final Object stub_native_entry(abi abi, nmh_constraint resolved_constraint)
+	public static final Object stub_native_entry(abi abi, nmh_stub_constraint resolved_constraint)
 	{
 		return stub_native_entry(resolved_constraint.stub_method_type(),
 				abi.descriptor,
-				resolved_constraint.args_vm_storage(abi, true),
+				resolved_constraint.args_vm_storage(abi),
 				resolved_constraint.ret_vm_storage(abi),
 				resolved_constraint.needs_return_buffer(),
 				resolved_constraint.captured_state_mask(),
@@ -945,13 +1036,13 @@ public class abi
 	 * @param signature
 	 * @return
 	 */
-	public static final MethodHandle func(long fun_addr, abi cabi, function_signature signature)
+	public static final MethodHandle func(long fun_addr, abi cabi, function_type func_type)
 	{
-		return symbols.bind(abi.stub_function(cabi, signature.func_type), 0, fun_addr);
+		return symbols.bind(abi.stub_function(cabi, func_type), 0, fun_addr);// 绑定首参数，即stub函数要执行的目标函数指针
 	}
 
-	public static final MethodHandle func(long fun_addr, function_signature signature)
+	public static final MethodHandle func(long fun_addr, function_type func_type)
 	{
-		return func(fun_addr, host, signature);
+		return func(fun_addr, host, func_type);
 	}
 }

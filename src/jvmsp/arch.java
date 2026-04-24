@@ -15,9 +15,10 @@ public enum arch
 	riscv64("riscv64", "RISCV64Architecture"),
 	s390("s390", "S390Architecture");
 
-	Class<?> _internal_class;
-	Class<?> _internal_storage_type_class;
-	Class<?> _internal_reg_class;
+	private Class<?> _internal_class;
+	private Class<?> _internal_storage_type_class;
+	private Class<?> _internal_reg_class;
+	private Object internal_arch;
 
 	public static final arch host;
 
@@ -63,8 +64,8 @@ public enum arch
 			_internal_class = Class.forName("jdk.internal.foreign.abi." + abi_pkg_name + "." + arch_class_name);
 			_internal_storage_type_class = _internal_inner_class("StorageType");
 			_internal_reg_class = _internal_inner_class("Regs");
-			stack_storage = this.new storage_type(storage_type.classify_type.STACK);
-			placeholder_storage = this.new storage_type(storage_type.classify_type.PLACEHOLDER);
+			internal_arch = unsafe.read_static_reference(_internal_class, "INSTANCE");// 获取jdk.internal.foreign.abi.Architecture对象
+			storages = storage_type.storages(this);
 		}
 		catch (ClassNotFoundException ex)
 		{
@@ -78,6 +79,11 @@ public enum arch
 		catch (Throwable ex)
 		{
 		}
+	}
+
+	public final Object internal_arch()
+	{
+		return internal_arch;
 	}
 
 	Class<?> _internal_inner_class(String inner_class_name)
@@ -135,13 +141,25 @@ public enum arch
 		{
 			INTEGER,
 			FLOAT,
-			VECTOR, // x86_64专属
+			VECTOR,
 			X87, // x86_64专属
 			STACK,
 			PLACEHOLDER;
 		}
 
-		public storage_type(classify_type classification)
+		static storage_type[] storages(arch arch)
+		{
+			classify_type[] classify_types = classify_type.values();
+			storage_type[] storages = new storage_type[classify_types.length];
+			for (int idx = 0; idx < classify_types.length; ++idx)
+			{
+				classify_type ct = classify_types[idx];
+				storages[ct.ordinal()] = arch.new storage_type(ct);
+			}
+			return storages;
+		}
+
+		private storage_type(classify_type classification)
 		{
 			this.classification = classification;
 			try
@@ -221,12 +239,30 @@ public enum arch
 		{
 			return (Object[]) Array.newInstance(jdk_internal_foreign_abi_VMStorage, size);
 		}
+
+		public static final Object[][] new_2d_array(int size)
+		{
+			return (Object[][]) Array.newInstance(jdk_internal_foreign_abi_VMStorage.arrayType(), size);
+		}
+
+		public static final Object[] new_array(Object... vm_storages)
+		{
+			Object[] arr = new_array(vm_storages.length);
+			System.arraycopy(vm_storages, 0, arr, 0, vm_storages.length);
+			return arr;
+		}
+
+		public static final Object[][] new_2d_array(Object[]... vm_storage_arrs)
+		{
+			Object[][] arr = new_2d_array(vm_storage_arrs.length);
+			System.arraycopy(vm_storage_arrs, 0, arr, 0, vm_storage_arrs.length);
+			return arr;
+		}
 	}
 
 	private int int_reg_size;
 	private int vec_reg_size;
-	private storage_type stack_storage;
-	private storage_type placeholder_storage;
+	private storage_type[] storages;
 	private HashMap<String, Object> regs = new HashMap<>();
 
 	public final int int_reg_size()
@@ -237,6 +273,41 @@ public enum arch
 	public final int vec_reg_size()
 	{
 		return vec_reg_size;
+	}
+
+	public final storage_type storage(storage_type.classify_type classification)
+	{
+		return storages[classification.ordinal()];
+	}
+
+	public final storage_type int_storage()
+	{
+		return storage(storage_type.classify_type.INTEGER);
+	}
+
+	public final storage_type float_storage()
+	{
+		return storage(storage_type.classify_type.FLOAT);
+	}
+
+	public final storage_type vec_storage()
+	{
+		return storage(storage_type.classify_type.VECTOR);
+	}
+
+	public final storage_type x87_storage()
+	{
+		return storage(storage_type.classify_type.X87);
+	}
+
+	public final storage_type stack_storage()
+	{
+		return storage(storage_type.classify_type.STACK);
+	}
+
+	public final storage_type placeholder_storage()
+	{
+		return storage(storage_type.classify_type.PLACEHOLDER);
 	}
 
 	/**
@@ -269,12 +340,12 @@ public enum arch
 	 */
 	public Object stack(short size, int offset)
 	{
-		return stack_storage._new(size, offset);
+		return stack_storage()._new(size, offset);
 	}
 
 	public Object placeholder(short size, int offset)
 	{
-		return placeholder_storage._new(size, offset);
+		return placeholder_storage()._new(size, offset);
 	}
 
 	/**

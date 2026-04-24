@@ -38,7 +38,7 @@ public abstract class type<_T> implements Cloneable
 
 	public static final int struct_flags = 0;
 
-	private final int flags;
+	protected int flags;
 
 	public final int flags()
 	{
@@ -502,12 +502,18 @@ public abstract class type<_T> implements Cloneable
 			return defined_types.get(type_name);
 		}
 
-		public static cxx_type typedef(cxx_type type_alias, String type_name)
+		public static cxx_type typedef(cxx_type type_alias, String type_name, int flags)
 		{
 			cxx_type alias = type_alias.clone();
 			alias.typename = type_name;
+			alias.flags = flags;
 			defined_types.put(type_name, alias);
 			return alias;
+		}
+
+		public static cxx_type typedef(cxx_type type_alias, String type_name)
+		{
+			return typedef(type_alias, type_name, type_alias.flags);
 		}
 
 		/**
@@ -946,7 +952,7 @@ public abstract class type<_T> implements Cloneable
 		public static final cxx_type unsigned_short = cxx_type.define("unsigned short", is_primitive | is_integer, type.sizeof(_short));
 		public static final cxx_type _int = cxx_type.define("int", is_primitive | is_integer | is_signed, 4);
 		public static final cxx_type unsigned_int = cxx_type.define("unsigned int", is_primitive | is_integer, type.sizeof(_int));
-		public static final cxx_type bool = cxx_type.define("bool", is_primitive | is_integer, type.sizeof(_int));
+		public static final cxx_type bool = cxx_type.define("bool", is_primitive | is_bool, type.sizeof(_int));
 		public static final cxx_type _long_long = cxx_type.define("long long", is_primitive | is_integer | is_signed, 8);
 		public static final cxx_type unsigned_long_long = cxx_type.define("unsigned long long", is_primitive | is_integer, type.sizeof(_long_long));
 		public static final cxx_type _float = cxx_type.define("float", is_primitive | is_float | is_signed, type.sizeof(_int));
@@ -1587,7 +1593,7 @@ public abstract class type<_T> implements Cloneable
 		public static final cxx_type jdoubleArray = typedef(jarray, "jdoubleArray");
 		public static final cxx_type jobjectArray = typedef(jarray, "jobjectArray");
 
-		public static final cxx_type jboolean = typedef(uint8_t, "jboolean");
+		public static final cxx_type jboolean = typedef(uint8_t, "jboolean", is_primitive | is_bool);
 		public static final cxx_type jbyte = typedef(int8_t, "jbyte");
 		public static final cxx_type jchar = typedef(uint16_t, "jchar");
 		public static final cxx_type jshort = typedef(int16_t, "jshort");

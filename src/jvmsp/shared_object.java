@@ -257,7 +257,7 @@ public class shared_object
 		if (addr == 0)
 			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
 		else
-			return abi.func(addr, cabi, signature);
+			return abi.func(addr, cabi, signature.func_type);
 	}
 
 	public static final MethodHandle dlsym(long handle, function_signature signature)

@@ -8,7 +8,7 @@ import java.util.List;
 
 import jvmsp.arch.os;
 import jvmsp.type.cxx_type;
-import jvmsp.type.cxx_type.function_signature;
+import jvmsp.type.cxx_type.function_type;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.type.java_type;
 import jvmsp.libso.libc;
@@ -70,7 +70,7 @@ public abstract class memory
 			return pointer.nullptr;
 		byte[] bytes = str.getBytes(cs);
 		long cstr_addr = unsafe.malloc(bytes.length + 1);
-		unsafe.memcpy(cstr_addr, bytes, 0, bytes.length);// Java的数组元素并不是从索引0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
+		unsafe.memcpy(cstr_addr, bytes, 0, bytes.length);// Java的数组元素并不是从偏移量0开始的，而是从ARRAY_OBJECT_BASE_OFFSET开始
 		unsafe.write(cstr_addr + bytes.length, (byte) 0);
 		return pointer.to(cstr_addr, cxx_type._char);
 	}
@@ -830,17 +830,17 @@ public abstract class memory
 		 * 将本内存视作机器码数组转换为可以调用的函数指针
 		 * 
 		 * @param machine_code
-		 * @param signature
+		 * @param func_type
 		 * @return
 		 */
-		public final MethodHandle func(long offset, abi cabi, function_signature signature)
+		public final MethodHandle func(long offset, abi cabi, function_type func_type)
 		{
-			return abi.func(mem + offset, cabi, signature);
+			return abi.func(mem + offset, cabi, func_type);
 		}
 
-		public final MethodHandle func(long offset, function_signature signature)
+		public final MethodHandle func(long offset, function_type func_type)
 		{
-			return func(offset, abi.host, signature);
+			return func(offset, abi.host, func_type);
 		}
 
 		/**
