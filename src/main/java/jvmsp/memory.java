@@ -6,6 +6,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import jvmsp.abi.call_convention;
 import jvmsp.arch.os;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_type;
@@ -833,14 +834,14 @@ public abstract class memory
 		 * @param func_type
 		 * @return
 		 */
-		public final MethodHandle func(long offset, abi cabi, function_type func_type)
+		public final MethodHandle func(long offset, call_convention call_conv, function_type func_type)
 		{
-			return abi.func(mem + offset, cabi, func_type);
+			return abi.func(mem + offset, call_conv, func_type);
 		}
 
 		public final MethodHandle func(long offset, function_type func_type)
 		{
-			return func(offset, abi.host, func_type);
+			return func(offset, call_convention.host, func_type);
 		}
 
 		/**

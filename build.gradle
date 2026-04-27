@@ -1,0 +1,86 @@
+plugins {
+    id 'java-library'
+}
+
+def jdkVersions = [17, 21, 25]
+
+jdkVersions.forEach { version ->
+	// 编译
+    tasks.register("compileJava${version}", JavaCompile) {
+        group = 'build'
+        description = "Compile with JDK ${version}"
+        
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(version)
+        }
+        
+        source = sourceSets.main.java
+        destinationDirectory = file("${buildDir}/classes/java/${version}")
+        
+        options.encoding = 'UTF-8'
+        options.compilerArgs = ['-Xlint:unchecked', '-Xlint:deprecation', '-Xlint:removal']
+        
+        classpath = sourceSets.main.compileClasspath
+    }
+    // 打包二进制
+    tasks.register("jarBin${version}", Jar) {
+        group = 'build'
+        description = "Archive bin for JDK ${version}"
+        
+        dependsOn tasks."compileJava${version}"
+        
+        archiveFileName = "${ar_bin_name}"
+        destinationDirectory = file("${buildDir}/libs/${version}")
+        
+        from sourceSets.main.output
+        
+        manifest {
+            attributes(
+                'Implementation-Title': "${module_name}",
+                'Implementation-Version': version,
+                'Automatic-Module-Name': "${module_name}",
+                'Built-JDK': System.getProperty("java.version"),
+            )
+        }
+    }
+    // 打包源码
+    tasks.register("jarSrc${version}", Jar) {
+        group = 'build'
+        description = "Archive src for JDK ${version}"
+        
+        archiveFileName = "${ar_src_name}"
+        destinationDirectory = file("${buildDir}/libs/${version}")
+        
+        from sourceSets.main.allSource
+    }
+}
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = "Build all for ${jdkVersions}"
+    
+    dependsOn jdkVersions.collect { "jarBin${it}" }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+clean {
+    delete buildDir
+}

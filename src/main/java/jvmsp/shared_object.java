@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Set;
 
+import jvmsp.abi.call_convention;
 import jvmsp.type.cxx_type.function_signature;
 
 /**
@@ -251,17 +252,17 @@ public class shared_object
 	 * @param signature
 	 * @return
 	 */
-	public static final MethodHandle dlsym(long handle, abi cabi, function_signature signature)
+	public static final MethodHandle dlsym(long handle, call_convention call_conv, function_signature signature)
 	{
 		long addr = dlsym(handle, signature.function_name);
 		if (addr == 0)
 			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
 		else
-			return abi.func(addr, cabi, signature.func_type);
+			return abi.func(addr, call_conv, signature.func_type);
 	}
 
 	public static final MethodHandle dlsym(long handle, function_signature signature)
 	{
-		return dlsym(handle, abi.host, signature);
+		return dlsym(handle, call_convention.host, signature);
 	}
 }

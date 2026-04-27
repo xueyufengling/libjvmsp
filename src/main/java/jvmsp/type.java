@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
+import jvmsp.abi.call_convention;
 import jvmsp.memory.memory_object;
 
 public abstract class type<_T> implements Cloneable
@@ -475,14 +476,14 @@ public abstract class type<_T> implements Cloneable
 			 * @param base_addr
 			 * @return
 			 */
-			public final MethodHandle callable(abi cabi, long base_addr)
+			public final MethodHandle callable(call_convention call_conv, long base_addr)
 			{
-				return symbols.bind(abi.stub_function(cabi, (cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
+				return symbols.bind(abi.stub_function(call_conv, (cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
 			}
 
 			public final MethodHandle callable(long base_addr)
 			{
-				return callable(abi.host, base_addr);
+				return callable(call_convention.host, base_addr);
 			}
 		}
 
@@ -1122,7 +1123,12 @@ public abstract class type<_T> implements Cloneable
 		public Class<?> java_carrier_type()
 		{
 			if (this.is_undefinable())
-				return void.class;
+			{
+				if (this == cxx_type._void)
+					return void.class;
+				else
+					return null;
+			}
 			switch ((int) size())
 			{
 			case 1:
@@ -1547,9 +1553,9 @@ public abstract class type<_T> implements Cloneable
 				write(get_field(field_name), x);
 			}
 
-			public final MethodHandle callable(abi cabi, field f)
+			public final MethodHandle callable(call_convention call_conv, field f)
 			{
-				return f.callable(cabi, address);
+				return f.callable(call_conv, address);
 			}
 
 			public final MethodHandle callable(field f)
@@ -1557,14 +1563,14 @@ public abstract class type<_T> implements Cloneable
 				return f.callable(address);
 			}
 
-			public final MethodHandle callable(abi cabi, String field_name)
+			public final MethodHandle callable(call_convention call_conv, String field_name)
 			{
-				return callable(cabi, type().field(field_name));
+				return callable(call_conv, type().field(field_name));
 			}
 
 			public final MethodHandle callable(String field_name)
 			{
-				return callable(abi.host, field_name);
+				return callable(call_convention.host, field_name);
 			}
 		}
 

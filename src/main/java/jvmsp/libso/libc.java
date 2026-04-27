@@ -35,13 +35,13 @@ public class libc
 		String libc_filename = null;
 		switch (os.host)
 		{
-		case os.linux:
+		case linux:
 			libc_filename = "c";
 			break;
-		case os.macos:
+		case macos:
 			libc_filename = "System";
 			break;
-		case os.windows:
+		case windows:
 			libc_filename = "msvcrt";
 			break;
 		}

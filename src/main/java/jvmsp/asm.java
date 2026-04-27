@@ -3,6 +3,7 @@ package jvmsp;
 import java.lang.invoke.MethodHandle;
 import java.util.ArrayList;
 
+import jvmsp.abi.call_convention;
 import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.libso.libllvmmci;
@@ -102,14 +103,14 @@ public class asm
 			return libllvmmci.dynamic_symbol_lookup(target, sym_name);
 		}
 
-		public final MethodHandle lookup(abi cabi, function_signature signature)
+		public final MethodHandle lookup(call_convention call_conv, function_signature signature)
 		{
-			return libllvmmci.dynamic_symbol_lookup(target, cabi, signature);
+			return libllvmmci.dynamic_symbol_lookup(target, call_conv, signature);
 		}
 
 		public final MethodHandle lookup(function_signature signature)
 		{
-			return lookup(abi.host, signature);
+			return lookup(call_convention.host, signature);
 		}
 	}
 
@@ -129,4 +130,26 @@ public class asm
 	}
 
 	public static final dynamic_linker global_dynamic_linker = new dynamic_linker(libllvmmci.global_dynamic_linker);
+
+	private static final dynamic_lib_target jit_lib = global_dynamic_linker.link_target("jit_lib");
+
+	public static final void jit_link(o o)
+	{
+		jit_lib.add_o(o);
+	}
+
+	public static final long jit_lookup(String sym_name)
+	{
+		return jit_lib.lookup(sym_name);
+	}
+
+	public static final MethodHandle jit_lookup(call_convention call_conv, function_signature signature)
+	{
+		return jit_lib.lookup(call_conv, signature);
+	}
+
+	public static final MethodHandle jit_lookup(function_signature signature)
+	{
+		return jit_lib.lookup(signature);
+	}
 }

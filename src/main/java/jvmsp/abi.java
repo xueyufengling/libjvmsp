@@ -17,25 +17,6 @@ import static jvmsp.versions.jdk_versions;
  */
 public class abi
 {
-	private final arch target_arch;
-	private final Object descriptor;
-
-	private abi(arch target_arch, Object descriptor)
-	{
-		this.target_arch = target_arch;
-		this.descriptor = descriptor;
-	}
-
-	public final arch target_arch()
-	{
-		return target_arch;
-	}
-
-	public final Object descriptor()
-	{
-		return descriptor;
-	}
-
 	private static Class<?> jdk_internal_foreign_CABI;
 
 	private static MethodHandle CABI_computeCurrent;
@@ -127,24 +108,25 @@ public class abi
 		return jdk_internal_abi(abi_call_arranger_pkg_name, abi_context_call_arranger_name, static_abi_instance_name, null);
 	}
 
-	public static final abi x86_64_CSysV = new abi(arch.x86_64, jdk_internal_abi("x64.sysv", "CallArranger", "CSysV"));
-	public static final abi x86_64_CWindows = new abi(arch.x86_64, jdk_internal_abi("x64.windows", "CallArranger", "CWindows"));
+	public static final Object x86_64_CSysV = jdk_internal_abi("x64.sysv", "CallArranger", "CSysV");
 
-	public static final abi aarch64_CLinux = new abi(arch.aarch64, jdk_internal_abi("aarch64", "CallArranger", "C", true, "LINUX", false));
-	public static final abi aarch64_CMacOS = new abi(arch.aarch64, jdk_internal_abi("aarch64", "CallArranger", "C", true, "MACOS", false));
-	public static final abi aarch64_CWindows = new abi(arch.aarch64, jdk_internal_abi("aarch64.windows", "WindowsAArch64CallArranger", "WindowsAArch64AbiDescriptor", true, "aarch64", "CallArranger", "WINDOWS", false));
-	public static final abi ppc64_C = new abi(arch.ppc64, jdk_internal_abi("ppc64", "CallArranger", "C", false, "ABIv2", false));
-	public static final abi riscv64_CLinux = new abi(arch.riscv64, jdk_internal_abi("riscv64.linux", "LinuxRISCV64CallArranger", "CLinux"));
-	public static final abi s390_CLinux = new abi(arch.s390, jdk_internal_abi("s390.linux", "LinuxS390CallArranger", "CLinux"));
+	public static final Object x86_64_CWindows = jdk_internal_abi("x64.windows", "CallArranger", "CWindows");
 
-	public static final abi host;
+	public static final Object aarch64_CLinux = jdk_internal_abi("aarch64", "CallArranger", "C", true, "LINUX", false);
+	public static final Object aarch64_CMacOS = jdk_internal_abi("aarch64", "CallArranger", "C", true, "MACOS", false);
+	public static final Object aarch64_CWindows = jdk_internal_abi("aarch64.windows", "WindowsAArch64CallArranger", "WindowsAArch64AbiDescriptor", true, "aarch64", "CallArranger", "WINDOWS", false);
+	public static final Object ppc64_C = jdk_internal_abi("ppc64", "CallArranger", "C", false, "ABIv2", false);
+	public static final Object riscv64_CLinux = jdk_internal_abi("riscv64.linux", "LinuxRISCV64CallArranger", "CLinux");
+	public static final Object s390_CLinux = jdk_internal_abi("s390.linux", "LinuxS390CallArranger", "CLinux");
+
+	public static final Object host;
 
 	/**
 	 * 获取宿主机的架构ABI
 	 * 
 	 * @return
 	 */
-	private static final abi get_host_abi_descriptor()
+	private static final Object get_host_abi_descriptor()
 	{
 		switch (host_cabi())
 		{
@@ -333,55 +315,282 @@ public class abi
 		return ret_regs(abi)[1];
 	}
 
+	public static final int stack_alignment(Object abi)
+	{
+		try
+		{
+			return (int) unsafe.read_int(abi, ABIDescriptor_stackAlignment);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get stack alignment of abi '" + abi + "' failed", ex);
+		}
+	}
+
+	public static final int shadow_space(Object abi)
+	{
+		try
+		{
+			return (int) unsafe.read_int(abi, ABIDescriptor_shadowSpace);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get shadow space of abi '" + abi + "' failed", ex);
+		}
+	}
+
+	public static final Object internal_arch(Object abi)
+	{
+		try
+		{
+			return unsafe.read_reference(abi, ABIDescriptor_arch);
+		}
+		catch (Throwable ex)
+		{
+			throw new java.lang.InternalError("get architecture of abi '" + abi + "' failed", ex);
+		}
+	}
+
+	public static final arch arch_of(Object abi_descriptor)
+	{
+		return arch.of_internal(internal_arch(abi_descriptor));
+	}
+
 	/**
 	 * NativeMethodHandle与stub函数之间的调用约定。<br>
 	 * 此外，JVM层生成stub函数时需要使用ABIDescriptor的_shadow_space_bytes、_scratch1等参数。<br>
+	 * ABIDescriptor∈abi∈call_convention，其中ABIDescriptor仅包含该调用约定使用的储存位置，abi包含了ABIDescriptor和架构信息及其操作，call_convention决定了具体的调用参数排布策略
 	 */
-	public static class nmh_call_convention
+	public static abstract class call_convention
 	{
-		public static Object[] resolve_arg_ops(abi abi, boolean is_stub, cxx_type... arg_types)
+		protected final Object abi_descriptor;
+		protected final arch abi_arch;
+		protected final Object[] arg_int_regs;
+		protected final Object[] arg_vec_regs;
+		protected final Object[] ret_int_regs;
+		protected final Object[] ret_vec_regs;
+
+		protected final int stack_alignment;
+
+		public call_convention(Object abi_descriptor)
 		{
-			int stack_top = 0;// 栈顶偏移量
+			this.abi_descriptor = abi_descriptor;
+			this.abi_arch = arch_of(abi_descriptor);
+			this.arg_int_regs = arg_int_regs(abi_descriptor);
+			this.arg_vec_regs = arg_vec_regs(abi_descriptor);
+			this.ret_int_regs = ret_int_regs(abi_descriptor);
+			this.ret_vec_regs = ret_vec_regs(abi_descriptor);
+			this.stack_alignment = stack_alignment(abi_descriptor);
+		}
+
+		public final Object abi_descriptor()
+		{
+			return abi_descriptor;
+		}
+
+		protected class context
+		{
+			protected int occupied_arg_int_reg_idx = -1;
+			protected int occupied_arg_vec_reg_idx = -1;
+
+			protected int occupied_ret_int_reg_idx = -1;
+			protected int occupied_ret_vec_reg_idx = -1;
+
+			protected int occupied_volatile_reg_idx = -1;
+			protected int stack_top = 0;// 栈顶偏移量
+
+			private context()
+			{
+			}
+
+			public void sync_arg_vec_reg_idx_as_int()
+			{
+				occupied_arg_vec_reg_idx = occupied_arg_int_reg_idx;
+			}
+
+			public Object next_arg_int_reg()
+			{
+				if (++occupied_arg_int_reg_idx < arg_int_regs.length)
+					return arg_int_regs[occupied_arg_int_reg_idx];
+				else
+					return null;
+			}
+
+			public Object next_arg_vec_reg()
+			{
+				if (++occupied_arg_vec_reg_idx < arg_vec_regs.length)
+					return arg_vec_regs[occupied_arg_vec_reg_idx];
+				else
+					return null;
+			}
+
+			public Object next_ret_int_reg()
+			{
+				if (++occupied_ret_int_reg_idx < ret_int_regs.length)
+					return ret_int_regs[occupied_ret_int_reg_idx];
+				else
+					return null;
+			}
+
+			public Object next_ret_vec_reg()
+			{
+				if (++occupied_ret_vec_reg_idx < ret_vec_regs.length)
+					return ret_vec_regs[occupied_ret_vec_reg_idx];
+				else
+					return null;
+			}
+
+			public Object stack(short size)
+			{
+				Object stack_mem = abi_arch.stack((short) size, stack_top);
+				// 偏移量对齐
+				int mod = size % stack_alignment;
+				stack_top += size;
+				if (mod != 0)
+					stack_top += stack_alignment - mod;
+				return stack_mem;
+			}
+		}
+
+		public abstract Object resolve_arg_op(int idx, cxx_type type, context ctx);
+
+		public final Object[] resolve_arg_ops(boolean is_stub, cxx_type... arg_types)
+		{
 			int insert_delta = 0;// 插入目标函数指针后的索引增量
-			Object[] arg_regs = arg_int_regs(abi.descriptor);
 			Object[] arg_ops = storage_type.new_array(is_stub ? arg_types.length + 1 : arg_types.length);
 			if (is_stub)
 			{
 				insert_delta = 1;
-				arg_ops[0] = abi.target_arch.placeholder((short) cxx_type.pvoid.size(), 0);// 将传入NativeMethodHandle的第一个参数移入PLACEHOLDER偏移量为0的内存
+				arg_ops[0] = abi_arch.placeholder((short) cxx_type.pvoid.size(), 0);// 将传入NativeMethodHandle的第一个参数移入PLACEHOLDER偏移量为0的内存
 			}
+			context ctx = this.new context();
 			for (int idx = 0; idx < arg_types.length; ++idx)
 			{
-				cxx_type type = arg_types[idx];
-				if (idx < arg_regs.length)
-				{
-					// 前n个参数用寄存器传递
-					arg_ops[idx + insert_delta] = arg_regs[idx];
-				}
-				else
-				{
-					// 剩下的参数用栈传递
-					short arg_size = (short) type.size();
-					arg_ops[idx + insert_delta] = abi.target_arch.stack(arg_size, stack_top);
-					stack_top += arg_size;
-				}
+				arg_ops[idx + insert_delta] = resolve_arg_op(idx, arg_types[idx], ctx);
 			}
 			return arg_ops;
 		}
 
-		public static Object[] resolve_ret_ops(abi abi, cxx_type ret_type)
+		public abstract Object resolve_ret_op(int idx, cxx_type type, context ctx);
+
+		public final Object[] resolve_ret_ops(cxx_type... ret_types)
 		{
-			if (ret_type == cxx_type._void)
+			if (ret_types[0] == cxx_type._void)
 			{
 				return storage_type.new_array(0);// 无返回值
 			}
 			else
 			{
-				Object[] ret_regs = ret_int_regs(abi.descriptor);
-				Object[] ret_ops = storage_type.new_array(1);
-				ret_ops[0] = ret_regs[0];
+				context ctx = this.new context();
+				Object[] ret_ops = storage_type.new_array(ret_types.length);
+				for (int idx = 0; idx < ret_types.length; ++idx)
+				{
+					cxx_type type = ret_types[idx];
+					if (type.is_undefinable())
+						throw new java.lang.InternalError("return type '" + type + "' is undefinable");
+					ret_ops[idx] = resolve_ret_op(idx, type, ctx);
+				}
 				return ret_ops;
 			}
+		}
+
+		public static final call_convention windows_x64 = new call_convention(abi.x86_64_CWindows)
+		{
+			@Override
+			public Object resolve_arg_op(int idx, cxx_type type, context ctx)
+			{
+				// 前n个参数用寄存器传递，浮点数用vec寄存器，整数、指针用通用寄存器
+				// 剩下的参数用栈传递
+				Object reg = null;
+				if (type.is_float())
+				{
+					reg = ctx.next_arg_vec_reg();
+				}
+				else
+				{
+					reg = ctx.next_arg_int_reg();
+				}
+				ctx.sync_arg_vec_reg_idx_as_int();
+				return reg != null ? reg : ctx.stack((short) type.size());
+			}
+
+			@Override
+			public Object resolve_ret_op(int idx, cxx_type type, context ctx)
+			{
+				Object reg = null;
+				if (type.is_float())
+				{
+					reg = ctx.next_ret_vec_reg();
+				}
+				else
+				{
+					reg = ctx.next_ret_int_reg();
+				}
+				return reg != null ? reg : ctx.stack((short) type.size());
+			}
+		};
+
+		public static final call_convention sysv_x64 = new call_convention(abi.x86_64_CSysV)
+		{
+			@Override
+			public Object resolve_arg_op(int idx, cxx_type type, context ctx)
+			{
+				// 前n个参数用寄存器传递，浮点数用vec寄存器，整数、指针用通用寄存器
+				// 剩下的参数用栈传递
+				Object reg = null;
+				if (type.is_float())
+				{
+					reg = ctx.next_arg_vec_reg();
+				}
+				else
+				{
+					reg = ctx.next_arg_int_reg();
+				}
+				ctx.sync_arg_vec_reg_idx_as_int();
+				return reg != null ? reg : ctx.stack((short) type.size());
+			}
+
+			@Override
+			public Object resolve_ret_op(int idx, cxx_type type, context ctx)
+			{
+				Object reg = null;
+				if (type.is_float())
+				{
+					reg = ctx.next_ret_vec_reg();
+				}
+				else
+				{
+					reg = ctx.next_ret_int_reg();
+				}
+				return reg != null ? reg : ctx.stack((short) type.size());
+			}
+		};
+
+		public static final call_convention host;
+
+		private static final call_convention get_host_call_convention()
+		{
+			switch (host_cabi())
+			{
+			case "SYS_V":
+			case "WIN_64":
+				return windows_x64;
+			case "LINUX_AARCH_64":
+			case "MAC_OS_AARCH_64":
+			case "WIN_AARCH_64":
+			case "LINUX_PPC_64_LE":
+			case "LINUX_RISCV_64":
+			case "LINUX_S390":
+			case "FALLBACK":
+			case "UNSUPPORTED":
+			default:
+				return null;
+			}
+		}
+
+		static
+		{
+			host = get_host_call_convention();
 		}
 	}
 
@@ -390,13 +599,44 @@ public class abi
 	 */
 	public static class nmh_stub_constraint
 	{
+		private call_convention call_conv;
 		private function_type func_type;
 		private MethodType stub_method_type;
 
-		public nmh_stub_constraint(function_type func_type)
+		private Object[] arg_vm_storage;
+		private Object[] ret_vm_storage;
+
+		private boolean needs_transition;
+
+		/**
+		 * 决议NativeMethodHandle与stub函数之间的约束
+		 * 
+		 * @param func_type        函数类型
+		 * @param needs_transition 是否需要保存当前Java上下文的现场，如果目标函数不涉及Java相关操作则不需要保护现场
+		 */
+		public nmh_stub_constraint(call_convention call_conv, function_type func_type, boolean needs_transition)
 		{
+			this.call_conv = call_conv;
 			this.func_type = func_type;
 			this.stub_method_type = func_type.to_method_type().insertParameterTypes(0, long.class);// 添加一个函数指针首参数，指向实际待执行的函数
+			this.arg_vm_storage = call_conv.resolve_arg_ops(true, func_type.argument_types());
+			this.ret_vm_storage = call_conv.resolve_ret_ops(func_type.return_type());
+			this.needs_transition = needs_transition;
+		}
+
+		public nmh_stub_constraint(call_convention call_conv, function_type func_type)
+		{
+			this(call_conv, func_type, false);
+		}
+
+		public nmh_stub_constraint(function_type func_type)
+		{
+			this(call_convention.host, func_type, false);
+		}
+
+		public final call_convention call_conv()
+		{
+			return call_conv;
 		}
 
 		public final function_type func_type()
@@ -406,7 +646,7 @@ public class abi
 
 		public final boolean is_in_memory_return()
 		{
-			return false;
+			return ret_vm_storage.length > 1;// 返回目标位置大于1则需要内存中保存多个返回结果
 		}
 
 		public final MethodType stub_method_type()
@@ -426,7 +666,7 @@ public class abi
 
 		public final boolean needs_transition()
 		{
-			return false;
+			return needs_transition;
 		}
 
 		public final int captured_state_mask()
@@ -439,9 +679,9 @@ public class abi
 		 * 
 		 * @return
 		 */
-		public final Object[] ret_vm_storage(abi abi)
+		public final Object[] ret_vm_storage()
 		{
-			return nmh_call_convention.resolve_ret_ops(abi, func_type.return_type());
+			return ret_vm_storage;
 		}
 
 		/**
@@ -449,9 +689,9 @@ public class abi
 		 * 
 		 * @return
 		 */
-		public final Object[] args_vm_storage(abi abi)
+		public final Object[] arg_vm_storage()
 		{
-			return nmh_call_convention.resolve_arg_ops(abi, true, func_type.argument_types());
+			return arg_vm_storage;
 		}
 	}
 
@@ -855,14 +1095,14 @@ public class abi
 	 * 
 	 * @return
 	 */
-	public static final MethodHandle stub_function(abi abi, cxx_type.function_type func_type)
+	public static final MethodHandle stub_function(call_convention call_conv, cxx_type.function_type func_type)
 	{
-		return native_entry_handle(stub_native_entry(abi, new nmh_stub_constraint(func_type)));
+		return native_entry_handle(stub_native_entry(new nmh_stub_constraint(call_conv, func_type)));
 	}
 
-	public static final MethodHandle stub_function(abi abi, cxx_type.function_pointer_type func_ptr_type)
+	public static final MethodHandle stub_function(call_convention call_conv, cxx_type.function_pointer_type func_ptr_type)
 	{
-		return stub_function(abi, func_ptr_type.pointed_to_type());
+		return stub_function(call_conv, func_ptr_type.pointed_to_type());
 	}
 
 	// @formatter:off
@@ -979,12 +1219,12 @@ public class abi
 	 * @param resolved_constraint
 	 * @return
 	 */
-	public static final Object stub_native_entry(abi abi, nmh_stub_constraint resolved_constraint)
+	public static final Object stub_native_entry(nmh_stub_constraint resolved_constraint)
 	{
 		return stub_native_entry(resolved_constraint.stub_method_type(),
-				abi.descriptor,
-				resolved_constraint.args_vm_storage(abi),
-				resolved_constraint.ret_vm_storage(abi),
+				resolved_constraint.call_conv().abi_descriptor,
+				resolved_constraint.arg_vm_storage(),
+				resolved_constraint.ret_vm_storage(),
 				resolved_constraint.needs_return_buffer(),
 				resolved_constraint.captured_state_mask(),
 				resolved_constraint.needs_transition());
@@ -1036,13 +1276,13 @@ public class abi
 	 * @param signature
 	 * @return
 	 */
-	public static final MethodHandle func(long fun_addr, abi cabi, function_type func_type)
+	public static final MethodHandle func(long fun_addr, call_convention call_conv, function_type func_type)
 	{
-		return symbols.bind(abi.stub_function(cabi, func_type), 0, fun_addr);// 绑定首参数，即stub函数要执行的目标函数指针
+		return symbols.bind(abi.stub_function(call_conv, func_type), 0, fun_addr);// 绑定首参数，即stub函数要执行的目标函数指针
 	}
 
 	public static final MethodHandle func(long fun_addr, function_type func_type)
 	{
-		return func(fun_addr, host, func_type);
+		return func(fun_addr, call_convention.host, func_type);
 	}
 }

@@ -1,7 +1,7 @@
 /bin/
 /dep/
-/jvmsp
-/META-INF
-/assets
-/pack.mcmeta
+/src/main/resources/jvmsp/
+/src/main/resources/pack.mcmeta
 /.gitignore
+/.gradle/
+/build/

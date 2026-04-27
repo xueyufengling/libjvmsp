@@ -24,7 +24,6 @@ import java.util.function.Function;
 
 import jvmsp.type.java_type;
 import jvmsp.hotspot.interpreter.Bytecodes;
-import jvmsp.hotspot.interpreter.Bytecodes.Code;
 import jvmsp.hotspot.oops.InstanceKlass;
 import sun.reflect.ReflectionFactory;
 

@@ -3,6 +3,7 @@ package jvmsp.libso;
 import java.lang.invoke.MethodHandle;
 
 import jvmsp.abi;
+import jvmsp.abi.call_convention;
 import jvmsp.memory;
 import jvmsp.shared_object;
 import jvmsp.type.cxx_type;
@@ -212,14 +213,14 @@ public class libllvmmci
 		}
 	}
 
-	public static final MethodHandle dynamic_symbol_lookup(long lib_ctx, abi cabi, function_signature signature)
+	public static final MethodHandle dynamic_symbol_lookup(long lib_ctx, call_convention call_conv, function_signature signature)
 	{
-		return abi.func(dynamic_symbol_lookup(lib_ctx, signature.function_name), cabi, signature.func_type);
+		return abi.func(dynamic_symbol_lookup(lib_ctx, signature.function_name), call_conv, signature.func_type);
 	}
 
 	public static final MethodHandle dynamic_symbol_lookup(long lib_ctx, function_signature signature)
 	{
-		return dynamic_symbol_lookup(lib_ctx, abi.host, signature);
+		return dynamic_symbol_lookup(lib_ctx, call_convention.host, signature);
 	}
 
 	/**

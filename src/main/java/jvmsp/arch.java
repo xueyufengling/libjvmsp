@@ -20,6 +20,12 @@ public enum arch
 	private Class<?> _internal_reg_class;
 	private Object internal_arch;
 
+	private static final class __architecture_map
+	{
+		// 储存从jdk.internal.foreign.abi.Architecture对象到对应的arch对象的映射
+		private static final HashMap<Object, arch> _internal_map = new HashMap<>();
+	}
+
 	public static final arch host;
 
 	private static final arch get_host_arch()
@@ -65,6 +71,7 @@ public enum arch
 			_internal_storage_type_class = _internal_inner_class("StorageType");
 			_internal_reg_class = _internal_inner_class("Regs");
 			internal_arch = unsafe.read_static_reference(_internal_class, "INSTANCE");// 获取jdk.internal.foreign.abi.Architecture对象
+			__architecture_map._internal_map.put(internal_arch, this);
 			storages = storage_type.storages(this);
 		}
 		catch (ClassNotFoundException ex)
@@ -79,6 +86,17 @@ public enum arch
 		catch (Throwable ex)
 		{
 		}
+	}
+
+	/**
+	 * 根据jdk.internal.foreign.abi.Architecture对象获取对应的arch对象
+	 * 
+	 * @param internal_arch
+	 * @return
+	 */
+	public static final arch of_internal(Object internal_arch)
+	{
+		return __architecture_map._internal_map.get(internal_arch);
 	}
 
 	public final Object internal_arch()
