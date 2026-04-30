@@ -473,7 +473,7 @@ public final class unsafe
 	 * @param offset
 	 * @return
 	 */
-	public static final long read_pointer(Object base, long offset)
+	public static final long read_ptr(Object base, long offset)
 	{
 		try
 		{
@@ -487,7 +487,7 @@ public final class unsafe
 
 	public static final long read_ptr(long addr)
 	{
-		return read_pointer(null, addr);
+		return read_ptr(null, addr);
 	}
 
 	/**
@@ -499,7 +499,7 @@ public final class unsafe
 	 */
 	public static final String read_cstr(Object base, long offset)
 	{
-		return memory.string(read_pointer(base, offset));
+		return memory.string(read_ptr(base, offset));
 	}
 
 	public static final String read_cstr(long addr)
@@ -2381,21 +2381,6 @@ public final class unsafe
 		{
 			throw new java.lang.InternalError("class '" + clazz + "' ensure initialized failed", ex);
 		}
-	}
-
-	/**
-	 * 获取ptr指向的地址的基地址<br>
-	 * 例如<br>
-	 * int x = 0;<br>
-	 * int* ptr = &x;<br>
-	 * 则get_pointed_base(ptr)为x储存的实际地址。
-	 * 
-	 * @param ptr 指针
-	 * @return
-	 */
-	public static final long get_pointed_base(long ptr)
-	{
-		return unsafe.read_long(ptr);
 	}
 
 	public static final <_T> Field first_memory_member_field(Class<_T> clazz)

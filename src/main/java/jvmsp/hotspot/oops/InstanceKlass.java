@@ -533,6 +533,7 @@ public class InstanceKlass extends Klass
 	public static final Method lookup_method(Array_pMethod methods, String name, String signature)
 	{
 		int length = methods.length();
+		System.err.println(name + "  ->  " + signature);
 		for (int idx = 0; idx < length; ++idx)
 		{
 			Method m = methods.at(idx);

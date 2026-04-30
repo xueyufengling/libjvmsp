@@ -8,9 +8,14 @@ import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_signature;
 import jvmsp.type.cxx_type.pointer;
 import jvmsp.unsafe;
+import jvmsp.hotspot.classfile.java_lang_Class;
+import jvmsp.hotspot.oops.CompressedOops;
+import jvmsp.hotspot.oops.InstanceKlass;
 
 /**
  * libjvm.so库中的函数封装
+ * JNIEnv -> JNINativeInterface_*
+ * JavaVM -> JNIInvokeInterface_*
  */
 public abstract class libjvm
 {
@@ -93,18 +98,16 @@ public abstract class libjvm
 	public static final long _libjvm;
 
 	private static final MethodHandle JNI_GetCreatedJavaVMs;
-	private static final MethodHandle universe;
-	private static final MethodHandle ps;
-	private static final MethodHandle pfl;
+
+	private static final MethodHandle JVM_GetCallerClass;
 
 	static
 	{
 		// 加载JNI，本类所有涉及JVM相关的函数都必须在加载libjvm.so以后才能调用
 		_libjvm = shared_object.dlopen("jvm");
 		JNI_GetCreatedJavaVMs = shared_object.dlsym(_libjvm, function_signature.of("JNI_GetCreatedJavaVMs", cxx_type.jint, cxx_type.pvoid, cxx_type.jsize, cxx_type.pjsize));
-		universe = shared_object.dlsym(_libjvm, function_signature.of("universe", cxx_type._void));
-		ps = shared_object.dlsym(_libjvm, function_signature.of("ps", cxx_type._void));
-		pfl = shared_object.dlsym(_libjvm, function_signature.of("pfl", cxx_type._void));
+		// JVM内部函数
+		JVM_GetCallerClass = shared_object.dlsym(_libjvm, function_signature.of("JVM_GetCallerClass", cxx_type.jclass, cxx_type.pvoid), true);// 要保存线程上下文现场
 	}
 
 	/**
@@ -114,14 +117,15 @@ public abstract class libjvm
 	 * @param max_num 最多获取多少个指针
 	 * @return获取到的是JNIInvokeInterface_*[]，需要再次取引用得到各个JNIInvokeInterface_对象的基地址。
 	 */
-	public static final long[] get_created_java_vms(int max_num)
+	public static final long[] JNI_GetCreatedJavaVMs(int max_num)
 	{
-		try (pointer vm_buf = memory.malloc(max_num, cxx_type.pvoid).auto(); pointer vm_num = memory.malloc(cxx_type.jsize).auto();)
+		// JavaVM** -> JNIInvokeInterface_***
+		try (pointer pppJNIInvokeInterface_ = memory.malloc(max_num, cxx_type.pvoid).auto(); pointer vm_num = memory.malloc(cxx_type.jsize).auto();)
 		{
-			int ret = (int) JNI_GetCreatedJavaVMs.invokeExact(vm_buf.address(), max_num, vm_num.address());
-			_check_jni_call_ret(ret);
+			_check_jni_call_ret((int) JNI_GetCreatedJavaVMs.invokeExact(pppJNIInvokeInterface_.address(), max_num, vm_num.address()));
 			int final_num = Math.min(max_num, (int) vm_num.dereference());
-			return (long[]) vm_buf.to_jarray(final_num, long.class);//
+			// 返回JNIInvokeInterface_**[]，即JavaVM*[]
+			return (long[]) pppJNIInvokeInterface_.to_jarray(final_num, long.class);// 仅64位
 		}
 		catch (Throwable ex)
 		{
@@ -129,78 +133,100 @@ public abstract class libjvm
 		}
 	}
 
-	public static final long get_created_java_vms()
+	public static final long JNI_GetCreatedJavaVMs()
 	{
-		return get_created_java_vms(1)[0];
+		return JNI_GetCreatedJavaVMs(1)[0];
 	}
 
-	public static final jni_invoke_interface[] jni_invoke_interfaces(int max_num)
+	public static final JNIInvokeInterface_[] jni_invoke_interfaces(int max_num)
 	{
-		long[] jvms = get_created_java_vms(max_num);
-		jni_invoke_interface[] interfaces = new jni_invoke_interface[jvms.length];
+		long[] jvms = JNI_GetCreatedJavaVMs(max_num);
+		JNIInvokeInterface_[] interfaces = new JNIInvokeInterface_[jvms.length];
 		for (int i = 0; i < jvms.length; ++i)
-			interfaces[i] = new jni_invoke_interface(unsafe.get_pointed_base(jvms[i]));
+			interfaces[i] = new JNIInvokeInterface_(jvms[i]);
 		return interfaces;
 	}
 
-	public static final jni_invoke_interface jni_invoke_interfaces()
+	public static final JNIInvokeInterface_ jni_invoke_interfaces()
 	{
 		return jni_invoke_interfaces(1)[0];
 	}
 
-	public static final jni_native_interface jni_native_interface(jni_invoke_interface ii, int jni_version)
+	public static final JNINativeInterface_ jni_native_interface(JNIInvokeInterface_ java_vm, int jni_version)
 	{
-		return new jni_native_interface(unsafe.get_pointed_base(ii.get_env(jni_version)));
+		return new JNINativeInterface_(java_vm.GetEnv(jni_version));
 	}
 
-	public static final jni_native_interface jni_native_interface(jni_invoke_interface ii)
+	public static final JNINativeInterface_ jni_native_interface(JNIInvokeInterface_ java_vm)
 	{
-		return new jni_native_interface(unsafe.get_pointed_base(ii.get_env()));
+		return new JNINativeInterface_(java_vm.GetEnv());
 	}
 
-	public static final jni_native_interface jni_native_interface(int jni_version)
+	public static final JNINativeInterface_ jni_native_interface(int jni_version)
 	{
 		return jni_native_interface(jni_invoke_interfaces(), jni_version);
 	}
 
-	public static final jni_native_interface jni_native_interface()
+	public static final JNINativeInterface_ jni_native_interface()
 	{
 		return jni_native_interface(jni_invoke_interfaces());
 	}
 
-	public static final void universe()
+	/**
+	 * jdk.internal.reflect.Reflection.getCallerClass()获取调用此方法的上下文的类。<br>
+	 * 调用此方法算起，返回栈帧中第一个没有caller_sensitive标记的方法所在的类。<br>
+	 * 此方法本身在JVM内部是call_sensitive的。<br>
+	 * 调用时的栈帧如下：<br>
+	 * [0] [ @CallerSensitive public jdk.internal.reflect.Reflection.getCallerClass() ]<br>
+	 * [1] [ @CallerSensitive API.method ] 直接调用Reflection.getCallerClass()的方法，即此方法。<br>
+	 * [.] [ (skipped intermediate frames) ] 根据Method*->intrinsic_id()决定是否跳过，例如反射、MethodHandle、lambda就会跳过。<br>
+	 * [n] [ caller ]<br>
+	 * 此方法无法使用，MethodHandle的栈帧会干扰JVM_GetCallerClass()的判定导致抛出错误
+	 * 
+	 * @param pJNIEnv
+	 * @return
+	 */
+	@Deprecated
+	public static final long JVM_GetCallerClass(long pJNIEnv)
 	{
+		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/jvm.cpp#L724
+		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/method.cpp#L1435
+		class __init
+		{
+			private static Class<?> jdk_internal_reflect_Reflection = null;
+
+			static
+			{
+				try
+				{
+					jdk_internal_reflect_Reflection = Class.forName("jdk.internal.reflect.Reflection");
+				}
+				catch (ClassNotFoundException ex)
+				{
+					ex.printStackTrace();
+				}
+				// 直接调用Reflection.getCallerClass()的方法必须是call_sensitive的，否则报错
+				// MethodHandle::invokeExact()方法在语法层是直接调用Reflection.getCallerClass()的方法，但为其设置caller_sensitive标记仍然报错直接调用方法不是call_sensitive的
+				// 因此判断内部还有JVM生成的或内部的中间函数，故必须在字节码层面使用invokeStatic直接调用。
+
+				java_lang_Class.as_InstanceKlass(jdk_internal_reflect_Reflection);
+				jvmsp.hotspot.oops.Method _vm_getCallerClass = InstanceKlass.lookup_method(jdk_internal_reflect_Reflection, "getCallerClass", "()Ljava/lang/Class;");
+				jvmsp.hotspot.oops.Method _libjvm_JVM_GetCallerClass = InstanceKlass.lookup_method(libjvm.class, "JVM_GetCallerClass", "(J)J");
+				jvmsp.hotspot.oops.ConstMethodFlags flags = _libjvm_JVM_GetCallerClass.constMethod().flags();
+				flags.set_caller_sensitive(true);// 为get_caller_class()方法设置caller_sensitive标志
+				flags.set_intrinsic_candidate(true);// 设置内联建议标志
+				_libjvm_JVM_GetCallerClass.set_intrinsic_id(_vm_getCallerClass.intrinsic_id());// 设置内部ID，遍历栈帧时查找caller时就会跳过此栈帧
+			}
+		}
 		try
 		{
-			universe.invokeExact();
+			unsafe.ensure_class_initialized(__init.class);
+			return (long) JVM_GetCallerClass.invokeExact(pJNIEnv);
 		}
 		catch (Throwable ex)
 		{
-			throw new java.lang.InternalError("call universe() failed", ex);
+			throw new java.lang.InternalError("call JVM_GetCallerClass() failed", ex);
 		}
 	}
 
-	public static final void ps()
-	{
-		try
-		{
-			ps.invokeExact();
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("call ps() failed", ex);
-		}
-	}
-
-	public static final void pfl()
-	{
-		try
-		{
-			pfl.invokeExact();
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("call pfl() failed", ex);
-		}
-	}
 }

@@ -145,6 +145,11 @@ public class Symbol extends vm_struct
 		set_refcount(PERM_REFCOUNT);
 	}
 
+	/**
+	 * 符号名称的长度
+	 * 
+	 * @return
+	 */
 	public int length()
 	{
 		return super.read_uint16_t(_length);
@@ -211,7 +216,7 @@ public class Symbol extends vm_struct
 	 */
 	public String jstring()
 	{
-		return memory.string(as_C_string());
+		return memory.string(as_C_string(), length());
 	}
 
 	@Override

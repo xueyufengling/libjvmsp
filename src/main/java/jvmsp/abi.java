@@ -631,7 +631,7 @@ public class abi
 
 		public nmh_stub_constraint(function_type func_type)
 		{
-			this(call_convention.host, func_type, false);
+			this(call_convention.host, func_type);
 		}
 
 		public final call_convention call_conv()
@@ -1095,9 +1095,14 @@ public class abi
 	 * 
 	 * @return
 	 */
+	public static final MethodHandle stub_function(call_convention call_conv, cxx_type.function_type func_type, boolean needs_transition)
+	{
+		return native_entry_handle(stub_native_entry(new nmh_stub_constraint(call_conv, func_type, needs_transition)));
+	}
+
 	public static final MethodHandle stub_function(call_convention call_conv, cxx_type.function_type func_type)
 	{
-		return native_entry_handle(stub_native_entry(new nmh_stub_constraint(call_conv, func_type)));
+		return stub_function(call_conv, func_type, false);
 	}
 
 	public static final MethodHandle stub_function(call_convention call_conv, cxx_type.function_pointer_type func_ptr_type)
@@ -1276,9 +1281,14 @@ public class abi
 	 * @param signature
 	 * @return
 	 */
+	public static final MethodHandle func(long fun_addr, call_convention call_conv, function_type func_type, boolean needs_transition)
+	{
+		return symbols.bind(abi.stub_function(call_conv, func_type, needs_transition), 0, fun_addr);// 绑定首参数，即stub函数要执行的目标函数指针
+	}
+
 	public static final MethodHandle func(long fun_addr, call_convention call_conv, function_type func_type)
 	{
-		return symbols.bind(abi.stub_function(call_conv, func_type), 0, fun_addr);// 绑定首参数，即stub函数要执行的目标函数指针
+		return func(fun_addr, call_conv, func_type, false);
 	}
 
 	public static final MethodHandle func(long fun_addr, function_type func_type)

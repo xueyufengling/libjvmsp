@@ -462,6 +462,8 @@ public class symbols
 	// JVM底层的符号信息
 	private static Class<?> java_lang_invoke_MemberName;
 
+	private static VarHandle MemberName_flags;
+
 	private static MethodHandle objectFieldOffset;
 	private static MethodHandle staticFieldOffset;
 	private static MethodHandle staticFieldBase;
@@ -477,6 +479,8 @@ public class symbols
 		{
 			ex.printStackTrace();
 		}
+		MemberName_flags = symbols.find_var(java_lang_invoke_MemberName, "flags", int.class);
+
 		objectFieldOffset = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "objectFieldOffset", long.class, java_lang_invoke_MemberName);
 		staticFieldOffset = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldOffset", long.class, java_lang_invoke_MemberName);
 		staticFieldBase = symbols.find_static_method(java_lang_invoke_MethodHandleNatives, "staticFieldBase", Object.class, java_lang_invoke_MemberName);
@@ -549,10 +553,6 @@ public class symbols
 	 * JVM的MethodHandle执行检查依赖于该类，修改目标MethodHandle的MemberName可以绕过检查。
 	 */
 
-	private static MethodHandle matchingFlagsSet;
-	private static MethodHandle allFlagsSet;
-	private static MethodHandle anyFlagSet;
-
 	public static final int BRIDGE;
 	public static final int VARARGS;
 	public static final int SYNTHETIC;
@@ -622,10 +622,6 @@ public class symbols
 		ALL_KINDS = (int) read_static(java_lang_invoke_MemberName, "ALL_KINDS", int.class);
 		IS_INVOCABLE = (int) read_static(java_lang_invoke_MemberName, "IS_INVOCABLE", int.class);
 
-		matchingFlagsSet = find_special_method(java_lang_invoke_MemberName, "matchingFlagsSet", boolean.class, int.class, int.class);
-		allFlagsSet = find_special_method(java_lang_invoke_MemberName, "allFlagsSet", boolean.class, int.class);
-		anyFlagSet = find_special_method(java_lang_invoke_MemberName, "anyFlagSet", boolean.class, int.class);
-
 		isBridge = find_special_method(java_lang_invoke_MemberName, "isBridge", boolean.class);
 		isVarargs = find_special_method(java_lang_invoke_MemberName, "isVarargs", boolean.class);
 		isSynthetic = find_special_method(java_lang_invoke_MemberName, "isSynthetic", boolean.class);
@@ -642,38 +638,17 @@ public class symbols
 
 	public static final boolean match_flags_set(Object member_name, int mask, int flags)
 	{
-		try
-		{
-			return (boolean) matchingFlagsSet.invokeExact(member_name, mask, flags);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("member name '" + member_name.toString() + "' matching flags set failed", ex);
-		}
+		return (member_name_flags(member_name) & mask) == flags;
 	}
 
 	public static final boolean all_flags_set(Object member_name, int flags)
 	{
-		try
-		{
-			return (boolean) allFlagsSet.invokeExact(member_name, flags);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check all flags set failed", ex);
-		}
+		return (member_name_flags(member_name) & flags) == flags;
 	}
 
 	public static final boolean any_flag_set(Object member_name, int flags)
 	{
-		try
-		{
-			return (boolean) anyFlagSet.invokeExact(member_name, flags);
-		}
-		catch (Throwable ex)
-		{
-			throw new java.lang.InternalError("member name '" + member_name.toString() + "' check any flags set failed", ex);
-		}
+		return (member_name_flags(member_name) & flags) != 0;
 	}
 
 	public static final boolean is_bridge(Object member_name)

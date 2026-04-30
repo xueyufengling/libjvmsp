@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import jvmsp.type.java_type;
-import jvmsp.hotspot.interpreter.Bytecodes;
 import jvmsp.hotspot.oops.InstanceKlass;
 import sun.reflect.ReflectionFactory;
 
@@ -984,67 +983,6 @@ public abstract class reflection
 	}
 
 	/**
-	 * jdk.internal.reflect.Reflection.getCallerClass()获取调用此方法的上下文的类。<br>
-	 * 调用此方法算起，返回栈帧中第一个没有caller_sensitive标记的方法所在的类。<br>
-	 * 此方法本身在JVM内部是call_sensitive的。<br>
-	 * 调用时的栈帧如下：<br>
-	 * [0] [ @CallerSensitive public jdk.internal.reflect.Reflection.getCallerClass() ]<br>
-	 * [1] [ @CallerSensitive API.method ] 直接调用Reflection.getCallerClass()的方法，即此方法。<br>
-	 * [.] [ (skipped intermediate frames) ] 根据Method*->intrinsic_id()决定是否跳过，例如反射、MethodHandle、lambda就会跳过。<br>
-	 * [n] [ caller ]<br>
-	 * 
-	 * @param m
-	 * @return
-	 */
-	public static final Class<?> get_caller_class()
-	{
-		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/prims/jvm.cpp#L724
-		// https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/method.cpp#L1435
-		class _invoker
-		{
-			static
-			{
-				// 直接调用Reflection.getCallerClass()的方法必须是call_sensitive的，否则报错
-				// MethodHandle::invokeExact()方法在语法层是直接调用Reflection.getCallerClass()的方法，但为其设置caller_sensitive标记仍然报错直接调用方法不是call_sensitive的
-				// 因此判断内部还有JVM生成的或内部的中间函数，故必须在字节码层面使用invokeStatic直接调用。
-				jvmsp.hotspot.oops.Method _vm_getCallerClass = InstanceKlass.lookup_method(jdk_internal_reflect_Reflection, "getCallerClass", "()Ljava/lang/Class;");
-				jvmsp.hotspot.oops.Method _dummy_getCallerClass = InstanceKlass.lookup_method(_invoker.class, "_dummy_getCallerClass", "()Ljava/lang/Class;");
-				jvmsp.hotspot.oops.Method _get_caller_class = InstanceKlass.lookup_method(reflection.class, "get_caller_class", "()Ljava/lang/Class;");
-				jvmsp.hotspot.oops.ConstMethod _get_caller_class_constMethod = _get_caller_class.constMethod();
-				jvmsp.hotspot.oops.ConstMethodFlags flags = _get_caller_class_constMethod.flags();
-				flags.set_caller_sensitive(true);// 为get_caller_class()方法设置caller_sensitive标志
-				flags.set_intrinsic_candidate(true);// 设置内联建议标志
-				_get_caller_class.set_intrinsic_id(_vm_getCallerClass.intrinsic_id());// 设置内部ID，遍历栈帧时查找caller时就会跳过此栈帧
-				// 修改字节码
-				byte[] bytecode = _get_caller_class_constMethod.code();
-				int targetCpIdxOffset = 0;
-				for (int i = 0; i < bytecode.length; ++i)
-				{
-					if (bytecode[i] == Bytecodes.Code._invokestatic)// invokeStatic
-					{
-						targetCpIdxOffset = i + 1;// _dummy_getCallerClass常量池索引偏移量
-						break;
-					}
-				}
-				// int cpi = _get_caller_class.constMethod().resolve_cp_cache_idx(targetCpIdx);
-				// System.out.println("targetCpIdx " + targetCpIdx + " -> " + cpi);
-				System.out.println(_get_caller_class.method_holder());
-				// _get_caller_class.constants().symbol_at_put(targetCpIdx, _vm_getCallerClass.name());
-			}
-
-			public static final Object init = null;
-
-			public static final Class<?> _dummy_getCallerClass()
-			{
-				return null;
-			}
-		}
-		@SuppressWarnings("unused")
-		Object unsused = _invoker.init;// 仅在调用此方法时才访问vm_struct，防止vm_struct$entry.<clinit>递归调用
-		return _invoker._dummy_getCallerClass();// 运行时修改字节码将invokeStatic目标从_dummy_getCallerClass()重定向到getCallerClass()
-	}
-
-	/**
 	 * 内部类相关
 	 */
 
@@ -1175,7 +1113,6 @@ public abstract class reflection
 	 * @param e
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
 	public static final Map<Class<?>, ?> declared_annotations(AnnotatedElement ae)
 	{
 		try
@@ -1600,7 +1537,7 @@ public abstract class reflection
 	}
 
 	/**
-	 * 栈追踪设置
+	 * 栈回溯设置
 	 */
 	public enum unwind_option
 	{
@@ -1608,7 +1545,7 @@ public abstract class reflection
 	}
 
 	/**
-	 * 栈追踪<br>
+	 * 栈回溯<br>
 	 * 本方法对应的栈帧始终是0，<br>
 	 * skip 1 会返回直接调用本方法unwind(int skip_frame_count)的栈帧，即调用者方法本身栈帧<br>
 	 * skip 2 会返回调用该调用者的方法栈帧
@@ -1629,6 +1566,11 @@ public abstract class reflection
 	public static final Class<?> unwind_class(int skip_frame_count)
 	{
 		return stack_walker.walk(stack -> stack.skip(skip_frame_count).findFirst().get().getDeclaringClass());
+	}
+
+	public static final Class<?> get_caller_class()
+	{
+		return unwind_class(3);
 	}
 
 	/**

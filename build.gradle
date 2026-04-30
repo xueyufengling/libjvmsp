@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
 }
 
-def jdkVersions = [17, 21, 25]
+def jdkVersions = [21, 25]
 
 jdkVersions.forEach { version ->
 	// 编译

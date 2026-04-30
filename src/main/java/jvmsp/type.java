@@ -476,14 +476,24 @@ public abstract class type<_T> implements Cloneable
 			 * @param base_addr
 			 * @return
 			 */
+			public final MethodHandle callable(call_convention call_conv, long base_addr, boolean needs_transition)
+			{
+				return symbols.bind(abi.stub_function(call_conv, ((cxx_type.function_pointer_type) decl_type).pointed_to_type(), needs_transition), 0, (long) read(base_addr));
+			}
+
 			public final MethodHandle callable(call_convention call_conv, long base_addr)
 			{
-				return symbols.bind(abi.stub_function(call_conv, (cxx_type.function_pointer_type) decl_type), 0, (long) read(base_addr));
+				return callable(call_conv, base_addr, false);
+			}
+
+			public final MethodHandle callable(long base_addr, boolean needs_transition)
+			{
+				return callable(call_convention.host, base_addr, needs_transition);
 			}
 
 			public final MethodHandle callable(long base_addr)
 			{
-				return callable(call_convention.host, base_addr);
+				return callable(base_addr, false);
 			}
 		}
 

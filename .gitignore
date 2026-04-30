@@ -2,6 +2,7 @@
 /dep/
 /src/main/resources/jvmsp/
 /src/main/resources/pack.mcmeta
+/src/main/resources/META-INF/
 /.gitignore
 /.gradle/
 /build/

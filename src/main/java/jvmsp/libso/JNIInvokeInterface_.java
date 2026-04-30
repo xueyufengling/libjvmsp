@@ -6,11 +6,12 @@ import jvmsp.memory;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_pointer_type;
 import jvmsp.type.cxx_type.pointer;
+import jvmsp.unsafe;
 
 /**
  * JNIInvokeInterface_的函数封装
  */
-public class jni_invoke_interface
+public class JNIInvokeInterface_
 {
 	public static final cxx_type JNIInvokeInterface_ = cxx_type.define("JNIInvokeInterface_")
 			.decl_field("reserved0", cxx_type.pvoid)
@@ -24,6 +25,7 @@ public class jni_invoke_interface
 			.resolve();
 
 	private final cxx_type.object JNIInvokeInterface_base;
+	private final long ppJNIInvokeInterface;
 
 	private final MethodHandle DestroyJavaVM;
 	private final MethodHandle AttachCurrentThread;
@@ -34,11 +36,12 @@ public class jni_invoke_interface
 	/**
 	 * 创建一个JNI调用接口
 	 * 
-	 * @param JNIInvokeInterface_addr JNIInvokeInterface_的基地址
+	 * @param pJNIInvokeInterface JNIInvokeInterface_的基地址
 	 */
-	public jni_invoke_interface(long JNIInvokeInterface_addr)
+	public JNIInvokeInterface_(long ppJNIInvokeInterface)
 	{
-		this.JNIInvokeInterface_base = JNIInvokeInterface_.new object(JNIInvokeInterface_addr);
+		this.JNIInvokeInterface_base = JNIInvokeInterface_.new object(unsafe.read_ptr(ppJNIInvokeInterface));
+		this.ppJNIInvokeInterface = ppJNIInvokeInterface;
 		this.DestroyJavaVM = JNIInvokeInterface_base.callable("DestroyJavaVM");
 		this.AttachCurrentThread = JNIInvokeInterface_base.callable("AttachCurrentThread");
 		this.DetachCurrentThread = JNIInvokeInterface_base.callable("DetachCurrentThread");
@@ -46,14 +49,19 @@ public class jni_invoke_interface
 		this.AttachCurrentThreadAsDaemon = JNIInvokeInterface_base.callable("AttachCurrentThreadAsDaemon");
 	}
 
+	public final long pJavaVM()
+	{
+		return ppJNIInvokeInterface;
+	}
+
 	/**
 	 * 摧毁该JVM
 	 */
-	public final void destroy_java_vm()
+	public final void DestroyJavaVM()
 	{
 		try
 		{
-			int ret = (int) DestroyJavaVM.invokeExact(JNIInvokeInterface_base.address());
+			int ret = (int) DestroyJavaVM.invokeExact(pJavaVM());
 			libjvm._check_jni_call_ret(ret);
 		}
 		catch (Throwable ex)
@@ -63,11 +71,11 @@ public class jni_invoke_interface
 		System.out.println("destroyed");
 	}
 
-	public final void detach_current_thread()
+	public final void DetachCurrentThread()
 	{
 		try
 		{
-			int ret = (int) DetachCurrentThread.invokeExact(JNIInvokeInterface_base.address());
+			int ret = (int) DetachCurrentThread.invokeExact(pJavaVM());
 			libjvm._check_jni_call_ret(ret);
 		}
 		catch (Throwable ex)
@@ -77,17 +85,19 @@ public class jni_invoke_interface
 	}
 
 	/**
-	 * 获取JNINativeInterface_的指针F
+	 * 获取JNINativeInterface_的二级指针，即JNIEnv*
 	 * 
 	 * @param jni_version 当前的JNI版本，如果不知道则可以最低传入JNI_VERSION_1_1
 	 * @return
 	 */
-	public final long get_env(int jni_version)
+	public final long GetEnv(int jni_version)
 	{
 		try (pointer penv = memory.malloc(cxx_type.pvoid).auto();)
 		{
-			int ret = (int) GetEnv.invokeExact(JNIInvokeInterface_base.address(), penv.address(), jni_version);
-			libjvm._check_jni_call_ret(ret);
+
+			// jint (JNICALL *GetEnv)(JavaVM *vm, void **penv, jint version);
+			// 获取对应jni_version的JNINativeInterface_** penv，即JNIEnv*
+			libjvm._check_jni_call_ret((int) GetEnv.invokeExact(pJavaVM(), penv.address(), jni_version));
 			return (long) penv.dereference();
 		}
 		catch (Throwable ex)
@@ -96,9 +106,9 @@ public class jni_invoke_interface
 		}
 	}
 
-	public final long get_env()
+	public final long GetEnv()
 	{
-		return get_env(libjvm.JNI_VERSION_1_1);
+		return GetEnv(libjvm.JNI_VERSION_1_1);
 	}
 
 }

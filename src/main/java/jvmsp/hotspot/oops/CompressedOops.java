@@ -13,7 +13,7 @@ public class CompressedOops extends AllStatic
 	// 指定了UseCompressedOops后则必定压缩。
 	// 堆内存的末尾绝对地址小于不压缩oop时支持的最大地址就不压缩
 
-	private static final long _base = vm_struct.switch_address(
+	public static final long _base = vm_struct.switch_address(
 			() -> vm_struct.entry.find(type_name, "_narrow_oop._base").address, // JDK21
 			() -> vm_struct.entry.find(type_name, "_base").address// JDK25
 	);

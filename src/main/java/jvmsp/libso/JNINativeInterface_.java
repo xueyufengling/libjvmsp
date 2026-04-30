@@ -3,6 +3,7 @@ package jvmsp.libso;
 import java.lang.invoke.MethodHandle;
 
 import jvmsp.memory;
+import jvmsp.unsafe;
 import jvmsp.type.cxx_type;
 import jvmsp.type.cxx_type.function_pointer_type;
 import jvmsp.type.cxx_type.pointer;
@@ -10,7 +11,7 @@ import jvmsp.type.cxx_type.pointer;
 /**
  * JNINativeInterface_的函数封装
  */
-public class jni_native_interface
+public class JNINativeInterface_
 {
 	public static final cxx_type JNINativeInterface_ = cxx_type.define("JNINativeInterface_")
 			.decl_field("reserved0", cxx_type.pvoid)
@@ -252,6 +253,7 @@ public class jni_native_interface
 			.resolve();
 
 	private final cxx_type.object JNINativeInterface_base;
+	private final long ppJNINativeInterface;
 
 	private final MethodHandle GetVersion;
 	private final MethodHandle DefineClass;
@@ -486,9 +488,15 @@ public class jni_native_interface
 	private final MethodHandle IsVirtualThread;
 	private final MethodHandle GetStringUTFLengthAsLong;
 
-	public jni_native_interface(long JNINativeInterface_addr)
+	/**
+	 * 传入JNINativeInterface*
+	 * 
+	 * @param ppJNINativeInterface
+	 */
+	public JNINativeInterface_(long ppJNINativeInterface)
 	{
-		this.JNINativeInterface_base = JNINativeInterface_.new object(JNINativeInterface_addr);
+		this.JNINativeInterface_base = JNINativeInterface_.new object(unsafe.read_ptr(ppJNINativeInterface));
+		this.ppJNINativeInterface = ppJNINativeInterface;
 		this.GetVersion = JNINativeInterface_base.callable("GetVersion");
 		this.DefineClass = JNINativeInterface_base.callable("DefineClass");
 		this.FindClass = JNINativeInterface_base.callable("FindClass");
@@ -723,12 +731,17 @@ public class jni_native_interface
 		this.GetStringUTFLengthAsLong = JNINativeInterface_base.callable("GetStringUTFLengthAsLong");
 	}
 
+	public final long pJNIEnv()
+	{
+		return ppJNINativeInterface;
+	}
+
 	public final long GetStringUTFChars(String jstr, boolean is_copy)
 	{
 		try (pointer pis_copy = memory.malloc(cxx_type.jboolean).auto();)
 		{
 			pis_copy.dereference_assign(is_copy);
-			return (long) GetStringUTFChars.invokeExact(JNINativeInterface_base.address(), jni_handles.make_local(jstr), pis_copy.address());
+			return (long) GetStringUTFChars.invokeExact(pJNIEnv(), jni_handles.make_local(jstr), pis_copy.address());
 		}
 		catch (Throwable ex)
 		{
@@ -740,7 +753,7 @@ public class jni_native_interface
 	{
 		try
 		{
-			ReleaseStringUTFChars.invokeExact(JNINativeInterface_base.address(), jstr, cstr);
+			ReleaseStringUTFChars.invokeExact(pJNIEnv(), jstr, cstr);
 		}
 		catch (Throwable ex)
 		{
@@ -757,7 +770,7 @@ public class jni_native_interface
 	{
 		try
 		{
-			return (int) GetVersion.invokeExact(JNINativeInterface_base.address());
+			return (int) GetVersion.invokeExact(pJNIEnv());
 		}
 		catch (Throwable ex)
 		{
@@ -769,7 +782,7 @@ public class jni_native_interface
 	{
 		try (pointer cstr = memory.c_str(bin_name).auto())
 		{
-			return (long) FindClass.invokeExact(JNINativeInterface_base.address(), cstr.address());
+			return (long) FindClass.invokeExact(pJNIEnv(), cstr.address());
 		}
 		catch (Throwable ex)
 		{
@@ -781,7 +794,7 @@ public class jni_native_interface
 	{
 		try (pointer cstr = memory.c_str(msg).auto())
 		{
-			FatalError.invokeExact(JNINativeInterface_base.address(), cstr.address());
+			FatalError.invokeExact(pJNIEnv(), cstr.address());
 		}
 		catch (Throwable ex)
 		{
@@ -799,7 +812,7 @@ public class jni_native_interface
 		try (pointer cname = memory.c_str(name).auto();
 				pointer csig = memory.c_str(sig).auto())
 		{
-			return (long) GetStaticMethodID.invokeExact(JNINativeInterface_base.address(), jni_handles.make_local(clazz), cname.address(), csig.address());
+			return (long) GetStaticMethodID.invokeExact(pJNIEnv(), jni_handles.make_local(clazz), cname.address(), csig.address());
 		}
 		catch (Throwable ex)
 		{

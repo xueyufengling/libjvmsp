@@ -81,31 +81,42 @@ public abstract class memory
 		return c_str(str, Charset.defaultCharset());
 	}
 
+	public static final String __string(long cstr_addr, int length, Charset cs)
+	{
+		byte[] bytes = new byte[length];// 不包含结尾的'\0'
+		unsafe.memcpy(bytes, 0, cstr_addr, bytes.length);
+		return new String(bytes, cs);
+	}
+
 	/**
 	 * 从C字符串地址拷贝并构造一个新的Java字符串
 	 * 
 	 * @param cstr_addr C字符串指针
+	 * @param length    长度，不包含结尾'\0'
 	 * @param cs        字符编码
 	 * @return
 	 */
+	public static final String string(long cstr_addr, int length, Charset cs)
+	{
+		if (cstr_addr == 0)// 空指针
+		{
+			return null;
+		}
+		return __string(cstr_addr, length, cs);
+	}
+
+	public static final String string(long cstr_addr, int length)
+	{
+		return string(cstr_addr, length, Charset.defaultCharset());
+	}
+
 	public static final String string(long cstr_addr, Charset cs)
 	{
 		if (cstr_addr == 0)// 空指针
 		{
 			return null;
 		}
-		else
-		{
-			long len = libc.strlen(cstr_addr);
-			byte[] bytes = new byte[(int) len];// 不包含结尾的'\0'
-			unsafe.memcpy(bytes, 0, cstr_addr, bytes.length);
-			return new String(bytes, cs);
-		}
-	}
-
-	public static final String string(pointer cstr, Charset cs)
-	{
-		return string(cstr.address(), cs);
+		return __string(cstr_addr, (int) libc.strlen(cstr_addr), cs);
 	}
 
 	public static final String string(long cstr_addr)
@@ -113,9 +124,17 @@ public abstract class memory
 		return string(cstr_addr, Charset.defaultCharset());
 	}
 
-	public static final String string(pointer cstr)
+	/**
+	 * 构造一个内存地址，该地址指向值为value的内存
+	 * 
+	 * @param value
+	 * @return
+	 */
+	public static final pointer address_of(long value)
 	{
-		return string(cstr.address());
+		pointer p = malloc(cxx_type._long_long);
+		unsafe.write(p.addr, value);
+		return p;
 	}
 
 	@SuppressWarnings("unchecked")

@@ -51,13 +51,14 @@ public class shared_object
 		{
 			ex.printStackTrace();
 		}
+		// JDK17为 long findEntry0(NativeLibraryImpl lib, String name)，JDK21+为 long findEntry0(long handle, String name)
 		NativeLibrary_findEntry0 = symbols.find_static_method(jdk_internal_loader_NativeLibrary, "findEntry0", long.class, long.class, String.class);
-		// 加载JNI模块
+		// 加载JNI库
 		NativeLibraries_load = symbols.find_static_method(jdk_internal_loader_NativeLibraries, "load", boolean.class, jdk_internal_loader_NativeLibraries$NativeLibraryImpl, String.class, boolean.class, boolean.class);
 		NativeLibraries_unload = symbols.find_static_method(jdk_internal_loader_NativeLibraries, "unload", void.class, String.class, boolean.class, long.class);
 		NativeLibraries_libraries = reflection.find_declared_field(jdk_internal_loader_NativeLibraries, "libraries");
 		NativeLibraryImpl_handle = symbols.find_var(jdk_internal_loader_NativeLibraries$NativeLibraryImpl, "handle", long.class);
-		// 加载通用模块
+		// 加载通用so库
 		RawNativeLibraries_load0 = symbols.find_static_method(jdk_internal_loader_RawNativeLibraries, "load0", boolean.class, jdk_internal_loader_RawNativeLibraries$RawNativeLibraryImpl, String.class);
 		RawNativeLibraries_unload0 = symbols.find_static_method(jdk_internal_loader_RawNativeLibraries, "unload0", void.class, String.class, long.class);
 		RawNativeLibraries_libraries = reflection.find_declared_field(jdk_internal_loader_RawNativeLibraries, "libraries");
@@ -128,8 +129,13 @@ public class shared_object
 		return (long) NativeLibraryImpl_handle.get(native_library_impl);
 	}
 
+	public static final long dlopen_jni(Class<?> any_class_in_jar, String path, boolean is_builtin, boolean throw_exception_if_fail)
+	{
+		return dlopen_jni(file_system.extract_jar_in_temp_dir(any_class_in_jar, path), is_builtin, throw_exception_if_fail);
+	}
+
 	/**
-	 * 加载name指定的so库
+	 * 加载name指定的JNI so库
 	 * 
 	 * @param name
 	 * @param throw_exception_if_fail
@@ -140,9 +146,27 @@ public class shared_object
 		return dlopen_jni(name, false, throw_exception_if_fail);
 	}
 
+	/**
+	 * 加载jar内指定路径的JNI so库
+	 * 
+	 * @param any_class_in_jar
+	 * @param path
+	 * @param throw_exception_if_fail
+	 * @return
+	 */
+	public static final long dlopen_jni(Class<?> any_class_in_jar, String path, boolean throw_exception_if_fail)
+	{
+		return dlopen_jni(any_class_in_jar, path, false, throw_exception_if_fail);
+	}
+
 	public static final long dlopen_jni(String name)
 	{
-		return dlopen_jni(name, false, true);
+		return dlopen_jni(name, true);
+	}
+
+	public static final long dlopen_jni(Class<?> any_class_in_jar, String path)
+	{
+		return dlopen_jni(any_class_in_jar, path, true);
 	}
 
 	public static final boolean dlclose_jni(String name, boolean is_builtin, long handle)
@@ -203,9 +227,19 @@ public class shared_object
 		return (long) RawNativeLibraryImpl_handle.get(raw_native_library_impl);
 	}
 
+	public static final long dlopen(Class<?> any_class_in_jar, String path, boolean throw_exception_if_fail)
+	{
+		return dlopen(file_system.extract_jar_in_temp_dir(any_class_in_jar, path), throw_exception_if_fail);
+	}
+
 	public static final long dlopen(String name)
 	{
 		return dlopen(name, false);
+	}
+
+	public static final long dlopen(Class<?> any_class_in_jar, String path)
+	{
+		return dlopen(any_class_in_jar, path, false);
 	}
 
 	public static final boolean dlclose(String name, long handle)
@@ -252,17 +286,27 @@ public class shared_object
 	 * @param signature
 	 * @return
 	 */
-	public static final MethodHandle dlsym(long handle, call_convention call_conv, function_signature signature)
+	public static final MethodHandle dlsym(long handle, call_convention call_conv, function_signature signature, boolean needs_transition)
 	{
 		long addr = dlsym(handle, signature.function_name);
 		if (addr == 0)
 			throw new java.lang.NoSuchMethodError("function '" + signature.toString() + "' not exists in shared object '" + handle + "'");
 		else
-			return abi.func(addr, call_conv, signature.func_type);
+			return abi.func(addr, call_conv, signature.func_type, needs_transition);
+	}
+
+	public static final MethodHandle dlsym(long handle, call_convention call_conv, function_signature signature)
+	{
+		return dlsym(handle, call_conv, signature, false);
+	}
+
+	public static final MethodHandle dlsym(long handle, function_signature signature, boolean needs_transition)
+	{
+		return dlsym(handle, call_convention.host, signature, needs_transition);
 	}
 
 	public static final MethodHandle dlsym(long handle, function_signature signature)
 	{
-		return dlsym(handle, call_convention.host, signature);
+		return dlsym(handle, signature, false);
 	}
 }

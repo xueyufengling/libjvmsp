@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
@@ -29,6 +30,33 @@ import jvmsp.arch.os;
 
 public class file_system
 {
+	public static final String temp_file_dir = System.getProperty("java.io.tmpdir");
+
+	/**
+	 * 解压jar中的文件到临时目录
+	 * 
+	 * @param any_class_in_jar
+	 * @param path
+	 * @return
+	 */
+	public static final String extract_jar_in_temp_dir(Class<?> any_class_in_jar, String path)
+	{
+		try (InputStream res = any_class_in_jar.getResourceAsStream(path))
+		{
+			if (res == null)
+			{
+				throw new java.lang.InternalError("jar resource '" + path + "' not found");
+			}
+			Path temp_file = Paths.get(temp_file_dir + File.separator + path).normalize();
+			copy(temp_file, res);
+			temp_file.toFile().deleteOnExit();
+			return temp_file.toString();
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("extract jar resource '" + path + "' to temp dir failed", ex);
+		}
+	}
 
 	public static final int default_buffer_size = 1024;
 
@@ -153,6 +181,21 @@ public class file_system
 		catch (IOException ex)
 		{
 			throw new java.lang.InternalError("read bytes of '" + path + "' failed", ex);
+		}
+	}
+
+	public static final void copy(Path path, InputStream res)
+	{
+		try
+		{
+			Path target = path.getParent();
+			if (target != null)
+				Files.createDirectories(target);
+			Files.copy(res, path, StandardCopyOption.REPLACE_EXISTING);
+		}
+		catch (IOException ex)
+		{
+			throw new java.lang.InternalError("copy '" + res + "' to '" + path + "' failed", ex);
 		}
 	}
 
